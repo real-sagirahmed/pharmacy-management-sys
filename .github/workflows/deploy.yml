@@ -24,9 +24,11 @@ jobs:
           npm install
           npm run build
           cd ..
-          # Angular builds to wwwroot/browser by default in this project
-          # Copying files to root wwwroot so backend can serve them
-          cp -r wwwroot/browser/* wwwroot/
+          # Angular 17+ Application builder outputs to wwwroot/browser
+          # We check if browser folder exists, then copy its content to wwwroot
+          if [ -d "wwwroot/browser" ]; then
+            cp -r wwwroot/browser/* wwwroot/
+          fi
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -43,6 +45,6 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./publish/
-          server-dir: /wwwroot/
+          server-dir: /
           protocol: ftp
           port: 21
