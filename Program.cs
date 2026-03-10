@@ -73,7 +73,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
 
 // Enable CORS before Authentication and Authorization
 app.UseCors("AllowFrontend");
