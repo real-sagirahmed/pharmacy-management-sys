@@ -30,7 +30,13 @@ builder.Services.AddCors(options =>
 
 // DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null)
+    ));
 
 // Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
@@ -70,8 +76,13 @@ app.UseHttpsRedirection();
 // Enable CORS before Authentication and Authorization
 app.UseCors("AllowFrontend");
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+app.MapFallbackToFile("index.html");
 
 app.Run();
