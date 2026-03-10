@@ -10,7 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 // Configure CORS
 builder.Services.AddCors(options =>
@@ -68,7 +69,8 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
@@ -81,6 +83,46 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+// Apply migrations and seed admin role for the first user
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        context.Database.Migrate();
+
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // Ensure roles exist
+        string[] roles = { "Admin", "Manager", "Cashier" };
+        foreach (var role in roles)
+        {
+            if (!await roleManager.RoleExistsAsync(role))
+            {
+                await roleManager.CreateAsync(new IdentityRole(role));
+            }
+        }
+
+        // Promote first user to Admin if no Admin exists
+        var admins = await userManager.GetUsersInRoleAsync("Admin");
+        if (!admins.Any())
+        {
+            var firstUser = await context.Users.OrderBy(u => u.Id).FirstOrDefaultAsync();
+            if (firstUser != null)
+            {
+                await userManager.AddToRoleAsync(firstUser, "Admin");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred during database migration or role seeding.");
+    }
+}
+
 app.MapControllers();
 
 app.MapFallbackToFile("index.html");

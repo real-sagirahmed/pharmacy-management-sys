@@ -7,6 +7,7 @@ import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { MedicineListComponent } from './components/medicines/medicine-list.component';
 import { PurchaseFormComponent } from './components/purchases/purchase-form.component';
 import { SalesFormComponent } from './components/sales/sales-form.component';
+import { UserManagementComponent } from './components/dashboard/user-management/user-management.component';
 import { AuthGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -22,6 +23,7 @@ export const routes: Routes = [
       { path: 'medicines', component: MedicineListComponent },
       { path: 'purchases', component: PurchaseFormComponent },
       { path: 'sales', component: SalesFormComponent },
+      { path: 'users', component: UserManagementComponent },
       { path: '', redirectTo: 'medicines', pathMatch: 'full' }
     ]
   },

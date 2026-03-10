@@ -42,6 +42,9 @@ import { AuthService } from '../../services/auth.service';
             <div class="nav-item" *ngIf="isCashier() || isAdmin()" routerLink="/dashboard/sales" routerLinkActive="active-nav-item">
               <i class="pi pi-receipt text-lg"></i> <span class="text-[15px]">Sales POS</span>
             </div>
+            <div class="nav-item" *ngIf="isAdmin()" routerLink="/dashboard/users" routerLinkActive="active-nav-item">
+              <i class="pi pi-users text-lg"></i> <span class="text-[15px]">User Management</span>
+            </div>
           </nav>
           <div class="p-5 border-t border-slate-700">
             <button (click)="onLogout()" class="w-full flex items-center justify-center gap-2 bg-[#ef4444] hover:bg-[#dc2626] text-white py-3 rounded-lg font-medium transition-colors shadow-sm">
@@ -89,6 +92,14 @@ import { AuthService } from '../../services/auth.service';
                   <i class="pi pi-receipt"></i>
                 </div>
                 <span class="text-xl font-bold text-slate-700 group-hover:text-emerald-700 transition-colors">Sales POS</span>
+              </div>
+              
+              <!-- Admin -->
+              <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:shadow-lg hover:border-purple-300 transition-all hover:-translate-y-1 group" *ngIf="isAdmin()" (click)="navigate('/dashboard/users')">
+                <div class="w-20 h-20 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-3xl group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
+                  <i class="pi pi-users"></i>
+                </div>
+                <span class="text-xl font-bold text-slate-700 group-hover:text-purple-700 transition-colors">Users</span>
               </div>
 
             </div>

@@ -63,6 +63,7 @@ import { AuthService } from '../../services/auth.service';
                   <input type="password" formControlName="password" placeholder="Create a password" class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all shadow-sm">
                 </div>
               </div>
+
               
               <div *ngIf="error" class="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start animate-fadein">
                 <i class="pi pi-exclamation-circle text-red-500 mt-0.5 mr-3 text-lg"></i>
@@ -105,7 +106,8 @@ export class RegisterComponent {
       fullName: ['', Validators.required],
       username: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      role: ['Admin', Validators.required]
     });
   }
 

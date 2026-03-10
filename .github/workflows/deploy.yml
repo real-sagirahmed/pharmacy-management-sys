@@ -1,0 +1,48 @@
+name: Deploy to MonsterASP.NET
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Angular Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+          cd ..
+          # Angular builds to wwwroot/browser by default in this project
+          # Copying files to root wwwroot so backend can serve them
+          cp -r wwwroot/browser/* wwwroot/
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish .NET Backend
+        run: dotnet publish -c Release -r win-x64 --self-contained true -o ./publish
+
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./publish/
+          server-dir: /wwwroot/
+          protocol: ftp
+          port: 21
