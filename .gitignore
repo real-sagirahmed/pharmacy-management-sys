@@ -11,6 +11,7 @@ frontend/.angular/
 bin/
 obj/
 appsettings.Development.json
+wwwroot/
 
 # IDE
 .vs/
