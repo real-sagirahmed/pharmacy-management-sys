@@ -22,15 +22,18 @@ jobs:
         run: |
           cd frontend
           npm install --legacy-peer-deps
+          # Clean root's wwwroot first
+          rm -rf ../wwwroot
           npm run build
           cd ..
+          
           # Angular 17+ Application builder outputs to wwwroot/browser
-          # We check if browser folder exists, then copy its content to wwwroot
+          # Move browser contents to wwwroot root
           if [ -d "wwwroot/browser" ]; then
             cp -r wwwroot/browser/* wwwroot/
+            # Optionally remove browser folder to keep it clean, 
+            # but we can leave it as well.
           fi
-          echo "Listing wwwroot contents for debugging:"
-          ls -R wwwroot
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -38,7 +41,17 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Publish .NET Backend
-        run: dotnet publish -c Release -r win-x64 --self-contained true -o ./publish
+        run: |
+          rm -rf ./publish
+          dotnet publish -c Release -r win-x64 --self-contained true -o ./publish
+          
+          # CRITICAL: Ensure the latest wwwroot from the root is in the publish folder
+          # Sometimes dotnet publish uses stale files if not cleaned
+          rm -rf ./publish/wwwroot
+          cp -r wwwroot ./publish/wwwroot
+          
+          echo "Listing final publish contents for debugging:"
+          ls -R ./publish/wwwroot
 
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
