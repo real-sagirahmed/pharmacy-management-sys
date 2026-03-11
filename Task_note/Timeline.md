@@ -4,6 +4,17 @@
 
 ---
 
+- [2026-03-11 08:00 AM] - API 404 Routing Fix v2 (OutOfProcess)
+- **Task:** Resolving 404 (Second Attempt)
+- **Details:** 
+  - হোস্টিং মডেল পরিবর্তন করে `OutOfProcess` করা হয়েছে।
+  - এপিআই হ্যান্ডলার কনফ্লিক্ট এড়ানোর জন্য `<remove name="aspNetCore" />` যুক্ত করা হয়েছে।
+  - ডেপ্লয়মেন্ট পাইপলাইনে `ls -R` ডায়াগনস্টিক যুক্ত করা হয়েছে।
+- **Technology:** IIS OutOfProcess Hosting, ASP.NET Core 8.
+- **Status:** FIX V2 APPLIED - WAITING FOR PUSH
+
+---
+
 - [2026-03-11 07:45 AM] - API 404 Routing Fix (IIS Config)
 - **Task:** Resolving 404 on API Endpoints
 - **Details:** 
