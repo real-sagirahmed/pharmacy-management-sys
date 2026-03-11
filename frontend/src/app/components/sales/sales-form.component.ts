@@ -6,121 +6,388 @@ import { SalesService } from '../../services/sales.service';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { DropdownModule } from 'primeng/dropdown';
-import { CalendarModule } from 'primeng/calendar';
-import { CardModule } from 'primeng/card';
 
 @Component({
   selector: 'app-sales-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, DropdownModule, CalendarModule, CardModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, DropdownModule],
   template: `
-    <div class="flex flex-col lg:flex-row gap-6 p-6 w-full max-w-7xl mx-auto animate-fadein">
-      <!-- Left: POS Entry -->
-      <div class="flex-grow bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 border-l-[12px] border-l-teal-600">
-        <h2 class="text-3xl font-black text-slate-800 mb-6 flex items-center gap-3">
-          <span class="pi pi-desktop text-3xl text-teal-600"></span> Point of Sale (POS)
-        </h2>
+    <div class="pos-shell animate-fadein-up">
 
-        <form [formGroup]="salesForm" (ngSubmit)="onSubmit()" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="flex flex-col gap-2">
-              <label class="font-bold text-slate-600">Customer Name</label>
-              <input pInputText formControlName="customerName" placeholder="Guest Customer" class="w-full">
+      <!-- ─── LEFT: POS Entry Form ─── -->
+      <div class="pos-form-card">
+        <div class="pos-header">
+          <div class="pos-icon"><i class="pi pi-desktop"></i></div>
+          <div>
+            <h2 class="pos-title">Point of Sale</h2>
+            <p class="pos-sub">New customer transaction</p>
+          </div>
+        </div>
+
+        <form [formGroup]="salesForm" (ngSubmit)="onSubmit()">
+
+          <!-- Customer Info -->
+          <div class="section-label">CUSTOMER INFO</div>
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label class="field-label">Customer Name</label>
+              <input class="field-input" formControlName="customerName" placeholder="Guest Customer">
             </div>
-            <div class="flex flex-col gap-2">
-              <label class="font-bold text-slate-600">Phone</label>
-              <input pInputText formControlName="customerPhone" placeholder="01XXX-XXXXXX" class="w-full">
+            <div class="form-field">
+              <label class="field-label">Phone</label>
+              <input class="field-input" formControlName="customerPhone" placeholder="01XXX-XXXXXX">
             </div>
           </div>
 
-          <div class="border-t border-slate-100 pt-6">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-xl font-bold text-slate-800">Medicines</h3>
-              <button type="button" pButton icon="pi pi-plus" label="Add" (click)="addItem()" class="p-button-sm p-button-info"></button>
-            </div>
+          <!-- Medicines Section -->
+          <div class="medicines-header">
+            <div class="section-label">MEDICINES</div>
+            <button type="button" class="btn-add-item" (click)="addItem()">
+              <i class="pi pi-plus"></i> Add Item
+            </button>
+          </div>
 
-            <div formArrayName="salesDetails" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-              <div *ngFor="let item of salesDetails.controls; let i=index" [formGroupName]="i" 
-                   class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
-                
-                <div class="md:col-span-2 flex flex-col gap-1">
-                  <label class="text-xs font-bold text-slate-400">Medicine</label>
-                  <p-dropdown [options]="medicines" formControlName="medicineId" optionLabel="name" optionValue="medicineId" 
-                              placeholder="Select Item" filter="true" styleClass="w-full" (onChange)="onMedicineChange(i)"></p-dropdown>
-                </div>
+          <div formArrayName="salesDetails" class="items-list">
+            <div *ngFor="let item of salesDetails.controls; let i=index"
+                 [formGroupName]="i" class="item-row">
 
-                <div class="flex flex-col gap-1">
-                  <label class="text-xs font-bold text-slate-400">Qty</label>
-                  <input pInputText type="number" formControlName="quantity" (input)="itemTotal(i)" class="w-full">
-                </div>
-
-                <div class="flex flex-col gap-1">
-                  <label class="text-xs font-bold text-slate-400">Price</label>
-                  <input pInputText type="number" formControlName="unitPrice" [readonly]="true" class="bg-slate-200 w-full text-slate-700 font-semibold">
-                </div>
-
-                <div class="flex gap-2 items-center justify-end pb-1">
-                  <div class="font-bold text-teal-700 w-24 text-right pr-2">{{ item.get('subtotal')?.value | currency }}</div>
-                  <button type="button" pButton icon="pi pi-times" (click)="removeItem(i)" class="p-button-danger p-button-text p-button-rounded"></button>
-                </div>
+              <div class="item-med-select">
+                <label class="field-label-sm">Medicine</label>
+                <p-dropdown [options]="medicines" formControlName="medicineId"
+                            optionLabel="name" optionValue="medicineId"
+                            placeholder="Select medicine…" [filter]="true"
+                            filterPlaceholder="Search…" styleClass="w-full"
+                            (onChange)="onMedicineChange(i)"></p-dropdown>
               </div>
+
+              <div class="item-qty">
+                <label class="field-label-sm">Qty</label>
+                <input class="field-input" type="number" formControlName="quantity"
+                       min="1" (input)="itemTotal(i)" style="text-align:center">
+              </div>
+
+              <div class="item-price">
+                <label class="field-label-sm">Unit Price</label>
+                <input class="field-input field-readonly" type="number"
+                       formControlName="unitPrice" [readonly]="true">
+              </div>
+
+              <div class="item-subtotal">
+                <label class="field-label-sm">Subtotal</label>
+                <div class="subtotal-value">{{ item.get('subtotal')?.value | currency }}</div>
+              </div>
+
+              <button type="button" class="item-remove" (click)="removeItem(i)" title="Remove">
+                <i class="pi pi-trash"></i>
+              </button>
+            </div>
+
+            <!-- Empty items state -->
+            <div *ngIf="salesDetails.controls.length === 0" class="items-empty">
+              <i class="pi pi-shopping-cart" style="font-size:1.5rem;color:#cbd5e1"></i>
+              <span>No items added. Click "Add Item" to start.</span>
             </div>
           </div>
+
         </form>
       </div>
 
-      <!-- Right: Summary & Checkout -->
-      <div class="w-full lg:w-96 space-y-6">
-        <div class="bg-teal-800 text-white p-8 rounded-3xl shadow-lg relative overflow-hidden">
-          <div class="absolute -right-4 -top-4 text-white/5 text-9xl pi pi-wallet"></div>
-          <h3 class="text-xl font-bold mb-4 uppercase tracking-widest text-teal-300">Order Summary</h3>
-          
-          <div class="space-y-3 mb-8">
-            <div class="flex justify-between text-lg">
-              <span class="text-teal-100">Subtotal:</span>
-              <span class="font-semibold">{{ subtotal | currency }}</span>
+      <!-- ─── RIGHT: Order Summary ─── -->
+      <div class="summary-panel">
+
+        <!-- Totals Card -->
+        <div class="summary-card">
+          <div class="summary-title">ORDER SUMMARY</div>
+
+          <div class="summary-lines">
+            <div class="summary-line">
+              <span>Subtotal</span>
+              <span>{{ subtotal | currency }}</span>
             </div>
-            <div class="flex justify-between text-lg">
-              <span class="text-teal-100">Tax (5%):</span>
-              <span class="font-semibold">{{ taxTotal | currency }}</span>
+            <div class="summary-line">
+              <span>Tax (5%)</span>
+              <span>{{ taxTotal | currency }}</span>
             </div>
-            <div class="flex justify-between text-lg items-center mt-2">
-              <span class="text-teal-100">Discount:</span>
-              <div class="w-24">
-                <input pInputText type="number" [formControl]="salesForm.controls.discount" 
-                       class="text-right p-2 text-slate-800 font-bold w-full rounded-lg" (input)="updateTotals()">
-              </div>
+            <div class="summary-line discount-line">
+              <span>Discount</span>
+              <input class="discount-input" type="number" [formControl]="salesForm.controls.discount"
+                     (input)="updateTotals()" placeholder="0">
             </div>
           </div>
 
-          <div class="border-t border-teal-600 pt-6 mb-8 mt-4">
-            <div class="text-sm font-bold text-teal-200 uppercase tracking-wide mb-1">Payable Amount</div>
-            <div class="text-5xl font-black text-white">{{ grandTotal | currency }}</div>
+          <div class="total-block">
+            <div class="total-label">PAYABLE AMOUNT</div>
+            <div class="total-value">{{ grandTotal | currency }}</div>
           </div>
+        </div>
 
-          <div class="space-y-4">
-            <p-dropdown [options]="['Cash', 'Card', 'Mobile']" formControlName="paymentMethod" 
-                        placeholder="Payment Method" styleClass="w-full"></p-dropdown>
-            <button pButton label="Complete Sale" icon="pi pi-check-circle" 
-                    class="p-button-lg bg-teal-500 hover:bg-teal-600 border-none w-full font-black text-xl py-4 transition-colors"
-                    (click)="onSubmit()" [disabled]="salesForm.invalid"></button>
+        <!-- Payment Method -->
+        <div class="payment-card">
+          <div class="payment-title">PAYMENT METHOD</div>
+          <div class="payment-methods">
+            <button type="button" class="pay-btn"
+                    [class.pay-active]="salesForm.get('paymentMethod')?.value === 'Cash'"
+                    (click)="salesForm.patchValue({paymentMethod:'Cash'})">
+              <i class="pi pi-money-bill"></i>
+              <span>Cash</span>
+            </button>
+            <button type="button" class="pay-btn"
+                    [class.pay-active]="salesForm.get('paymentMethod')?.value === 'Card'"
+                    (click)="salesForm.patchValue({paymentMethod:'Card'})">
+              <i class="pi pi-credit-card"></i>
+              <span>Card</span>
+            </button>
+            <button type="button" class="pay-btn"
+                    [class.pay-active]="salesForm.get('paymentMethod')?.value === 'Mobile'"
+                    (click)="salesForm.patchValue({paymentMethod:'Mobile'})">
+              <i class="pi pi-mobile"></i>
+              <span>Mobile</span>
+            </button>
           </div>
+        </div>
+
+        <!-- Checkout Button -->
+        <button class="checkout-btn" (click)="onSubmit()"
+                [disabled]="salesForm.invalid || isSubmitting">
+          <span *ngIf="!isSubmitting">
+            <i class="pi pi-check-circle"></i> Complete Sale
+          </span>
+          <span *ngIf="isSubmitting">
+            <i class="pi pi-spin pi-spinner"></i> Processing…
+          </span>
+        </button>
+
+        <div class="sale-success" *ngIf="lastSuccess">
+          <i class="pi pi-check-circle"></i> Sale #{{ lastSuccess }} completed!
         </div>
       </div>
     </div>
   `,
   styles: [`
-    :host { width: 100%; display: flex; justify-content: center; background-color: #F8FAFC; min-height: 100vh; }
-    ::ng-deep .p-dropdown { border-radius: 12px; }
-    ::ng-deep .p-inputtext { border-radius: 12px; }
+    :host { display: block; width: 100%; }
+
+    .pos-shell {
+      display: flex;
+      gap: 20px;
+      width: 100%;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    /* ─── Form Card ─── */
+    .pos-form-card {
+      flex: 1;
+      min-width: 340px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .pos-header { display: flex; align-items: center; gap: 14px; }
+    .pos-icon {
+      width: 48px; height: 48px;
+      background: #ccfbf1; color: #0d9488;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+    }
+    .pos-title { font-size: 1.3rem; font-weight: 800; color: #0f172a; margin: 0; }
+    .pos-sub   { font-size: .8rem; color: #64748b; margin: 0; }
+
+    /* Form fields */
+    .section-label {
+      font-size: .65rem; font-weight: 700; color: #94a3b8;
+      letter-spacing: .1em; margin-bottom: 10px;
+    }
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-field { display: flex; flex-direction: column; gap: 6px; }
+    .field-label { font-size: .8rem; font-weight: 600; color: #475569; }
+    .field-label-sm { font-size: .72rem; font-weight: 600; color: #94a3b8; }
+    .field-input {
+      padding: 9px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: .875rem;
+      font-family: 'Inter', sans-serif;
+      color: #0f172a;
+      outline: none;
+      transition: border-color .15s;
+      width: 100%;
+    }
+    .field-input:focus { border-color: #0d9488; }
+    .field-readonly { background: #f8fafc; color: #64748b; }
+
+    /* Medicines Section */
+    .medicines-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .btn-add-item {
+      display: flex; align-items: center; gap: 6px;
+      background: #eff6ff; color: #3b82f6;
+      border: 1px solid #bfdbfe; border-radius: 8px;
+      padding: 7px 14px; font-size: .8rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+      font-family: 'Inter', sans-serif;
+    }
+    .btn-add-item:hover { background: #dbeafe; }
+
+    /* Item rows */
+    .items-list { display: flex; flex-direction: column; gap: 10px; }
+    .item-row {
+      display: grid;
+      grid-template-columns: 2fr 80px 100px 100px 36px;
+      gap: 10px;
+      align-items: end;
+      background: #f8fafc;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #f1f5f9;
+    }
+    .subtotal-value {
+      font-weight: 700; color: #0d9488; font-size: .95rem;
+      padding: 8px 0;
+    }
+    .item-remove {
+      width: 36px; height: 36px;
+      background: #fff1f2; border: none; border-radius: 8px;
+      color: #f87171; cursor: pointer; transition: background .15s;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .875rem;
+    }
+    .item-remove:hover { background: #ffe4e6; color: #ef4444; }
+
+    .items-empty {
+      display: flex; align-items: center; gap: 10px;
+      justify-content: center;
+      padding: 24px;
+      color: #94a3b8;
+      font-size: .875rem;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px dashed #e2e8f0;
+    }
+
+    /* ─── Summary Panel ─── */
+    .summary-panel {
+      width: 300px;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .summary-card {
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 24px;
+      color: #fff;
+    }
+    .summary-title {
+      font-size: .65rem; font-weight: 700; color: #4ade80;
+      letter-spacing: .1em; margin-bottom: 16px;
+    }
+    .summary-lines { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .summary-line {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: .875rem; color: #94a3b8;
+    }
+    .summary-line span:last-child { color: #f1f5f9; font-weight: 600; }
+    .discount-line span:last-child { color: inherit; font-weight: normal; }
+    .discount-input {
+      width: 90px;
+      padding: 6px 10px;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      background: #1e293b;
+      color: #f1f5f9;
+      font-size: .875rem;
+      text-align: right;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+    }
+    .total-block {
+      border-top: 1px solid #1e293b;
+      padding-top: 16px;
+    }
+    .total-label { font-size: .65rem; font-weight: 700; color: #64748b; letter-spacing: .1em; margin-bottom: 4px; }
+    .total-value { font-size: 2rem; font-weight: 900; color: #fff; }
+
+    /* Payment */
+    .payment-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .payment-title { font-size: .65rem; font-weight: 700; color: #94a3b8; letter-spacing: .1em; margin-bottom: 12px; }
+    .payment-methods { display: flex; gap: 8px; }
+    .pay-btn {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 12px 8px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #64748b;
+      cursor: pointer;
+      transition: all .15s;
+      font-size: .75rem; font-weight: 600;
+      font-family: 'Inter', sans-serif;
+    }
+    .pay-btn i { font-size: 1.1rem; }
+    .pay-btn:hover { border-color: #0d9488; color: #0d9488; background: #f0fdfa; }
+    .pay-active {
+      border-color: #0d9488 !important;
+      background: #ccfbf1 !important;
+      color: #0f766e !important;
+    }
+
+    /* Checkout */
+    .checkout-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #0d9488, #0f766e);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem; font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s;
+      font-family: 'Inter', sans-serif;
+    }
+    .checkout-btn:hover:not(:disabled) { opacity: .9; }
+    .checkout-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .sale-success {
+      display: flex; align-items: center; gap: 8px;
+      background: #d1fae5; color: #065f46;
+      border-radius: 10px; padding: 12px 16px;
+      font-size: .875rem; font-weight: 600;
+      animation: fadein .3s ease-out;
+    }
+
+    @keyframes fadein { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .pos-shell { flex-direction: column; }
+      .summary-panel { width: 100%; }
+      .item-row { grid-template-columns: 1fr; }
+      .form-grid-2 { grid-template-columns: 1fr; }
+    }
   `]
 })
 export class SalesFormComponent implements OnInit {
   salesForm: FormGroup;
   medicines: Medicine[] = [];
-  subtotal = 0;
-  taxTotal = 0;
+  subtotal  = 0;
+  taxTotal  = 0;
   grandTotal = 0;
+  isSubmitting = false;
+  lastSuccess: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -128,18 +395,20 @@ export class SalesFormComponent implements OnInit {
     private salesService: SalesService
   ) {
     this.salesForm = this.fb.group({
-      customerName: ['Guest'],
+      customerName:  ['Guest'],
       customerPhone: [''],
-      saleDate: [new Date()],
-      grandTotal: [0],
-      discount: [0],
+      saleDate:      [new Date()],
+      grandTotal:    [0],
+      discount:      [0],
       paymentMethod: ['Cash', Validators.required],
-      salesDetails: this.fb.array([], Validators.required)
+      salesDetails:  this.fb.array([], Validators.required)
     });
   }
 
   ngOnInit() {
-    this.medicineService.getMedicines().subscribe(data => this.medicines = data);
+    this.medicineService.getMedicines().subscribe(data => {
+      this.medicines = data;
+    });
     this.addItem();
   }
 
@@ -150,10 +419,10 @@ export class SalesFormComponent implements OnInit {
   addItem() {
     const item = this.fb.group({
       medicineId: [null, Validators.required],
-      quantity: [1, [Validators.required, Validators.min(1)]],
-      unitPrice: [0],
-      tax: [0],
-      subtotal: [0]
+      quantity:   [1, [Validators.required, Validators.min(1)]],
+      unitPrice:  [0],
+      tax:        [0],
+      subtotal:   [0]
     });
     this.salesDetails.push(item);
   }
@@ -164,9 +433,9 @@ export class SalesFormComponent implements OnInit {
   }
 
   onMedicineChange(index: number) {
-    const item = this.salesDetails.at(index);
+    const item  = this.salesDetails.at(index);
     const medId = item.get('medicineId')?.value;
-    const med = this.medicines.find(m => m.medicineId === medId);
+    const med   = this.medicines.find(m => m.medicineId === medId);
     if (med) {
       item.patchValue({ unitPrice: med.price });
       this.itemTotal(index);
@@ -174,30 +443,40 @@ export class SalesFormComponent implements OnInit {
   }
 
   itemTotal(index: number) {
-    const item = this.salesDetails.at(index);
-    const qty = item.get('quantity')?.value || 0;
+    const item  = this.salesDetails.at(index);
+    const qty   = item.get('quantity')?.value || 0;
     const price = item.get('unitPrice')?.value || 0;
     const total = qty * price;
-    item.patchValue({ 
-      tax: total * 0.05,
-      subtotal: total
-    });
+    item.patchValue({ tax: total * 0.05, subtotal: total });
     this.updateTotals();
   }
 
   updateTotals() {
-    this.subtotal = this.salesDetails.controls.reduce((acc, curr) => acc + (curr.get('subtotal')?.value || 0), 0);
-    this.taxTotal = this.salesDetails.controls.reduce((acc, curr) => acc + (curr.get('tax')?.value || 0), 0);
-    const disc = this.salesForm.get('discount')?.value || 0;
-    this.grandTotal = (this.subtotal + this.taxTotal) - disc;
+    this.subtotal  = this.salesDetails.controls.reduce((a, c) => a + (c.get('subtotal')?.value || 0), 0);
+    this.taxTotal  = this.salesDetails.controls.reduce((a, c) => a + (c.get('tax')?.value || 0), 0);
+    const disc     = this.salesForm.get('discount')?.value || 0;
+    this.grandTotal = this.subtotal + this.taxTotal - disc;
     this.salesForm.patchValue({ grandTotal: this.grandTotal });
   }
 
   onSubmit() {
     if (this.salesForm.valid) {
+      this.isSubmitting = true;
+      this.lastSuccess = null;
       this.salesService.createSale(this.salesForm.value).subscribe({
-        next: () => alert('Sale completed!'),
-        error: (err) => alert(err.error || 'Error completing sale')
+        next: (res: any) => {
+          this.isSubmitting = false;
+          this.lastSuccess  = res?.saleId || 'NEW';
+          // Reset form
+          while (this.salesDetails.length) this.salesDetails.removeAt(0);
+          this.salesForm.patchValue({ customerName: 'Guest', customerPhone: '', discount: 0, paymentMethod: 'Cash' });
+          this.subtotal = this.taxTotal = this.grandTotal = 0;
+          this.addItem();
+        },
+        error: (err) => {
+          this.isSubmitting = false;
+          alert(err.error || 'Error completing sale');
+        }
       });
     }
   }
