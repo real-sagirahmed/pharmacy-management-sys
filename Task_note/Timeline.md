@@ -4,6 +4,17 @@
 
 ---
 
+- [2026-03-11 06:45 AM] - Sync Investigation (Broken Layout)
+- **Task:** Debugging 404 & Broken CSS
+- **Details:** 
+  - সার্ভারের ফাইল ক্লিনিং-এর পরও লেআউট ভেঙে আসছিল এবং এপিআই ৪০৪ দিচ্ছিল।
+  - চিহ্নিত করা হয়েছে যে বিল্ড প্রসেসে পুরনো ফাইল থেকে যাচ্ছিল (Stale artifacts)।
+  - `deploy.yml` আপডেট করা হয়েছে যাতে প্রতিবার একদম ফ্রেশ বিল্ড (Clean build) তৈরি হয় এবং `wwwroot` সঠিকভাবে সিঙ্ক হয়।
+- **Technology:** GitHub Actions, Ubuntu Runner, .NET CLI.
+- **Status:** FIX PUSHED & DEPLOYING
+
+---
+
 - [2026-03-11 05:55 AM] - Deployment Logic Fix
 - **Task:** Fixing Sync Issues (Git Tracking)
 - **Details:** 

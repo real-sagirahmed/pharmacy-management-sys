@@ -12,6 +12,7 @@ bin/
 obj/
 appsettings.Development.json
 wwwroot/
+publish/
 
 # IDE
 .vs/

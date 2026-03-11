@@ -42,16 +42,20 @@ jobs:
 
       - name: Publish .NET Backend
         run: |
+          # Ensure publish directory is clean and exists
           rm -rf ./publish
-          dotnet publish -c Release -r win-x64 --self-contained true -o ./publish
+          mkdir -p ./publish
+          
+          # Build a portable DLL version (default)
+          dotnet publish -c Release -o ./publish
           
           # CRITICAL: Ensure the latest wwwroot from the root is in the publish folder
-          # Sometimes dotnet publish uses stale files if not cleaned
+          # Some older files might be cached by dotnet publish
           rm -rf ./publish/wwwroot
           cp -r wwwroot ./publish/wwwroot
           
-          echo "Listing final publish contents for debugging:"
-          ls -R ./publish/wwwroot
+          echo "Final publish directory structure:"
+          ls -R ./publish
 
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
