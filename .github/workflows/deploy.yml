@@ -51,6 +51,9 @@ jobs:
           rm -rf ./publish/wwwroot
           cp -r wwwroot ./publish/wwwroot
           
+          # CREATE APP_OFFLINE.HTM to unlock files on server
+          echo "<html><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>System Update in Progress</h1><p>We are updating the Pharmacy Management System. Please wait a moment...</p></body></html>" > ./publish/app_offline.htm
+
           echo "Final publish directory structure verification (Recursive):"
           ls -R ./publish
 
