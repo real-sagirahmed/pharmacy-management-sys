@@ -4,6 +4,28 @@
 
 ---
 
+- [2026-03-11 07:45 AM] - API 404 Routing Fix (IIS Config)
+- **Task:** Resolving 404 on API Endpoints
+- **Details:** 
+  - `web.config` আপডেট করা হয়েছে যাতে `processPath` সরাসরি `PharmacyApi.exe` কে নির্দেশ করে।
+  - `deploy.yml` এ ম্যানুয়াল `web.config` কপি চেক যুক্ত করা হয়েছে যাতে পাবলিশ ফোল্ডারে এটি নিশ্চিতভাবে থাকে।
+  - এটি সেলফ-কন্টেইনড বিল্ডের জন্য এপিআই রাউটিং সমস্যা সমাধান করবে।
+- **Technology:** ASP.NET Core Module V2, IIS Configuration.
+- **Status:** FIX APPLIED - WAITING FOR PUSH
+
+---
+
+- [2026-03-11 07:15 AM] - Self-Contained Build Fix
+- **Task:** Resolving 404 (Self-Contained Deployment)
+- **Details:** 
+  - Portable বিল্ড সম্ভবত শেয়ারড হোস্টিং-এ `dotnet` কমান্ড এক্সেস পাচ্ছিল না।
+  - `self-contained` (win-x64) রানিং মোডে ফিরে যাওয়া হয়েছে যাতে সব DLL এবং Runtime প্যাক করা থাকে।
+  - `wwwroot` এবং `publish` সিঙ্ক লজিক আরও মজবুত করা হয়েছে।
+- **Technology:** .NET Core Self-Contained, win-x64.
+- **Status:** FIX PUSHED & DEPLOYING FINAL
+
+---
+
 - [2026-03-11 06:45 AM] - Sync Investigation (Broken Layout)
 - **Task:** Debugging 404 & Broken CSS
 - **Details:** 

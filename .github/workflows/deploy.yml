@@ -54,6 +54,10 @@ jobs:
           echo "Final publish directory structure verification:"
           ls -F ./publish
           ls -F ./publish/wwwroot
+          if [ ! -f "./publish/web.config" ]; then
+            echo "web.config missing from publish folder, copying manually..."
+            cp web.config ./publish/
+          fi
 
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
