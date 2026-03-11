@@ -44,15 +44,12 @@ jobs:
           # Ensure publish directory is clean and exists
           rm -rf ./publish
           
-          # Build a SELF-CONTAINED win-x64 version (Highly recommended for Shared Hosting/IIS)
-          dotnet publish -c Release -r win-x64 --self-contained true -o ./publish
+          # Build a FRAMEWORK-DEPENDENT version (Standard for Shared Hosting/IIS)
+          dotnet publish -c Release -o ./publish
           
           # CRITICAL Check: Ensure the updated wwwroot is in the final publish folder
           rm -rf ./publish/wwwroot
           cp -r wwwroot ./publish/wwwroot
-          
-          echo "Forcing custom web.config into publish folder..."
-          cp web.config ./publish/
           
           echo "Final publish directory structure verification (Recursive):"
           ls -R ./publish
