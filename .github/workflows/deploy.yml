@@ -67,3 +67,11 @@ jobs:
           server-dir: /wwwroot/
           protocol: ftp
           port: 21
+
+      - name: Cleanup app_offline.htm (Bring Site Online)
+        if: always()
+        run: |
+          # Use curl to send a DELE command to the FTP server
+          # This ensures the site goes back online even if the main sync didn't remove it
+          curl --ftp-method single-cwd -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
+            "ftp://${{ secrets.FTP_SERVER }}/wwwroot/app_offline.htm" -Q "DELE app_offline.htm" || echo "app_offline.htm already removed or not found"
