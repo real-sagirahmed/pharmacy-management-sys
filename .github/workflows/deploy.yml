@@ -51,13 +51,11 @@ jobs:
           rm -rf ./publish/wwwroot
           cp -r wwwroot ./publish/wwwroot
           
+          echo "Forcing custom web.config into publish folder..."
+          cp web.config ./publish/
+          
           echo "Final publish directory structure verification (Recursive):"
           ls -R ./publish
-          
-          if [ ! -f "./publish/web.config" ]; then
-            echo "web.config missing from publish folder, copying manually..."
-            cp web.config ./publish/
-          fi
 
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
