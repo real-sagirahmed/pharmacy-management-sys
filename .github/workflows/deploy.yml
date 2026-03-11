@@ -29,6 +29,8 @@ jobs:
           if [ -d "wwwroot/browser" ]; then
             cp -r wwwroot/browser/* wwwroot/
           fi
+          echo "Listing wwwroot contents for debugging:"
+          ls -R wwwroot
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
