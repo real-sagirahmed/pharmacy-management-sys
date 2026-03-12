@@ -4,17 +4,39 @@
 
 ---
 
-- [2026-03-12 03:00 PM] - Medicine Feature Overhaul & UI Alignment
-- **Task:** Comprehensive Upgrade of Medicine Management
+- [2026-03-12 04:20 PM] - Batch-wise Stock Reporting & FEFO Logic
+- **Task:** Granular Stock Tracking per Batch in Details View
 - **Details:** 
-  - **Data Model:** `Medicine` টেবিলে `PurchasePrice`, `Batch` এবং `ExpiryDate` যোগ করা হয়েছে। জেনেরিক ও ক্যাটাগরি নাম (Category) বড় করার জন্য লিমিট ২৫০ ক্যারেক্টারে বাড়ানো হয়েছে।
-  - **UI/UX:** মেডিসিন লিস্টে এখন ১১টি কলাম (Code, Name, Category, Generic, UOM, Purchase, Sale, Batch, Expiry, Stock, Status) ডাইনামিকভাবে প্রদর্শিত হয়।
-  - **Navigation:** ফর্মে কী-বোর্ড নেভিগেশন (Enter key focus flow) এবং অটো-কোড জেনারেশন ইমপ্লিমেন্ট করা হয়েছে।
-  - **Features:** "Details View" (Eye icon) যোগ করা হয়েছে যা দিয়ে মেডিসিনের সকল তথ্য আলাদা পপ-আপে দেখা যায়।
-- **Technology:** ASP.NET Core 8, EF Core (Migrations), Angular 19, PrimeNG (Dialog, Select, InputNumber).
+  - **Backend Logic:** `MedicineRepository`-এ FEFO (First Expiry First Out) লজিক ইমপ্লিমেন্ট করা হয়েছে। এটি প্রতিটি ব্যাচের পার্চেস থেকে মোট সেল বিয়োগ করে অবশিষ্ট স্টক নিখুঁতভাবে হিসেব করে।
+  - **Details UI:** 'Eye' আইকন ক্লিক করলে পপ-আপে এখন সাধারণ তথ্যের নিচে একটি সুন্দর টেবিল দেখায়, যেখানে প্রতিটি ব্যাচের **Batch No**, **Expiry**, **Cost** এবং **Current Stock** আলাদাভাবে দেখা যায়।
+  - **Real-time Sync:** ফ্রন্টএন্ডে সরাসরি ব্যাকএন্ড থেকে লেটেস্ট ব্যাচ লিস্ট ফেচ করার ব্যবস্থা করা হয়েছে।
+- **Technology:** ASP.NET Core 8, LINQ (FEFO calculation), Angular 19, CSS Tables.
 - **Status:** COMPLETED & VERIFIED
 
 ---
+
+- [2026-03-12 03:42 PM] - Medicine Status Toggle & DB Migration Fix
+- **Task:** Inline Active/Inactive Toggle + Missing Column Fix
+- **Details:** 
+  - **Migration Fix:** `PurchasePrice`, `Batch`, এবং `ExpiryDate` কলামগুলো model-এ ছিল কিন্তু ডেটাবেজে apply হয়নি। দুটি নতুন migration (`AddPurchasePriceBatchExpiry`, `AddExpiryDate`) তৈরি ও apply করা হয়েছে। EF Core precision warning ঠিক করা হয়েছে (`HasPrecision(18, 2)`)।
+  - **Toggle Switch:** Medicine List-এ Status কলামে সরাসরি **animated toggle switch** যোগ করা হয়েছে। ক্লিক করলেই Active/Inactive পরিবর্তন হয় — Edit dialog খুলতে হয় না। Backend-এ `PATCH /api/Medicines/{id}/toggle-status` endpoint যোগ করা হয়েছে।
+- **Technology:** ASP.NET Core 8, EF Core Migrations, Angular 19, CSS Animations.
+- **Status:** COMPLETED & VERIFIED
+
+---
+
+- [2026-03-12 03:00 PM] - Medicine Feature Overhaul & UI Alignment
+- **Task:** Comprehensive Upgrade of Medicine Management
+- **Details:** 
+  - **Data Model:** `Medicine` টেবিলে `PurchasePrice`, `Batch` এবং `ExpiryDate` যোগ করা হয়েছে। জেনেরিক ও ক্যাটাগরি নামের লিমিট ২৫০ ক্যারেক্টারে বাড়ানো হয়েছে।
+  - **UI/UX:** মেডিসিন লিস্টে এখন ১১টি কলাম (Code, Name, Category, Generic, UOM, Purchase, Sale, Batch, Expiry, Stock, Status) প্রদর্শিত হয়।
+  - **Navigation:** ফর্মে Enter key দিয়ে পরের ফিল্ডে যাওয়া এবং অটো-কোড জেনারেশন ইমপ্লিমেন্ট করা হয়েছে।
+  - **Features:** "Details View" (Eye icon) যোগ করা হয়েছে।
+- **Technology:** ASP.NET Core 8, EF Core, Angular 19, PrimeNG.
+- **Status:** COMPLETED & VERIFIED
+
+---
+
 
 - [2026-03-12 10:40 AM] - Deployment Lock Resolution & Maintenance Mode Fix
 - **Task:** Fixing FTP 550 Error & Tuning Maintenance Mode

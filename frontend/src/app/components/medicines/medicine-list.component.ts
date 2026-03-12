@@ -116,8 +116,15 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                   </span>
                 </td>
                 <td>
-                  <p-tag [value]="medicine.isActive ? 'Active' : 'Inactive'"
-                         [severity]="medicine.isActive ? 'success' : 'secondary'"></p-tag>
+                  <button class="status-toggle-btn"
+                          [class.active]="medicine.isActive"
+                          (click)="toggleStatus(medicine)"
+                          [title]="medicine.isActive ? 'Click to Deactivate' : 'Click to Activate'">
+                    <span class="toggle-track">
+                      <span class="toggle-thumb"></span>
+                    </span>
+                    <span class="toggle-label">{{ medicine.isActive ? 'Active' : 'Inactive' }}</span>
+                  </button>
                 </td>
                 <td>
                   <div class="action-btns">
@@ -348,6 +355,30 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
           <div class="det-row"><strong>Expiry:</strong> <span [class.text-danger]="isExpired(med.expiryDate)">{{ (med.expiryDate | date:'dd MMM yyyy') || 'N/A' }}</span></div>
           <div class="det-row"><strong>Stock:</strong> <span>{{ med.stockQuantity }}</span></div>
           <div class="det-row"><strong>Status:</strong> <span>{{ med.isActive ? 'Active' : 'Inactive' }}</span></div>
+          
+          <div class="batch-section" *ngIf="med.batches && med.batches.length > 0">
+            <h4 class="section-title">Batch-wise Stock Status</h4>
+            <div class="batch-table-wrapper">
+              <table class="batch-table">
+                <thead>
+                  <tr>
+                    <th>Batch</th>
+                    <th>Expiry</th>
+                    <th class="text-right">Price</th>
+                    <th class="text-right">Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let b of med.batches">
+                    <td><span class="batch-no">{{ b.batchNumber }}</span></td>
+                    <td><span [class.text-danger]="isExpired(b.expiryDate)">{{ (b.expiryDate | date:'MMM yyyy') || '-' }}</span></td>
+                    <td class="text-right">{{ b.purchasePrice | currency:'BDT ' }}</td>
+                    <td class="text-right font-bold">{{ b.remainingQuantity }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </p-dialog>
     </div>
@@ -356,6 +387,43 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
     .details-grid { display: flex; flex-direction: column; gap: 12px; padding: 10px 0; }
     .det-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
     .text-danger { color: #ef4444; font-weight: 600; }
+    
+    .batch-section { margin-top: 15px; border-top: 2px solid #f1f5f9; padding-top: 12px; }
+    .section-title { font-size: 0.9rem; font-weight: 700; color: #334155; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .batch-table-wrapper { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+    .batch-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .batch-table th { background: #f8fafc; padding: 8px; text-align: left; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+    .batch-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+    .batch-table tr:last-child td { border-bottom: none; }
+    .batch-no { font-family: monospace; color: #0d9488; font-weight: 600; }
+    .font-bold { font-weight: 700; }
+    .text-right { text-align: right; }
+
+    /* ─── Status Toggle Switch ─── */
+    .status-toggle-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: none; border: none; cursor: pointer; padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+    .toggle-track {
+      position: relative; width: 36px; height: 20px;
+      background: #cbd5e1; border-radius: 99px;
+      transition: background .25s;
+      flex-shrink: 0;
+    }
+    .toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+      transition: transform .25s;
+    }
+    .status-toggle-btn.active .toggle-track { background: #0d9488; }
+    .status-toggle-btn.active .toggle-thumb { transform: translateX(16px); }
+    .toggle-label {
+      font-size: .72rem; font-weight: 600;
+      color: #64748b;
+    }
+    .status-toggle-btn.active .toggle-label { color: #0d9488; }
     :host { display: block; width: 100%; }
     .page-wrap { display: flex; flex-direction: column; gap: 20px; width: 100%; }
     .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -667,8 +735,18 @@ export class MedicineListComponent implements OnInit {
   }
 
   viewDetails(med: Medicine) {
-    this.selectedMedicine.set(med);
-    this.showDetailsDialog = true;
+    // Fetch full data with batches from backend
+    this.medicineService.getMedicine(med.medicineId).subscribe({
+      next: (fullMed) => {
+        this.selectedMedicine.set(fullMed);
+        this.showDetailsDialog = true;
+      },
+      error: () => {
+        // Fallback to list data if API fails
+        this.selectedMedicine.set(med);
+        this.showDetailsDialog = true;
+      }
+    });
   }
 
 
@@ -729,6 +807,22 @@ export class MedicineListComponent implements OnInit {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' });
           }
         });
+      }
+    });
+  }
+
+  toggleStatus(med: Medicine) {
+    this.medicineService.toggleStatus(med.medicineId).subscribe({
+      next: (res) => {
+        med.isActive = res.isActive;
+        this.messageService.add({
+          severity: res.isActive ? 'success' : 'warn',
+          summary: 'Status Updated',
+          detail: `${med.name} is now ${res.isActive ? 'Active' : 'Inactive'}.`
+        });
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not update status.' });
       }
     });
   }

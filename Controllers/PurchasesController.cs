@@ -95,11 +95,14 @@ namespace PharmacyApi.Controllers
                     };
                     purchase.PurchaseDetails.Add(detail);
 
-                    // Update Stock
+                    // Update Stock and Sync latest batch/expiry
                     var medicine = await _context.Medicines.FindAsync(item.MedicineId);
                     if (medicine != null)
                     {
                         medicine.StockQuantity += item.Quantity;
+                        medicine.Batch = item.BatchNumber;
+                        medicine.ExpiryDate = item.ExpiryDate;
+                        medicine.PurchasePrice = item.UnitCost; // Optional: Sync latest cost
                     }
                 }
 

@@ -20,6 +20,15 @@ namespace PharmacyApi.DTOs
         public string? CreatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string? UpdatedBy { get; set; }
+        public List<MedicineBatchDto> Batches { get; set; } = new();
+    }
+
+    public class MedicineBatchDto
+    {
+        public string BatchNumber { get; set; } = string.Empty;
+        public DateTime? ExpiryDate { get; set; }
+        public int RemainingQuantity { get; set; }
+        public decimal PurchasePrice { get; set; }
     }
 
     public class MedicineSearchParameters

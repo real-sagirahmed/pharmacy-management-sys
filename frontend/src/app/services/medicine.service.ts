@@ -20,6 +20,14 @@ export interface Medicine {
   createdBy: string;
   updatedAt?: string;
   updatedBy?: string;
+  batches?: MedicineBatch[];
+}
+
+export interface MedicineBatch {
+  batchNumber: string;
+  expiryDate?: string;
+  remainingQuantity: number;
+  purchasePrice: number;
 }
 
 export interface MedicineSearchParameters {
@@ -74,6 +82,10 @@ export class MedicineService {
 
   getNextCode(): Observable<{code: string}> {
     return this.http.get<{code: string}>(`${this.apiUrl}/next-code`);
+  }
+
+  toggleStatus(id: number): Observable<{isActive: boolean}> {
+    return this.http.patch<{isActive: boolean}>(`${this.apiUrl}/${id}/toggle-status`, {});
   }
 
   deleteMedicine(id: number): Observable<any> {

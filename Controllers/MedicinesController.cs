@@ -126,5 +126,25 @@ namespace PharmacyApi.Controllers
                 return StatusCode(500, new { message = "Error deleting medicine.", error = ex.Message });
             }
         }
+        [HttpPatch("{id}/toggle-status")]
+        public async Task<IActionResult> ToggleStatus(int id)
+        {
+            try
+            {
+                var med = await _repo.GetByIdAsync(id);
+                if (med == null) return NotFound();
+
+                med.IsActive = !med.IsActive;
+                var username = User.Identity?.Name ?? "System";
+                var success = await _repo.UpdateAsync(id, med, username);
+
+                if (!success) return NotFound();
+                return Ok(new { isActive = med.IsActive });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error toggling status.", error = ex.Message });
+            }
+        }
     }
 }

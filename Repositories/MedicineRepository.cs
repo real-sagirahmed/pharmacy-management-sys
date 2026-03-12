@@ -78,7 +78,7 @@ namespace PharmacyApi.Repositories
             var m = await _context.Medicines.FindAsync(id);
             if (m == null) return null;
 
-            return new MedicineDto
+            var dto = new MedicineDto
             {
                 MedicineId = m.MedicineId,
                 Code = m.Code,
@@ -97,6 +97,38 @@ namespace PharmacyApi.Repositories
                 UpdatedAt = m.UpdatedAt,
                 UpdatedBy = m.UpdatedBy
             };
+
+            // Calculate Stock Per Batch (FEFO Logic)
+            var totalSales = await _context.SalesDetails
+                .Where(sd => sd.MedicineId == id)
+                .SumAsync(sd => sd.Quantity);
+
+            var purchases = await _context.PurchaseDetails
+                .Where(pd => pd.MedicineId == id)
+                .OrderBy(pd => pd.ExpiryDate ?? DateTime.MaxValue)
+                .ThenBy(pd => pd.PurchaseDetailId)
+                .Select(pd => new { pd.BatchNumber, pd.ExpiryDate, pd.Quantity, pd.UnitCost })
+                .ToListAsync();
+
+            int remainingToSubtract = totalSales;
+            foreach (var p in purchases)
+            {
+                int remainingInBatch = Math.Max(0, p.Quantity - remainingToSubtract);
+                remainingToSubtract = Math.Max(0, remainingToSubtract - p.Quantity);
+
+                if (remainingInBatch > 0 || p.Quantity == 0) // Show batches with stock
+                {
+                    dto.Batches.Add(new MedicineBatchDto
+                    {
+                        BatchNumber = p.BatchNumber,
+                        ExpiryDate = p.ExpiryDate,
+                        RemainingQuantity = remainingInBatch,
+                        PurchasePrice = p.UnitCost
+                    });
+                }
+            }
+
+            return dto;
         }
 
         public async Task<MedicineDto> CreateAsync(MedicineDto dto, string username)
