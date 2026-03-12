@@ -78,6 +78,39 @@ import { SalesService } from '../../services/sales.service';
               <i class="pi pi-users nav-icon"></i>
               <span class="nav-label">Users</span>
             </a>
+
+            <!-- ─── Master Data Section ─── -->
+            <div class="nav-section-label" style="margin-top:12px">MASTER DATA</div>
+
+            <a class="nav-item" *ngIf="isAdmin() || isManager()"
+               routerLink="/dashboard/parties" routerLinkActive="nav-active">
+              <i class="pi pi-address-book nav-icon"></i>
+              <span class="nav-label">Parties</span>
+            </a>
+
+            <a class="nav-item" *ngIf="isAdmin() || isManager()"
+               routerLink="/dashboard/taxes" routerLinkActive="nav-active">
+              <i class="pi pi-percentage nav-icon"></i>
+              <span class="nav-label">Tax</span>
+            </a>
+
+            <a class="nav-item" *ngIf="isAdmin() || isManager()"
+               routerLink="/dashboard/uoms" routerLinkActive="nav-active">
+              <i class="pi pi-th-large nav-icon"></i>
+              <span class="nav-label">UOM</span>
+            </a>
+
+            <a class="nav-item" *ngIf="isAdmin() || isManager()"
+               routerLink="/dashboard/generics" routerLinkActive="nav-active">
+              <i class="pi pi-list nav-icon"></i>
+              <span class="nav-label">Generics</span>
+            </a>
+
+            <a class="nav-item" *ngIf="isAdmin() || isManager()"
+               routerLink="/dashboard/categories" routerLinkActive="nav-active">
+              <i class="pi pi-tags nav-icon"></i>
+              <span class="nav-label">Categories</span>
+            </a>
           </nav>
 
           <div class="sidebar-footer">

@@ -6,13 +6,13 @@ import { Supplier, SupplierService } from '../../services/supplier.service';
 import { PurchaseService } from '../../services/purchase.service';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { DropdownModule } from 'primeng/dropdown';
-import { CalendarModule } from 'primeng/calendar';
+import { SelectModule } from 'primeng/select';
+import { DatePickerModule } from 'primeng/datepicker';
 
 @Component({
   selector: 'app-purchase-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, DropdownModule, CalendarModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule],
   template: `
     <div class="po-shell animate-fadein-up">
 
@@ -33,9 +33,9 @@ import { CalendarModule } from 'primeng/calendar';
           <div class="form-grid-3">
             <div class="form-field">
               <label class="field-label">Supplier</label>
-              <p-dropdown [options]="suppliers" formControlName="supplierId"
+              <p-select [options]="suppliers" formControlName="supplierId"
                           optionLabel="name" optionValue="supplierId"
-                          placeholder="Select supplier…" styleClass="w-full"></p-dropdown>
+                          placeholder="Select supplier…" styleClass="w-full"></p-select>
             </div>
             <div class="form-field">
               <label class="field-label">Invoice #</label>
@@ -46,8 +46,8 @@ import { CalendarModule } from 'primeng/calendar';
             </div>
             <div class="form-field">
               <label class="field-label">Date</label>
-              <p-calendar formControlName="purchaseDate" [showIcon]="true" styleClass="w-full"
-                          dateFormat="dd/mm/yy"></p-calendar>
+              <p-datepicker formControlName="purchaseDate" [showIcon]="true" styleClass="w-full"
+                          dateFormat="dd/mm/yy"></p-datepicker>
             </div>
           </div>
 
@@ -65,10 +65,10 @@ import { CalendarModule } from 'primeng/calendar';
 
               <div class="item-med">
                 <label class="field-label-sm">Medicine</label>
-                <p-dropdown [options]="medicines" formControlName="medicineId"
+                <p-select [options]="medicines" formControlName="medicineId"
                             optionLabel="name" optionValue="medicineId"
                             placeholder="Select medicine…" [filter]="true"
-                            styleClass="w-full" (onChange)="onMedicineChange(i)"></p-dropdown>
+                            styleClass="w-full" (onChange)="onMedicineChange(i)"></p-select>
               </div>
 
               <div class="item-qty">

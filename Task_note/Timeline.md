@@ -4,6 +4,41 @@
 
 ---
 
+- [2026-03-12 09:55 AM] - Taxes API Fix & Robust Error Reporting Overhaul
+- **Task:** Resolving 400 Bad Request & Enhancing Master Data Reliability
+- **Details:** 
+  - **Backend Diagnostics:** `TaxesController` এবং অন্যান্য Master Data Controllers-এ `ModelState` ভ্যালিডেশন এরর রিপোর্টিং যোগ করা হয়েছে। এখন থেকে সার্ভার সরাসরি বলবে কোন ফিল্ডে সমস্যা।
+  - **Frontend Fix:** `TaxListComponent` সহ সব মাস্টার ডেটা মডিউলে ফরম রিসেট লজিক এবং ডিফল্ট ভ্যালু (`isActive`) হ্যান্ডলিং ঠিক করা হয়েছে যাতে ৪০০ এরর প্রতিরোধ করা যায়।
+  - **Global Impact:** `UOM`, `Category`, `Generic` এবং `Party` মডিউলেও প্র্যাকটিভলি এই ফিক্সগুলো অ্যাপ্লাই করা হয়েছে।
+  - **Error UI:** ফ্রন্টএন্ড টোস্ট মেসেজে এখন ব্যাকএন্ডের নির্দিষ্ট এরর মেসেজগুলো প্রদর্শিত হবে।
+- **Technology:** ASP.NET Core 8, Angular 19, PrimeNG.
+- **Status:** COMPLETED & VERIFIED
+
+- [2026-03-12 07:45 AM] - Master Data Modules Implementation
+- **Task:** Implementing Master Data (Party, Tax, UOM, Generic, Category)
+- **Details:** 
+  - **Architecture:** Generic Repository Pattern ব্যবহার করে ব্যাকএন্ড লেয়ার মজবুত করা হয়েছে।
+  - **Backend:** ৫টি নতুন Models, Repositories এবং Controllers যোগ করা হয়েছে।
+  - **Database:** EF Core মাইগ্রেশনের মাধ্যমে Tables (Parties, Taxes, etc.) তৈরি ও ইউনিক ইনডেক্স সেট করা হয়েছে।
+  - **Frontend:** Angular Standalone Components এবং ৫টি সার্ভিস তৈরি করা হয়েছে। 
+  - **UI/UX:** PrimeNG টেবিল, সামারি চিপস এবং রিঅ্যাক্টিভ ফর্মের মাধ্যমে প্রিমিয়াম ইন্টারফেস নিশ্চিত করা হয়েছে।
+- **Technology:** ASP.NET Core 8, EF Core, Angular 19, PrimeNG.
+- **Status:** COMPLETED & VERIFIED
+
+---
+
+- [2026-03-11 01:30 PM] - Automated Deployment Fix (Phase 9)
+- **Task:** Resolving FTP 550 File Lock & Automating Maintenance Mode
+- **Details:** 
+  - `deploy.yml` এ `app_offline.htm` মেকানিজম যুক্ত করা হয়েছে।
+  - ডেপ্লয়মেন্টের শুরুতে স্বয়ংক্রিয়ভাবে সাইটকে অফলাইনে নেওয়া এবং কাজ শেষে `curl` কমান্ডের মাধ্যমে ফাইলটি মুছে ফেলে সাইটকে অনলাইনে ফিরিয়ে আনার প্রসেস অটোমেট করা হয়েছে।
+  - এর ফলে এখন থেকে আর ম্যানুয়ালি ফাইল ম্যানেজার ব্যবহার করার প্রয়োজন পড়বে না।
+- **Technology:** GitHub Actions, FTP-Deploy-Action, cURL.
+- **Status:** COMPLETED & PUSHED
+
+---
+
+
 - [2026-03-11 11:45 AM] - Massive UI/UX Redesign (Phase 1-8)
 - **Task:** Complete Project Visual Overhaul & Bug Fixes
 - **Details:** 
@@ -102,3 +137,8 @@
 - **Task:** Initial Project Status Review
 - **Details:** প্রজেক্টের টেকনিক্যাল স্ট্যাক, অটোমেশন এবং সাম্প্রতিক পরিবর্তনের একটি বিস্তারিত রিভিউ দেওয়া হয়েছে।
 - **Status:** COMPLETED
+### [2024-05-22] - Auto-Generated Unique Codes Implementation
+- **Feature**: Auto-generation of unique codes (CUS-0001, SUP-0001, TAX-0001, etc.) for all Master Data modules.
+- **Backend**: Updated IRepository, all 5 repositories, and controllers to support GetNextCode logic.
+- **Frontend**: Updated Services and Components to fetch and display read-only codes automatically.
+- **Status**: Completed.

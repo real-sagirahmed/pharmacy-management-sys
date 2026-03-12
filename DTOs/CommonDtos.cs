@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace PharmacyApi.DTOs
 {
     public class MedicineDto
@@ -67,5 +69,114 @@ namespace PharmacyApi.DTOs
         public decimal UnitPrice { get; set; }
         public decimal Tax { get; set; }
         public decimal Subtotal { get; set; }
+    }
+
+    // ─── Master Data DTOs ───────────────────────────────────────────────────
+
+    public class PartyDto
+    {
+        public int PartyId { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Code { get; set; } = string.Empty;
+
+        // "Customer" | "Supplier"
+        [Required]
+        [StringLength(20)]
+        public string PartyType { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(150)]
+        public string FullName { get; set; } = string.Empty;
+
+        [StringLength(15)]
+        [Phone]
+        public string? Cell { get; set; }
+
+        [StringLength(100)]
+        [EmailAddress]
+        public string? Email { get; set; }
+
+        [StringLength(250)]
+        public string? Address { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class TaxDto
+    {
+        public int TaxId { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+
+        [Required]
+        [Range(0, 100, ErrorMessage = "TaxRate must be between 0 and 100.")]
+        public decimal TaxRate { get; set; }
+
+        [StringLength(250)]
+        public string? Remarks { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class UomDto
+    {
+        public int UomId { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(250)]
+        public string? Description { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class GenericDto
+    {
+        public int GenericId { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(250)]
+        public string? Description { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class CategoryDto
+    {
+        public int CategoryId { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(250)]
+        public string? Description { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 }

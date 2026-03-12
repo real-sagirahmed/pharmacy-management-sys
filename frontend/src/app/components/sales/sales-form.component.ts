@@ -53,11 +53,11 @@ import { DropdownModule } from 'primeng/dropdown';
 
               <div class="item-med-select">
                 <label class="field-label-sm">Medicine</label>
-                <p-dropdown [options]="medicines" formControlName="medicineId"
+                <p-select [options]="medicines" formControlName="medicineId"
                             optionLabel="name" optionValue="medicineId"
                             placeholder="Select medicine…" [filter]="true"
                             filterPlaceholder="Search…" styleClass="w-full"
-                            (onChange)="onMedicineChange(i)"></p-dropdown>
+                            (onChange)="onMedicineChange(i)"></p-select>
               </div>
 
               <div class="item-qty">

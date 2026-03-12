@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PharmacyApi.Data;
+using PharmacyApi.DTOs;
 using PharmacyApi.Models;
+using PharmacyApi.Repositories;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +14,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// ─── Master Data Repositories (DI Registration) ───
+builder.Services.AddScoped<IRepository<Party, PartyDto>, PartyRepository>();
+builder.Services.AddScoped<IRepository<Tax, TaxDto>, TaxRepository>();
+builder.Services.AddScoped<IRepository<Uom, UomDto>, UomRepository>();
+builder.Services.AddScoped<IRepository<PharmacyApi.Models.Generic, GenericDto>, GenericMedicineRepository>();
+builder.Services.AddScoped<IRepository<Category, CategoryDto>, CategoryRepository>();
 
 // Configure CORS
 builder.Services.AddCors(options =>
