@@ -21,6 +21,7 @@ builder.Services.AddScoped<IRepository<Tax, TaxDto>, TaxRepository>();
 builder.Services.AddScoped<IRepository<Uom, UomDto>, UomRepository>();
 builder.Services.AddScoped<IRepository<PharmacyApi.Models.Generic, GenericDto>, GenericMedicineRepository>();
 builder.Services.AddScoped<IRepository<Category, CategoryDto>, CategoryRepository>();
+builder.Services.AddScoped<IMedicineRepository, MedicineRepository>();
 
 // Configure CORS
 builder.Services.AddCors(options =>

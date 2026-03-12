@@ -406,8 +406,8 @@ export class SalesFormComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.medicineService.getMedicines().subscribe(data => {
-      this.medicines = data;
+    this.medicineService.getMedicines({ pageNumber: 1, pageSize: 1000 }).subscribe(res => {
+      this.medicines = res.items;
     });
     this.addItem();
   }
@@ -437,7 +437,7 @@ export class SalesFormComponent implements OnInit {
     const medId = item.get('medicineId')?.value;
     const med   = this.medicines.find(m => m.medicineId === medId);
     if (med) {
-      item.patchValue({ unitPrice: med.price });
+      item.patchValue({ unitPrice: med.salePrice });
       this.itemTotal(index);
     }
   }

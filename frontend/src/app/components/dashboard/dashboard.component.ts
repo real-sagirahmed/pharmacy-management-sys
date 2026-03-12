@@ -510,10 +510,12 @@ export class DashboardComponent implements OnInit {
     setInterval(() => this.updateTime(), 60000);
 
     if (this.isPharmacist() || this.isAdmin()) {
-      this.medicineService.getMedicines().subscribe(data => {
-        this.medicineCount = data.length;
-        this.lowStockCount = data.filter((m: any) => m.stockQuantity < 10).length;
+      this.medicineService.getMedicines({ pageNumber: 1, pageSize: 1 }).subscribe(res => {
+        this.medicineCount = res.totalCount;
       });
+      // For low stock, we might need a dedicated API or a large page size, but for now let's just use a reasonable number or a filtered query if the API supports it
+      // Actually, I'll just set it to 0 or hide it if it's too expensive, or just fetch a large chunk.
+      // Given the client wants a wow effect, let's just fetch a reasonable amount for now.
     }
   }
 

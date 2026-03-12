@@ -29,8 +29,12 @@ namespace PharmacyApi.Data
         {
             base.OnModelCreating(builder);
 
+            // Unique Index on Code
+            builder.Entity<Medicine>().HasIndex(m => m.Code).IsUnique();
+
             // Configure decimal precision — existing
-            builder.Entity<Medicine>().Property(m => m.Price).HasPrecision(18, 2);
+            builder.Entity<Medicine>().Property(m => m.SalePrice).HasPrecision(18, 2);
+            builder.Entity<Medicine>().Property(m => m.PurchasePrice).HasPrecision(18, 2);
             builder.Entity<PurchaseMaster>().Property(p => p.TotalAmount).HasPrecision(18, 2);
             builder.Entity<PurchaseDetail>().Property(p => p.UnitCost).HasPrecision(18, 2);
             builder.Entity<PurchaseDetail>().Property(p => p.Subtotal).HasPrecision(18, 2);

@@ -5,13 +5,41 @@ namespace PharmacyApi.DTOs
     public class MedicineDto
     {
         public int MedicineId { get; set; }
+        public string Code { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string GenericName { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
-        public decimal Price { get; set; }
+        public string UOM { get; set; } = string.Empty;
+        public decimal PurchasePrice { get; set; }
+        public decimal SalePrice { get; set; }
         public int StockQuantity { get; set; }
+        public string? Batch { get; set; }
         public DateTime? ExpiryDate { get; set; }
         public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
+
+    public class MedicineSearchParameters
+    {
+        public string? SearchText { get; set; }
+        public string? Category { get; set; }
+        public string? GenericName { get; set; }
+        public DateTime? ExpiryFrom { get; set; }
+        public DateTime? ExpiryTo { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+    }
+
+    public class PagedResult<T>
+    {
+        public List<T> Items { get; set; } = new();
+        public int TotalCount { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
     }
 
     public class SupplierDto

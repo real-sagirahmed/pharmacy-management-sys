@@ -279,7 +279,7 @@ export class PurchaseFormComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.medicineService.getMedicines().subscribe(data => this.medicines = data);
+    this.medicineService.getMedicines({ pageNumber: 1, pageSize: 1000 }).subscribe(res => this.medicines = res.items);
     this.supplierService.getSuppliers().subscribe(data => this.suppliers = data);
     this.addItem();
   }

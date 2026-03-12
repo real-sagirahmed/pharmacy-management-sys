@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using PharmacyApi.Data;
 using PharmacyApi.DTOs;
 using PharmacyApi.Models;
+using PharmacyApi.Repositories;
+using PharmacyApi.DTOs;
 
 namespace PharmacyApi.Controllers
 {
@@ -12,103 +14,117 @@ namespace PharmacyApi.Controllers
     [ApiController]
     public class MedicinesController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IMedicineRepository _repo;
 
-        public MedicinesController(ApplicationDbContext context)
+        public MedicinesController(IMedicineRepository repo)
         {
-            _context = context;
+            _repo = repo;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<MedicineDto>>> GetMedicines()
+        public async Task<ActionResult<PagedResult<MedicineDto>>> GetMedicines([FromQuery] MedicineSearchParameters parms)
         {
-            return await _context.Medicines
-                .Select(m => new MedicineDto
-                {
-                    MedicineId = m.MedicineId,
-                    Name = m.Name,
-                    GenericName = m.GenericName,
-                    Category = m.Category,
-                    Price = m.Price,
-                    StockQuantity = m.StockQuantity,
-                    ExpiryDate = m.ExpiryDate,
-                    IsActive = m.IsActive
-                }).ToListAsync();
+            try
+            {
+                var result = await _repo.GetPagedAsync(parms);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching medicines.", error = ex.Message });
+            }
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<MedicineDto>> GetMedicine(int id)
         {
-            var m = await _context.Medicines.FindAsync(id);
-
-            if (m == null) return NotFound();
-
-            return new MedicineDto
+            try
             {
-                MedicineId = m.MedicineId,
-                Name = m.Name,
-                GenericName = m.GenericName,
-                Category = m.Category,
-                Price = m.Price,
-                StockQuantity = m.StockQuantity,
-                ExpiryDate = m.ExpiryDate,
-                IsActive = m.IsActive
-            };
+                var m = await _repo.GetByIdAsync(id);
+                if (m == null) return NotFound();
+                return Ok(m);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching medicine details.", error = ex.Message });
+            }
         }
 
         [HttpPost]
         public async Task<ActionResult<MedicineDto>> PostMedicine(MedicineDto medicineDto)
         {
-            var medicine = new Medicine
+            try
             {
-                Name = medicineDto.Name,
-                GenericName = medicineDto.GenericName,
-                Category = medicineDto.Category,
-                Price = medicineDto.Price,
-                StockQuantity = medicineDto.StockQuantity,
-                ExpiryDate = medicineDto.ExpiryDate,
-                IsActive = true
-            };
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            _context.Medicines.Add(medicine);
-            await _context.SaveChangesAsync();
+                if (await _repo.ExistsByNameAsync(medicineDto.Name))
+                    return BadRequest(new { message = "A medicine with this name already exists." });
 
-            medicineDto.MedicineId = medicine.MedicineId;
-            return CreatedAtAction("GetMedicine", new { id = medicine.MedicineId }, medicineDto);
+                var username = User.Identity?.Name ?? "System";
+                var result = await _repo.CreateAsync(medicineDto, username);
+
+                return CreatedAtAction("GetMedicine", new { id = result.MedicineId }, result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error creating medicine.", error = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutMedicine(int id, MedicineDto medicineDto)
         {
-            if (id != medicineDto.MedicineId) return BadRequest();
+            try
+            {
+                if (id != medicineDto.MedicineId) return BadRequest(new { message = "ID mismatch." });
 
-            var medicine = await _context.Medicines.FindAsync(id);
-            if (medicine == null) return NotFound();
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            medicine.Name = medicineDto.Name;
-            medicine.GenericName = medicineDto.GenericName;
-            medicine.Category = medicineDto.Category;
-            medicine.Price = medicineDto.Price;
-            medicine.StockQuantity = medicineDto.StockQuantity;
-            medicine.ExpiryDate = medicineDto.ExpiryDate;
-            medicine.IsActive = medicineDto.IsActive;
+                if (await _repo.ExistsByNameAsync(medicineDto.Name, id))
+                    return BadRequest(new { message = "Another medicine with this name already exists." });
 
-            _context.Entry(medicine).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+                var username = User.Identity?.Name ?? "System";
+                var success = await _repo.UpdateAsync(id, medicineDto, username);
+                
+                if (!success) return NotFound();
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating medicine.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("next-code")]
+        public async Task<ActionResult<string>> GetNextCode()
+        {
+            try
+            {
+                var code = await _repo.GetNextCodeAsync();
+                return Ok(new { code });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error generating next code.", error = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMedicine(int id)
         {
-            var medicine = await _context.Medicines.FindAsync(id);
-            if (medicine == null) return NotFound();
-
-            _context.Medicines.Remove(medicine);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            try
+            {
+                var success = await _repo.DeleteAsync(id);
+                if (!success) return NotFound();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error deleting medicine.", error = ex.Message });
+            }
         }
     }
 }

@@ -4,6 +4,26 @@
 
 ---
 
+- [2026-03-12 03:00 PM] - Medicine Feature Overhaul & UI Alignment
+- **Task:** Comprehensive Upgrade of Medicine Management
+- **Details:** 
+  - **Data Model:** `Medicine` টেবিলে `PurchasePrice`, `Batch` এবং `ExpiryDate` যোগ করা হয়েছে। জেনেরিক ও ক্যাটাগরি নাম (Category) বড় করার জন্য লিমিট ২৫০ ক্যারেক্টারে বাড়ানো হয়েছে।
+  - **UI/UX:** মেডিসিন লিস্টে এখন ১১টি কলাম (Code, Name, Category, Generic, UOM, Purchase, Sale, Batch, Expiry, Stock, Status) ডাইনামিকভাবে প্রদর্শিত হয়।
+  - **Navigation:** ফর্মে কী-বোর্ড নেভিগেশন (Enter key focus flow) এবং অটো-কোড জেনারেশন ইমপ্লিমেন্ট করা হয়েছে।
+  - **Features:** "Details View" (Eye icon) যোগ করা হয়েছে যা দিয়ে মেডিসিনের সকল তথ্য আলাদা পপ-আপে দেখা যায়।
+- **Technology:** ASP.NET Core 8, EF Core (Migrations), Angular 19, PrimeNG (Dialog, Select, InputNumber).
+- **Status:** COMPLETED & VERIFIED
+
+---
+
+- [2026-03-12 10:40 AM] - Deployment Lock Resolution & Maintenance Mode Fix
+- **Task:** Fixing FTP 550 Error & Tuning Maintenance Mode
+- **Details:** 
+  - **Deploy Fix:** `deploy.yml` ফাইলে `app_offline.htm` এর কন্টেন্টকে ডায়নামিক (timestamp-সহ) করা হয়েছে যাতে IIS রানিং প্রসেস রিলিজ করতে বাধ্য হয়।
+  - **Manual Cleanup:** অটো-ক্লিনআপ পাথের সমস্যার কারণে ফাইলটি ম্যানুয়ালি ডিলিট করে সাইট অনলাইনে ফিরিয়ে আনা হয়েছে।
+- **Technology:** GitHub Actions, IIS Configuration, FTP.
+- **Status:** COMPLETED & ONLINE
+
 - [2026-03-12 09:55 AM] - Taxes API Fix & Robust Error Reporting Overhaul
 - **Task:** Resolving 400 Bad Request & Enhancing Master Data Reliability
 - **Details:** 
