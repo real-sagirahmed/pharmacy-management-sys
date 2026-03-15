@@ -44,6 +44,9 @@ namespace PharmacyApi.Repositories
 
         public async Task<GenericDto> CreateAsync(GenericDto dto)
         {
+            if (await _context.Generics.AnyAsync(g => g.Name == dto.Name))
+                throw new InvalidOperationException($"Generic with name '{dto.Name}' already exists.");
+
             dto.Code = await GetNextCodeAsync("GEN");
 
             var entity = new Generic
@@ -80,6 +83,9 @@ namespace PharmacyApi.Repositories
 
             if (await _context.Generics.AnyAsync(g => g.Code == dto.Code && g.GenericId != id))
                 throw new InvalidOperationException($"Another Generic with Code '{dto.Code}' already exists.");
+
+            if (await _context.Generics.AnyAsync(g => g.Name == dto.Name && g.GenericId != id))
+                throw new InvalidOperationException($"Another Generic with Name '{dto.Name}' already exists.");
 
             entity.Code        = dto.Code;
             entity.Name        = dto.Name;

@@ -43,6 +43,9 @@ namespace PharmacyApi.Repositories
 
         public async Task<UomDto> CreateAsync(UomDto dto)
         {
+            if (await _context.Uoms.AnyAsync(u => u.Name == dto.Name))
+                throw new InvalidOperationException($"UOM with name '{dto.Name}' already exists.");
+
             dto.Code = await GetNextCodeAsync("UOM");
 
             var entity = new Uom
@@ -79,6 +82,9 @@ namespace PharmacyApi.Repositories
 
             if (await _context.Uoms.AnyAsync(u => u.Code == dto.Code && u.UomId != id))
                 throw new InvalidOperationException($"Another UOM with Code '{dto.Code}' already exists.");
+
+            if (await _context.Uoms.AnyAsync(u => u.Name == dto.Name && u.UomId != id))
+                throw new InvalidOperationException($"Another UOM with Name '{dto.Name}' already exists.");
 
             entity.Code        = dto.Code;
             entity.Name        = dto.Name;

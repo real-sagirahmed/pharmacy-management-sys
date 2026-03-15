@@ -45,6 +45,9 @@ namespace PharmacyApi.Repositories
 
         public async Task<TaxDto> CreateAsync(TaxDto dto)
         {
+            if (await _context.Taxes.AnyAsync(t => t.Name == dto.Name))
+                throw new InvalidOperationException($"Tax with name '{dto.Name}' already exists.");
+
             dto.Code = await GetNextCodeAsync("TAX");
 
             var entity = new Tax
@@ -82,6 +85,9 @@ namespace PharmacyApi.Repositories
 
             if (await _context.Taxes.AnyAsync(t => t.Code == dto.Code && t.TaxId != id))
                 throw new InvalidOperationException($"Another Tax with Code '{dto.Code}' already exists.");
+
+            if (await _context.Taxes.AnyAsync(t => t.Name == dto.Name && t.TaxId != id))
+                throw new InvalidOperationException($"Another Tax with Name '{dto.Name}' already exists.");
 
             entity.Code    = dto.Code;
             entity.Name    = dto.Name;

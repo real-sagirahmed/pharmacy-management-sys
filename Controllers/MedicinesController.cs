@@ -5,7 +5,6 @@ using PharmacyApi.Data;
 using PharmacyApi.DTOs;
 using PharmacyApi.Models;
 using PharmacyApi.Repositories;
-using PharmacyApi.DTOs;
 
 namespace PharmacyApi.Controllers
 {
@@ -144,6 +143,20 @@ namespace PharmacyApi.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Error toggling status.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("check-batch/{medicineId}/{batchNumber}")]
+        public async Task<ActionResult<bool>> CheckBatch(int medicineId, string batchNumber)
+        {
+            try
+            {
+                var exists = await _repo.BatchExistsAsync(medicineId, batchNumber);
+                return Ok(exists);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error checking batch.", error = ex.Message });
             }
         }
     }

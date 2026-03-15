@@ -6,6 +6,7 @@ import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { MessageService, ConfirmationService } from 'primeng/api';
+import { DatePipe } from '@angular/common';
 
 import { routes } from './app.routes';
 
@@ -22,6 +23,7 @@ export const appConfig: ApplicationConfig = {
     }),
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     MessageService,
-    ConfirmationService
+    ConfirmationService,
+    DatePipe
   ]
 };

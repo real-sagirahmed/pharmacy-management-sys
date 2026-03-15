@@ -4,11 +4,24 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface SalesDetail {
+  salesDetailId?: number;
   medicineId: number;
+  medicineName?: string;
   quantity: number;
   unitPrice: number;
   tax: number;
   subtotal: number;
+}
+
+export interface SalesPayment {
+  salesPaymentId?: number;
+  saleId: number;
+  paymentMethod: string;
+  amount: number;
+  accountNumber?: string;
+  transactionId?: string;
+  remarks?: string;
+  createdAt?: string;
 }
 
 export interface SalesMaster {
@@ -19,7 +32,11 @@ export interface SalesMaster {
   grandTotal: number;
   discount: number;
   paymentMethod: string;
+  paidAmount: number;
+  dueAmount: number;
+  paymentStatus: string;
   salesDetails: SalesDetail[];
+  salesPayments?: SalesPayment[];
 }
 
 @Injectable({

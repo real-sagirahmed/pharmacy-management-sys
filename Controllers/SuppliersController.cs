@@ -22,15 +22,16 @@ namespace PharmacyApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SupplierDto>>> GetSuppliers()
         {
-            return await _context.Suppliers
+            return await _context.Parties
+                .Where(p => p.PartyType == "Supplier" && p.IsActive)
                 .Select(s => new SupplierDto
                 {
-                    SupplierId = s.SupplierId,
-                    Name = s.Name,
-                    ContactPerson = s.ContactPerson,
-                    Phone = s.Phone,
-                    Email = s.Email,
-                    Address = s.Address,
+                    SupplierId = s.PartyId,
+                    Name = s.FullName,
+                    ContactPerson = s.FullName,
+                    Phone = s.Cell ?? string.Empty,
+                    Email = s.Email ?? string.Empty,
+                    Address = s.Address ?? string.Empty,
                     IsActive = s.IsActive
                 }).ToListAsync();
         }

@@ -21,7 +21,12 @@ builder.Services.AddScoped<IRepository<Tax, TaxDto>, TaxRepository>();
 builder.Services.AddScoped<IRepository<Uom, UomDto>, UomRepository>();
 builder.Services.AddScoped<IRepository<PharmacyApi.Models.Generic, GenericDto>, GenericMedicineRepository>();
 builder.Services.AddScoped<IRepository<Category, CategoryDto>, CategoryRepository>();
+builder.Services.AddScoped<IRepository<Manufacturer, ManufacturerDto>, ManufacturerRepository>();
+builder.Services.AddScoped<IRepository<DosageForm, DosageFormDto>, DosageFormRepository>();
+builder.Services.AddScoped<IRepository<CommonStrength, CommonStrengthDto>, CommonStrengthRepository>();
+builder.Services.AddScoped<IRepository<UseFor, UseForDto>, UseForRepository>();
 builder.Services.AddScoped<IMedicineRepository, MedicineRepository>();
+builder.Services.AddScoped<IPurchaseRepository, PurchaseRepository>();
 
 // Configure CORS
 builder.Services.AddCors(options =>

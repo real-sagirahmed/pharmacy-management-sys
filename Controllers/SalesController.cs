@@ -70,53 +70,89 @@ namespace PharmacyApi.Controllers
         [HttpPost]
         public async Task<ActionResult<SalesMaster>> PostSale(SalesMasterDto salesDto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync<ActionResult<SalesMaster>>(async () =>
             {
-                var sale = new SalesMaster
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    CustomerName = salesDto.CustomerName,
-                    CustomerPhone = salesDto.CustomerPhone,
-                    SaleDate = salesDto.SaleDate,
-                    GrandTotal = salesDto.GrandTotal,
-                    Discount = salesDto.Discount,
-                    PaymentMethod = salesDto.PaymentMethod
-                };
-
-                foreach (var item in salesDto.SalesDetails)
-                {
-                    // Check Stock
-                    var medicine = await _context.Medicines.FindAsync(item.MedicineId);
-                    if (medicine == null || medicine.StockQuantity < item.Quantity)
+                    var sale = new SalesMaster
                     {
-                        return BadRequest($"Insufficient stock for {medicine?.Name ?? "Medicine"}");
+                        CustomerName = salesDto.CustomerName,
+                        CustomerPhone = salesDto.CustomerPhone,
+                        SaleDate = salesDto.SaleDate,
+                        GrandTotal = salesDto.GrandTotal,
+                        Discount = salesDto.Discount,
+                        PaymentMethod = salesDto.PaymentMethod,
+                        PaidAmount = salesDto.PaidAmount,
+                        DueAmount = salesDto.GrandTotal - salesDto.PaidAmount,
+                        CreatedBy = User.Identity?.Name
+                    };
+
+                    // Set Payment Status
+                    if (sale.DueAmount <= 0) sale.PaymentStatus = "Paid";
+                    else if (sale.PaidAmount > 0) sale.PaymentStatus = "Partial";
+                    else sale.PaymentStatus = "Due";
+
+                    foreach (var item in salesDto.SalesDetails)
+                    {
+                        var medicine = await _context.Medicines.FindAsync(item.MedicineId);
+                        if (medicine == null || medicine.StockQuantity < item.Quantity)
+                        {
+                            return BadRequest($"Insufficient stock for {medicine?.Name ?? "Medicine"}");
+                        }
+
+                        var detail = new SalesDetail
+                        {
+                            MedicineId = item.MedicineId,
+                            Quantity = item.Quantity,
+                            UnitPrice = item.UnitPrice,
+                            Tax = item.Tax,
+                            Subtotal = item.Subtotal
+                        };
+                        sale.SalesDetails.Add(detail);
+
+                        medicine.StockQuantity -= item.Quantity;
                     }
 
-                    var detail = new SalesDetail
+                    // Record initial payments if any
+                    if (salesDto.SalesPayments != null && salesDto.SalesPayments.Any())
                     {
-                        MedicineId = item.MedicineId,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice,
-                        Tax = item.Tax,
-                        Subtotal = item.Subtotal
-                    };
-                    sale.SalesDetails.Add(detail);
+                        foreach (var p in salesDto.SalesPayments)
+                        {
+                            sale.SalesPayments.Add(new SalesPayment
+                            {
+                                PaymentMethod = p.PaymentMethod,
+                                Amount = p.Amount,
+                                AccountNumber = p.AccountNumber,
+                                TransactionId = p.TransactionId,
+                                Remarks = p.Remarks
+                            });
+                        }
+                    }
+                    else if (sale.PaidAmount > 0)
+                    {
+                        // Fallback: If no explicit payments list but PaidAmount > 0, create one entry
+                        sale.SalesPayments.Add(new SalesPayment
+                        {
+                            PaymentMethod = sale.PaymentMethod,
+                            Amount = sale.PaidAmount,
+                            Remarks = "Initial Payment"
+                        });
+                    }
 
-                    // Deduct Stock
-                    medicine.StockQuantity -= item.Quantity;
+                    _context.SalesMasters.Add(sale);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return CreatedAtAction("GetSale", new { id = sale.SaleId }, sale);
                 }
-
-                _context.SalesMasters.Add(sale);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return CreatedAtAction("GetSale", new { id = sale.SaleId }, sale);
-            }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync();
-                return BadRequest("Error saving sale.");
-            }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest($"Error saving sale: {ex.Message}");
+                }
+            });
         }
     }
 }

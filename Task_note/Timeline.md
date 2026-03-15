@@ -4,6 +4,73 @@
 
 ---
 
+- [2026-03-15 07:25 AM] - Deep Infrastructure & Project State Analysis
+- **Task:** Comprehensive Audit & Reporting of Database, Backend, and Frontend
+- **Details:**
+  - **Project Audit:** পুরো প্রজেক্টের ডাটাবেস স্কিমা, রিপোজিটরি প্যাটার্ন এবং ফ্রন্টএন্ড আর্কিটেকচার গভীরভাবে বিশ্লেষণ করা হয়েছে।
+  - **UI/UX Consistency:** Medicine Inventory এবং Procurement Records পেজগুলোর লেআউট, হেডার এবং টুলবার ১০০% অ্যালাইন করা হয়েছে।
+  - **Stock Logic:** FEFO (First-Expire-First-Out) লজিকের কার্যকারিতা যাচাই করা হয়েছে, যা ব্যাচ-উইজ স্টক এবং সেলস ক্যালকুলেশন নিখুঁতভাবে পরিচালনা করছে।
+  - **Report Generation:** বর্তমানে প্রজেক্টটি একটি স্থিতিশীল এবং ফাংশনাল অবস্থায় আছে, যেখানে ইনভেন্টরি এবং পার্চেসিং সাইকেল সম্পূর্ণভাবে কাজ করছে।
+- **Technology:** ASP.NET Core 8, Angular 19, PrimeNG, PDF Engine.
+- **Status:** ANALYZED & DOCUMENTED
+
+- [2026-03-15 01:00 AM] - Medicine Inventory UI Realignment
+- **Task:** Mirroring Procurement Records Header & Toolbar Layout
+- **Details:**
+  - **Layout Sync:** Medicine Inventory পেজের হেডার সেকশন (Title, Buttons, Toolbar) পুরোপুরি Procurement Records-এর মতো করে নতুনভাবে সাজানো হয়েছে।
+  - **Visual Consistency:** উইজেটগুলোর অ্যালাইনমেন্ট এবং টুলবারের বাটনগুলোর পজিশন সামঞ্জস্যপূর্ণ করা হয়েছে যাতে এক মডিউল থেকে অন্য মডিউলে গেলে অভিজ্ঞতায় কোনো পার্থক্য না থাকে।
+- **Technology:** Angular 19, CSS Flexbox/Grid.
+- **Status:** COMPLETED & VERIFIED
+
+---
+
+- [2026-03-14 10:00 AM] - GRN PDF Printing
+- **Task:** Goods Received Note (GRN) PDF Generation & Print Feature
+- **Details:**
+  - **Save & Print:** Purchase Form-এ "Save & Print" বাটন যুক্ত করা হয়েছে। পার্চেস সেভের পরই স্বয়ংক্রিয়ভাবে GRN-এর পিডিএফ প্রিভিউ খোলে।
+  - **Print from List:** Purchase List-এ প্রতিটি রেকর্ডের পাশে Print আইকন যোগ করা হয়েছে, যা দিয়ে যেকোনো পুরনো পার্চেসের GRN সহজেই প্রিন্ট করা যায়।
+  - **PDF Template:** পেশাদার GRN লেআউট তৈরি করা হয়েছে, যাতে সাপ্লায়ার তথ্য, আইটেম টেবিল (Batch, Expiry, Qty, Rate, Total) এবং সারসংক্ষেপ অন্তর্ভুক্ত।
+  - **Backend:** `PurchasesController`-এ GRN ডেটা ফেচ করার জন্য নতুন endpoint যুক্ত করা হয়েছে।
+- **Technology:** ASP.NET Core 8, Angular 19, Browser Print API / PDF Generation.
+- **Status:** COMPLETED & VERIFIED
+
+---
+
+- [2026-03-13 05:00 PM] - Sticky Header Layout Fix
+- **Task:** Fixed Sticky/Fixed Header for All List Pages
+- **Details:**
+  - **CSS Fix:** Page Title, Toolbar (Search + Add Button) এবং Table Header — এই তিনটি অংশ একসাথে স্ক্রিনের উপরে Fixed থাকার ব্যবস্থা করা হয়েছে।
+  - **Z-index & Overlap:** `position: sticky`, `top`, `z-index` এবং `background` প্রপার্টি সঠিকভাবে সেট করা হয়েছে যাতে স্ক্রোল করলে কনটেন্টের সাথে কোনো ওভারল্যাপ না হয়।
+  - **Global Impact:** একাধিক লিস্ট কম্পোনেন্টে (Medicine, Purchase, Party, Master Data) এই ফিক্স প্রয়োগ করা হয়েছে।
+- **Technology:** Angular 19, CSS (position: sticky, z-index).
+- **Status:** COMPLETED & VERIFIED
+
+---
+
+- [2026-03-13 11:15 AM] - Master Data Name Validation (Unique Constraint)
+- **Task:** Enforcing Unique Names for All Master Data Entities
+- **Details:**
+  - **Database Level:** Tax, UOM, Generic, Category, Manufacturer, DosageForm, CommonStrength এবং Indication — সকল Master Data টেবিলে `Name` কলামে ডেটাবেজ-লেভেলে **Unique Index** যোগ করা হয়েছে।
+  - **Repository Level:** প্রতিটি Repository-তে `IsNameUniqueAsync()` মেথড যুক্ত করা হয়েছে, যা নতুন এন্ট্রি বা আপডেটের সময় ডুপ্লিকেট নাম আছে কিনা চেক করে।
+  - **Controller Validation:** Controller-এ এই চেক ব্যবহার করে `400 Bad Request` এবং স্পষ্ট এরর মেসেজ রিটার্ন করা হয়।
+  - **Frontend UX:** ফ্রন্টএন্ডে Toast নোটিফিকেশনে সার্ভারের নির্দিষ্ট ভ্যালিডেশন মেসেজ প্রদর্শিত হয়।
+- **Technology:** ASP.NET Core 8, EF Core (Unique Index Migration), Angular 19, PrimeNG Toast.
+- **Status:** COMPLETED & VERIFIED
+
+---
+
+- [2026-03-13 12:40 PM] - Purchase Module Modernization
+- **Task:** Comprehensive Upgrade of Purchase Module (Form & List)
+- **Details:** 
+  - **Purchase List:** PrimeNG Table ব্যবহার করে একটি প্রফেশনাল ডাটা টেবিল যুক্ত করা হয়েছে। এতে সার্ভার-সাইড প্যাগিনেশন এবং ইনভয়েস/সাপ্লায়ার অনুযায়ী সার্চ সুবিধা রয়েছে।
+  - **Enhanced Form:** আধুনিক ডিজাইন (Glassmorphism), কিবোর্ড শর্টকাট (Enter key navigation), এবং রিয়েল-টাইম ক্যালকুলেশন সহ পর্চেস ফর্ম উন্নত করা হয়েছে।
+  - **Backend Support:** `PurchaseRepository`-তে `GetPagedAsync` মেথড এবং `PurchasesController`-এ নতুন এন্ডপয়েন্ট যুক্ত করা হয়েছে।
+  - **Navigation:** ড্যাশবোর্ডের Procurement এবং New Purchase লিঙ্কগুলো নতুন রাউটের সাথে ইন্টিগ্রেট করা হয়েছে।
+- **Technology:** ASP.NET Core 8, Angular 19, PrimeNG, Repository Pattern.
+- **Status:** COMPLETED & VERIFIED
+
+---
+
 - [2026-03-12 04:20 PM] - Batch-wise Stock Reporting & FEFO Logic
 - **Task:** Granular Stock Tracking per Batch in Details View
 - **Details:** 
@@ -45,6 +112,18 @@
   - **Manual Cleanup:** অটো-ক্লিনআপ পাথের সমস্যার কারণে ফাইলটি ম্যানুয়ালি ডিলিট করে সাইট অনলাইনে ফিরিয়ে আনা হয়েছে।
 - **Technology:** GitHub Actions, IIS Configuration, FTP.
 - **Status:** COMPLETED & ONLINE
+---
+
+- [2026-03-12 10:15 AM] - Master Data Expansion (Phase 6)
+- **Task:** Infrastructure for Manufacturers, Dosage Forms, Strengths, and Indications
+- **Details:**
+    - **Models & Repositories:** Manufacturer, DosageForm, CommonStrength, এবং UseFor (Indications)-এর জন্য ব্যাকএন্ড মডেল ও রিপোজিটরি তৈরি।
+    - **CRUD Logic:** অটো-কোড জেনারেশন (MFG, DSG, STR, USF) সহ সম্পূর্ণ CRUD অপারেশন ইমপ্লিমেন্টেশন।
+    - **Frontend:** ৪টি নতুন সার্ভিস এবং PrimeNG-ভিত্তিক লিস্ট কম্পোনেন্ট তৈরি করে রাউটিং-এ ইন্টিগ্রেট করা হয়েছে।
+- **Technology:** ASP.NET Core 8, Angular 19, Repository Pattern.
+- **Status:** COMPLETED & VERIFIED
+
+---
 
 - [2026-03-12 09:55 AM] - Taxes API Fix & Robust Error Reporting Overhaul
 - **Task:** Resolving 400 Bad Request & Enhancing Master Data Reliability

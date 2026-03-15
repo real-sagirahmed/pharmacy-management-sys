@@ -1,0 +1,311 @@
+<div class="page-wrap animate-fadein-up">
+    <p-toast></p-toast>
+
+    <!-- Sticky Header Area -->
+    <div id="main-sticky-zone" class="sticky-header">
+        <div class="page-head pt-2 pb-1 px-4">
+            <div style="margin-left: 12px;">
+                <h1 class="page-title">Due Collection</h1>
+                <p class="page-sub text-xs">Manage and collect outstanding dues from customers and suppliers.</p>
+            </div>
+        </div>
+
+        <div class="table-toolbar px-4 py-2">
+            <p-tabs [value]="activeTab">
+                <p-tablist>
+                    <p-tab [value]="0" (click)="onTabChange(0)">
+                        <i class="pi pi-users mr-2"></i> Customer Dues
+                    </p-tab>
+                    <p-tab [value]="1" (click)="onTabChange(1)">
+                        <i class="pi pi-truck mr-2"></i> Supplier Dues
+                    </p-tab>
+                </p-tablist>
+            </p-tabs>
+        </div>
+    </div>
+
+    <div class="px-4 pb-4">
+        <div class="table-card">
+            <div class="table-responsive">
+                <!-- Sales Dues Table -->
+                <p-table *ngIf="activeTab === 0" [value]="salesDues()" [loading]="loading" 
+                         [scrollable]="true" scrollHeight="calc(100vh - 230px)" styleClass="p-datatable-sm"
+                         dataKey="saleId" [expandedRowKeys]="expandedRows" (onRowExpand)="onRowExpand($event)">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 3rem"></th>
+                            <th>Invoice Date</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-right">Paid</th>
+                            <th class="text-right">Balance Due</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-due let-expanded="expanded">
+                        <tr>
+                            <td>
+                                <button type="button" pButton pRipple [pRowToggler]="due" 
+                                        class="p-button-text p-button-rounded p-button-plain p-button-sm" 
+                                        [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
+                                </button>
+                            </td>
+                            <td>{{ due.saleDate | date:'dd-MMM-yyyy' }}</td>
+                            <td class="font-semibold">{{ due.customerName }}</td>
+                            <td class="text-muted text-xs">{{ due.customerPhone }}</td>
+                            <td class="text-right">{{ due.grandTotal | number:'1.2-2' }}</td>
+                            <td class="text-right text-green">{{ due.paidAmount | number:'1.2-2' }}</td>
+                            <td class="text-right text-red font-bold">{{ due.dueAmount | number:'1.2-2' }}</td>
+                            <td class="text-center">
+                                <button class="btn-pay" (click)="openPayDialog(due)">Collect Now</button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="rowexpansion" let-due>
+                        <tr>
+                            <td colspan="8">
+                                <div class="p-3 history-panel">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h4 class="text-sm font-bold flex items-center gap-2">
+                                            <i class="pi pi-history text-teal"></i> Payment History
+                                        </h4>
+                                        <button pButton icon="pi pi-print" label="Print Statement" 
+                                                class="p-button-text p-button-sm text-teal" (click)="printHistory(due)">
+                                        </button>
+                                    </div>
+                                    <p-table [value]="paymentHistory()" [loading]="loadingHistory" styleClass="p-datatable-sm border-round shadow-1">
+                                        <ng-template pTemplate="header">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Method</th>
+                                                <th>Account</th>
+                                                <th>Transaction ID</th>
+                                                <th class="text-right">Amount</th>
+                                                <th>Remarks</th>
+                                            </tr>
+                                        </ng-template>
+                                        <ng-template pTemplate="body" let-pay>
+                                            <tr>
+                                                <td class="text-xs">{{ pay.createdAt | date:'dd/MM/yy hh:mm a' }}</td>
+                                                <td><span class="badge badge-slate">{{ pay.paymentMethod }}</span></td>
+                                                <td class="text-xs">{{ pay.accountNumber || '-' }}</td>
+                                                <td class="text-xs font-mono">{{ pay.transactionId || '-' }}</td>
+                                                <td class="text-right font-bold">{{ pay.amount | number:'1.2-2' }}</td>
+                                                <td class="text-xs italic">{{ pay.remarks || '-' }}</td>
+                                            </tr>
+                                        </ng-template>
+                                        <ng-template pTemplate="emptymessage">
+                                            <tr><td colspan="6" class="text-center py-2 text-xs">No history found.</td></tr>
+                                        </ng-template>
+                                    </p-table>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="8" class="text-center p-4">No outstanding sales dues found.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+
+                <!-- Purchase Dues Table -->
+                <p-table *ngIf="activeTab === 1" [value]="purchaseDues()" [loading]="loading" 
+                         [scrollable]="true" scrollHeight="calc(100vh - 230px)" styleClass="p-datatable-sm"
+                         dataKey="purchaseId" [expandedRowKeys]="expandedRows" (onRowExpand)="onRowExpand($event)">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 3rem"></th>
+                            <th>GRN Date</th>
+                            <th>GRN Code</th>
+                            <th>Supplier</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-right">Paid</th>
+                            <th class="text-right">Balance Due</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-due let-expanded="expanded">
+                        <tr>
+                            <td>
+                                <button type="button" pButton pRipple [pRowToggler]="due" 
+                                        class="p-button-text p-button-rounded p-button-plain p-button-sm" 
+                                        [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
+                                </button>
+                            </td>
+                            <td>{{ due.purchaseDate | date:'dd-MMM-yyyy' }}</td>
+                            <td><span class="badge badge-teal">{{ due.grnCode }}</span></td>
+                            <td class="font-semibold">{{ due.supplierName }}</td>
+                            <td class="text-right">{{ due.grandTotal | number:'1.2-2' }}</td>
+                            <td class="text-right text-green">{{ due.paidAmount | number:'1.2-2' }}</td>
+                            <td class="text-right text-red font-bold">{{ due.dueAmount | number:'1.2-2' }}</td>
+                            <td class="text-center">
+                                <button class="btn-pay" (click)="openPayDialog(due)">Pay Now</button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="rowexpansion" let-due>
+                        <tr>
+                            <td colspan="8">
+                                <div class="p-3 history-panel">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h4 class="text-sm font-bold flex items-center gap-2">
+                                            <i class="pi pi-history text-teal"></i> Payment History
+                                        </h4>
+                                        <button pButton icon="pi pi-print" label="Print Statement" 
+                                                class="p-button-text p-button-sm text-teal" (click)="printHistory(due)">
+                                        </button>
+                                    </div>
+                                    <p-table [value]="paymentHistory()" [loading]="loadingHistory" styleClass="p-datatable-sm border-round shadow-1">
+                                        <ng-template pTemplate="header">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Method</th>
+                                                <th>Account</th>
+                                                <th>Transaction ID</th>
+                                                <th class="text-right">Amount</th>
+                                                <th>Remarks</th>
+                                            </tr>
+                                        </ng-template>
+                                        <ng-template pTemplate="body" let-pay>
+                                            <tr>
+                                                <td class="text-xs">{{ pay.createdAt | date:'dd/MM/yy hh:mm a' }}</td>
+                                                <td><span class="badge badge-slate">{{ pay.paymentMethod }}</span></td>
+                                                <td class="text-xs">{{ pay.accountNumber || '-' }}</td>
+                                                <td class="text-xs font-mono">{{ pay.transactionId || '-' }}</td>
+                                                <td class="text-right font-bold">{{ pay.amount | number:'1.2-2' }}</td>
+                                                <td class="text-xs italic">{{ pay.remarks || '-' }}</td>
+                                            </tr>
+                                        </ng-template>
+                                        <ng-template pTemplate="emptymessage">
+                                            <tr><td colspan="6" class="text-center py-2 text-xs">No history found.</td></tr>
+                                        </ng-template>
+                                    </p-table>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="8" class="text-center p-4">No outstanding purchase dues found.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Multi-Mode Payment Dialog -->
+    <p-dialog [(visible)]="showPayDialog" [modal]="true" [header]="activeTab === 0 ? 'Collect Payment' : 'Pay Supplier'" 
+              styleClass="premium-dialog" [draggable]="false" [resizable]="false" 
+              [breakpoints]="{ '960px': '95vw' }" [blockScroll]="true">
+        <div *ngIf="selectedDue" class="flex flex-col bg-white overflow-hidden" style="height: 100%; width: 100%;">
+            <!-- Summary Header - Standardized Alignment -->
+            <div class="due-info-card m-10 grid grid-cols-2 gap-12 shadow-sm p-12 bg-white">
+                <div class="flex flex-col justify-center border-r-2 border-slate-100 pr-12">
+                    <span class="text-sm text-slate-500 uppercase font-bold tracking-widest mb-4">Total Invoice Amount</span>
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-black text-6xl text-slate-900">{{ selectedDue.grandTotal | number:'1.2-2' }}</span>
+                        <span class="text-2xl font-bold text-slate-400">Tk</span>
+                    </div>
+                </div>
+                <div class="flex flex-col text-red items-end justify-center pl-12">
+                    <span class="text-sm text-red-400 uppercase font-bold tracking-widest mb-4">Current Net Balance Due</span>
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-black text-9xl text-red-600 leading-none">{{ selectedDue.dueAmount | number:'1.2-2' }}</span>
+                        <span class="text-3xl font-bold text-red-400">Tk</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="payment-modes-container border-t flex-grow flex flex-col overflow-hidden bg-slate-50 p-12">
+                <div class="flex justify-between items-end mb-12 px-2">
+                    <div class="flex flex-col">
+                        <h4 class="text-4xl font-black text-slate-800 flex items-center gap-4">
+                            <i class="pi pi-credit-card text-5xl text-teal"></i> Payment Distribution
+                        </h4>
+                        <p class="text-lg text-slate-500 mt-3">Allocate the payment across one or more payment methods</p>
+                    </div>
+                    <button class="btn-add-mode p-6 px-12 text-xl shadow-lg flex items-center gap-3" (click)="addPaymentRow()">
+                        <i class="pi pi-plus-circle text-2xl"></i> Add Another Method
+                    </button>
+                </div>
+
+                <div class="modes-list flex-grow scroll-shadow px-2" style="overflow-y: auto; padding-bottom: 40px;">
+                    <div *ngFor="let row of paymentRows(); let i = index" class="mode-row animate-fadein">
+                        <div class="mode-grid">
+                            <div class="flex flex-col gap-1">
+                                <label class="mode-label">Method</label>
+                                <p-select [options]="paymentMethods" [(ngModel)]="row.paymentMethod" 
+                                          optionLabel="label" optionValue="value" styleClass="w-full mode-select">
+                                    <ng-template let-item pTemplate="item">
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <i [class]="item.icon" [style.color]="'#0d9488'"></i>
+                                            <span>{{ item.label }}</span>
+                                        </div>
+                                    </ng-template>
+                                </p-select>
+                            </div>
+
+                            <div class="flex flex-col gap-1">
+                                <label class="mode-label">Amount (Tk)</label>
+                                <p-inputNumber [(ngModel)]="row.amount" styleClass="w-full" 
+                                              inputStyleClass="w-full mode-amount text-center font-bold" 
+                                              [min]="0" mode="decimal" [minFractionDigits]="2"></p-inputNumber>
+                            </div>
+
+                            <div class="flex flex-col gap-1" *ngIf="row.paymentMethod !== 'Cash'">
+                                <label class="mode-label">Ref/Account</label>
+                                <input type="text" [(ngModel)]="row.accountNumber" pInputText class="w-full text-xs py-2" placeholder="ID/No.">
+                            </div>
+
+                            <div class="flex flex-col gap-1 flex-grow">
+                                <label class="mode-label">Remarks</label>
+                                <input type="text" [(ngModel)]="row.remarks" pInputText class="w-full text-xs py-2" placeholder="Optional note">
+                            </div>
+
+                            <div class="flex items-center justify-center pb-1">
+                                <button class="btn-remove-row" (click)="removePaymentRow(i)" *ngIf="paymentRows().length > 1" pTooltip="Remove">
+                                    <i class="pi pi-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="total-bar mt-6 shadow-lg">
+                    <div class="flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <span class="text-xs opacity-80 uppercase font-bold">Total Being Paid</span>
+                            <span class="font-black text-2xl" [class.text-amber-400]="getTotalPaymentAmount() > selectedDue.dueAmount + 0.01">
+                                {{ getTotalPaymentAmount() | number:'1.2-2' }} Tk
+                            </span>
+                        </div>
+                        <div class="text-right" *ngIf="selectedDue.dueAmount - getTotalPaymentAmount() >= 0">
+                            <span class="text-xs opacity-80 uppercase font-bold">Remaining After</span>
+                            <div class="font-bold text-lg text-emerald-400">
+                                {{ selectedDue.dueAmount - getTotalPaymentAmount() | number:'1.2-2' }} Tk
+                            </div>
+                        </div>
+                        <div class="text-right bg-red-600 px-3 py-1 rounded" *ngIf="getTotalPaymentAmount() > selectedDue.dueAmount + 0.01">
+                            <span class="text-xs font-bold">EXCEEDS DUE!</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <ng-template pTemplate="footer">
+            <div class="px-6 py-4 flex justify-end gap-3 border-t bg-slate-50 w-full">
+                <button class="btn-cancel" (click)="showPayDialog=false">Not Now</button>
+                <button class="btn-save" (click)="savePayment()" 
+                        [disabled]="getTotalPaymentAmount() <= 0 || getTotalPaymentAmount() > selectedDue.dueAmount + 0.01 || saving">
+                    <i class="pi pi-check-circle mr-1" *ngIf="!saving"></i>
+                    <i class="pi pi-spin pi-spinner mr-1" *ngIf="saving"></i>
+                    Confirm & Post Payment
+                </button>
+            </div>
+        </ng-template>
+    </p-dialog>
+</div>

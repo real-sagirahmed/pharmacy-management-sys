@@ -5,8 +5,10 @@ import { ForgotPasswordComponent } from './components/forgot-password/forgot-pas
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { MedicineListComponent } from './components/medicines/medicine-list.component';
+import { PurchaseListComponent } from './components/purchases/purchase-list.component';
 import { PurchaseFormComponent } from './components/purchases/purchase-form.component';
 import { SalesFormComponent } from './components/sales/sales-form.component';
+import { DueCollectionComponent } from './components/due-collection/due-collection.component';
 import { UserManagementComponent } from './components/dashboard/user-management/user-management.component';
 import { AuthGuard } from './guards/auth.guard';
 
@@ -16,6 +18,10 @@ import { TaxListComponent } from './components/taxes/tax-list.component';
 import { UomListComponent } from './components/uoms/uom-list.component';
 import { GenericListComponent } from './components/generics/generic-list.component';
 import { CategoryListComponent } from './components/categories/category-list.component';
+import { ManufacturerListComponent } from './components/manufacturers/manufacturer-list.component';
+import { DosageFormListComponent } from './components/dosage-forms/dosage-form-list.component';
+import { CommonStrengthListComponent } from './components/common-strengths/common-strength-list.component';
+import { UseForListComponent } from './components/use-for/use-for-list.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -28,8 +34,10 @@ export const routes: Routes = [
     canActivate: [AuthGuard],
     children: [
       { path: 'medicines',   component: MedicineListComponent },
-      { path: 'purchases',   component: PurchaseFormComponent },
+      { path: 'purchases',       component: PurchaseListComponent },
+      { path: 'purchases/new',   component: PurchaseFormComponent },
       { path: 'sales',       component: SalesFormComponent },
+      { path: 'due-collection', component: DueCollectionComponent },
       { path: 'users',       component: UserManagementComponent },
       // ─── Master Data Routes ───
       { path: 'parties',    component: PartyListComponent },
@@ -37,7 +45,10 @@ export const routes: Routes = [
       { path: 'uoms',       component: UomListComponent },
       { path: 'generics',   component: GenericListComponent },
       { path: 'categories', component: CategoryListComponent },
-      { path: '', redirectTo: 'medicines', pathMatch: 'full' }
+      { path: 'manufacturers', component: ManufacturerListComponent },
+      { path: 'dosage-forms', component: DosageFormListComponent },
+      { path: 'strengths', component: CommonStrengthListComponent },
+      { path: 'indications', component: UseForListComponent }
     ]
   },
   { path: '', redirectTo: '/login', pathMatch: 'full' },

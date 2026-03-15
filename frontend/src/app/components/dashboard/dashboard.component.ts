@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { MedicineService } from '../../services/medicine.service';
@@ -73,6 +74,12 @@ import { SalesService } from '../../services/sales.service';
               <span class="nav-label">Sales POS</span>
             </a>
 
+            <a class="nav-item" *ngIf="isAdmin() || isManager() || isCashier()"
+               routerLink="/dashboard/due-collection" routerLinkActive="nav-active">
+              <i class="pi pi-wallet nav-icon"></i>
+              <span class="nav-label">Due Collection</span>
+            </a>
+
             <a class="nav-item" *ngIf="isAdmin()"
                routerLink="/dashboard/users" routerLinkActive="nav-active">
               <i class="pi pi-users nav-icon"></i>
@@ -110,6 +117,30 @@ import { SalesService } from '../../services/sales.service';
                routerLink="/dashboard/categories" routerLinkActive="nav-active">
               <i class="pi pi-tags nav-icon"></i>
               <span class="nav-label">Categories</span>
+            </a>
+
+            <a class="nav-item" *ngIf="isAdmin() || isManager()"
+               routerLink="/dashboard/manufacturers" routerLinkActive="nav-active">
+              <i class="pi pi-briefcase nav-icon"></i>
+              <span class="nav-label">Manufacturers</span>
+            </a>
+
+            <a class="nav-item" *ngIf="isAdmin() || isManager()"
+               routerLink="/dashboard/dosage-forms" routerLinkActive="nav-active">
+              <i class="pi pi-box nav-icon"></i>
+              <span class="nav-label">Dosage Forms</span>
+            </a>
+
+            <a class="nav-item" *ngIf="isAdmin() || isManager()"
+               routerLink="/dashboard/strengths" routerLinkActive="nav-active">
+              <i class="pi pi-bolt nav-icon"></i>
+              <span class="nav-label">Strengths</span>
+            </a>
+
+            <a class="nav-item" *ngIf="isAdmin() || isManager()"
+               routerLink="/dashboard/indications" routerLinkActive="nav-active">
+              <i class="pi pi-heart nav-icon"></i>
+              <span class="nav-label">Indications</span>
             </a>
           </nav>
 
@@ -172,13 +203,13 @@ import { SalesService } from '../../services/sales.service';
                 <i class="pi pi-arrow-right kpi-arrow"></i>
               </div>
 
-              <div class="kpi-card kpi-indigo" *ngIf="isManager() || isAdmin()" (click)="navigate('/dashboard/purchases')">
+              <div class="kpi-card kpi-indigo" *ngIf="isManager() || isAdmin()" (click)="navigate('/dashboard/purchases/new')">
                 <div class="kpi-icon-wrap kpi-indigo-icon">
                   <i class="pi pi-shopping-bag"></i>
                 </div>
                 <div class="kpi-info">
                   <span class="kpi-label">Procurement</span>
-                  <span class="kpi-value">New Order</span>
+                  <span class="stat-value" style="font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1.1;">New Order</span>
                   <span class="kpi-meta">purchase from supplier</span>
                 </div>
                 <i class="pi pi-arrow-right kpi-arrow"></i>
@@ -192,13 +223,17 @@ import { SalesService } from '../../services/sales.service';
                 <div class="action-icon teal-bg"><i class="pi pi-box"></i></div>
                 <span>Medicine Inventory</span>
               </div>
-              <div class="action-tile" *ngIf="isManager() || isAdmin()" (click)="navigate('/dashboard/purchases')">
+              <div class="action-tile" *ngIf="isManager() || isAdmin()" (click)="navigate('/dashboard/purchases/new')">
                 <div class="action-icon indigo-bg"><i class="pi pi-shopping-bag"></i></div>
                 <span>New Purchase</span>
               </div>
               <div class="action-tile" *ngIf="isCashier() || isAdmin()" (click)="navigate('/dashboard/sales')">
                 <div class="action-icon emerald-bg"><i class="pi pi-desktop"></i></div>
                 <span>Point of Sale</span>
+              </div>
+              <div class="action-tile" *ngIf="isAdmin() || isManager() || isCashier()" (click)="navigate('/dashboard/due-collection')">
+                <div class="action-icon amber-bg" style="background: linear-gradient(135deg, #f59e0b, #d97706);"><i class="pi pi-wallet"></i></div>
+                <span>Due Collection</span>
               </div>
               <div class="action-tile" *ngIf="isAdmin()" (click)="navigate('/dashboard/users')">
                 <div class="action-icon purple-bg"><i class="pi pi-users"></i></div>
@@ -381,13 +416,13 @@ import { SalesService } from '../../services/sales.service';
       flex: 1;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 28px;
+      padding: 0; /* Removed global padding to allow sticky headers to touch the top */
       display: flex;
       flex-direction: column;
     }
 
     /* ─── Dashboard Home ─── */
-    .dashboard-home { display: flex; flex-direction: column; gap: 28px; }
+    .dashboard-home { display: flex; flex-direction: column; gap: 28px; padding: 28px; }
 
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; }
     .page-title  { font-size: 1.6rem; font-weight: 800; color: #0f172a; margin: 0 0 4px; letter-spacing: -.02em; }
@@ -497,6 +532,7 @@ export class DashboardComponent implements OnInit {
   medicineCount = 0;
   lowStockCount = 0;
   sidebarOpen = signal(true);
+  currentUrl = signal('/dashboard');
 
   constructor(
     private router: Router,
@@ -508,6 +544,15 @@ export class DashboardComponent implements OnInit {
     this.user = this.authService.currentUserValue;
     this.updateTime();
     setInterval(() => this.updateTime(), 60000);
+
+    // Initial URL সেট করা হচ্ছে যাতে রিলোড করলে সঠিক পেইজ দেখায়
+    this.currentUrl.set(this.router.url);
+
+    // URL সঠিকভাবে ট্র্যাক করার জন্য NavigationEnd ব্যবহার করা হচ্ছে
+    // এতে blink/flash সমস্যা দূর হবে
+    this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e: any) => this.currentUrl.set(e.urlAfterRedirects));
 
     if (this.isPharmacist() || this.isAdmin()) {
       this.medicineService.getMedicines({ pageNumber: 1, pageSize: 1 }).subscribe(res => {
@@ -521,10 +566,10 @@ export class DashboardComponent implements OnInit {
 
   updateTime() {
     const now = new Date();
-    this.currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    this.currentTime = now.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/,/g, '');
   }
 
-  isRoot() { return this.router.url === '/dashboard'; }
+  isRoot() { return this.currentUrl() === '/dashboard'; }
   isAdmin()      { return this.authService.getRoles().includes('Admin'); }
   isPharmacist() { return this.authService.getRoles().includes('Pharmacist'); }
   isManager()    { return this.authService.getRoles().includes('Manager'); }

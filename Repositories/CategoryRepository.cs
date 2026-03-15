@@ -43,6 +43,9 @@ namespace PharmacyApi.Repositories
 
         public async Task<CategoryDto> CreateAsync(CategoryDto dto)
         {
+            if (await _context.Categories.AnyAsync(c => c.Name == dto.Name))
+                throw new InvalidOperationException($"Category with name '{dto.Name}' already exists.");
+
             dto.Code = await GetNextCodeAsync("CAT");
 
             var entity = new Category
@@ -79,6 +82,9 @@ namespace PharmacyApi.Repositories
 
             if (await _context.Categories.AnyAsync(c => c.Code == dto.Code && c.CategoryId != id))
                 throw new InvalidOperationException($"Another Category with Code '{dto.Code}' already exists.");
+
+            if (await _context.Categories.AnyAsync(c => c.Name == dto.Name && c.CategoryId != id))
+                throw new InvalidOperationException($"Another Category with Name '{dto.Name}' already exists.");
 
             entity.Code        = dto.Code;
             entity.Name        = dto.Name;

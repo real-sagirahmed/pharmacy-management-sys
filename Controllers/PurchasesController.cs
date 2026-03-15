@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PharmacyApi.Data;
 using PharmacyApi.DTOs;
-using PharmacyApi.Models;
+using PharmacyApi.Repositories;
 
 namespace PharmacyApi.Controllers
 {
@@ -12,111 +10,72 @@ namespace PharmacyApi.Controllers
     [ApiController]
     public class PurchasesController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IPurchaseRepository _repo;
 
-        public PurchasesController(ApplicationDbContext context)
+        public PurchasesController(IPurchaseRepository repo)
         {
-            _context = context;
+            _repo = repo;
         }
 
+        // GET: api/purchases/next-grn
+        [HttpGet("next-grn")]
+        public async Task<ActionResult<string>> GetNextGrn()
+        {
+            var code = await _repo.GetNextGrnCodeAsync();
+            return Ok(new { grnCode = code });
+        }
+
+        // GET: api/purchases
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PurchaseMasterDto>>> GetPurchases()
         {
-            return await _context.PurchaseMasters
-                .Include(p => p.Supplier)
-                .Select(p => new PurchaseMasterDto
-                {
-                    PurchaseId = p.PurchaseId,
-                    SupplierId = p.SupplierId,
-                    SupplierName = p.Supplier != null ? p.Supplier.Name : string.Empty,
-                    InvoiceNumber = p.InvoiceNumber,
-                    PurchaseDate = p.PurchaseDate,
-                    TotalAmount = p.TotalAmount
-                }).ToListAsync();
+            var result = await _repo.GetAllAsync();
+            return Ok(result);
         }
 
+        // GET: api/purchases/paged
+        [HttpGet("paged")]
+        public async Task<ActionResult<PagedResult<PurchaseMasterDto>>> GetPaged([FromQuery] PurchaseSearchParameters parameters)
+        {
+            var result = await _repo.GetPagedAsync(parameters);
+            return Ok(result);
+        }
+
+        // GET: api/purchases/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<PurchaseMasterDto>> GetPurchase(int id)
         {
-            var p = await _context.PurchaseMasters
-                .Include(p => p.Supplier)
-                .Include(p => p.PurchaseDetails)
-                .ThenInclude(d => d.Medicine)
-                .FirstOrDefaultAsync(x => x.PurchaseId == id);
-
-            if (p == null) return NotFound();
-
-            return new PurchaseMasterDto
-            {
-                PurchaseId = p.PurchaseId,
-                SupplierId = p.SupplierId,
-                SupplierName = p.Supplier?.Name,
-                InvoiceNumber = p.InvoiceNumber,
-                PurchaseDate = p.PurchaseDate,
-                TotalAmount = p.TotalAmount,
-                PurchaseDetails = p.PurchaseDetails.Select(d => new PurchaseDetailDto
-                {
-                    PurchaseDetailId = d.PurchaseDetailId,
-                    MedicineId = d.MedicineId,
-                    MedicineName = d.Medicine?.Name,
-                    BatchNumber = d.BatchNumber,
-                    ExpiryDate = d.ExpiryDate,
-                    Quantity = d.Quantity,
-                    UnitCost = d.UnitCost,
-                    Subtotal = d.Subtotal
-                }).ToList()
-            };
+            var result = await _repo.GetByIdAsync(id);
+            if (result == null) return NotFound();
+            return Ok(result);
         }
 
+        // POST: api/purchases
         [HttpPost]
-        public async Task<ActionResult<PurchaseMaster>> PostPurchase(PurchaseMasterDto purchaseDto)
+        public async Task<ActionResult<PurchaseMasterDto>> PostPurchase(PurchaseMasterDto purchaseDto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var purchase = new PurchaseMaster
-                {
-                    SupplierId = purchaseDto.SupplierId,
-                    InvoiceNumber = purchaseDto.InvoiceNumber,
-                    PurchaseDate = purchaseDto.PurchaseDate,
-                    TotalAmount = purchaseDto.TotalAmount
-                };
+                if (!ModelState.IsValid) return BadRequest(ModelState);
 
-                foreach (var item in purchaseDto.PurchaseDetails)
-                {
-                    var detail = new PurchaseDetail
-                    {
-                        MedicineId = item.MedicineId,
-                        BatchNumber = item.BatchNumber,
-                        ExpiryDate = item.ExpiryDate,
-                        Quantity = item.Quantity,
-                        UnitCost = item.UnitCost,
-                        Subtotal = item.Subtotal
-                    };
-                    purchase.PurchaseDetails.Add(detail);
+                var username = User.Identity?.Name ?? "System";
+                var result = await _repo.CreateAsync(purchaseDto, username);
 
-                    // Update Stock and Sync latest batch/expiry
-                    var medicine = await _context.Medicines.FindAsync(item.MedicineId);
-                    if (medicine != null)
-                    {
-                        medicine.StockQuantity += item.Quantity;
-                        medicine.Batch = item.BatchNumber;
-                        medicine.ExpiryDate = item.ExpiryDate;
-                        medicine.PurchasePrice = item.UnitCost; // Optional: Sync latest cost
-                    }
-                }
-
-                _context.PurchaseMasters.Add(purchase);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return CreatedAtAction("GetPurchase", new { id = purchase.PurchaseId }, purchase);
+                return CreatedAtAction(nameof(GetPurchase), new { id = result.PurchaseId }, result);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                await transaction.RollbackAsync();
-                return BadRequest("Error saving purchase.");
+                return BadRequest(new { message = "Error saving GRN.", error = ex.Message });
             }
+        }
+
+        // DELETE: api/purchases/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePurchase(int id)
+        {
+            var success = await _repo.DeleteAsync(id);
+            if (!success) return NotFound();
+            return NoContent();
         }
     }
 }

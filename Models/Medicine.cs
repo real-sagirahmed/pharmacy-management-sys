@@ -39,14 +39,31 @@ namespace PharmacyApi.Models
 
         public DateTime? ExpiryDate { get; set; }
 
+        [StringLength(250)]
+        public string? Manufacturer { get; set; }
+
+        [StringLength(100)]
+        public string? DosageForm { get; set; }
+
+        [StringLength(100)]
+        public string? Strength { get; set; }
+
+        [StringLength(250)]
+        public string? UseFor { get; set; }
+
         public bool IsActive { get; set; } = true;
 
         // Audit Fields
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
         [StringLength(100)]
         public string? CreatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
         [StringLength(100)]
         public string? UpdatedBy { get; set; }
+
+        public Medicine()
+        {
+            CreatedAt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Bangladesh Standard Time"));
+        }
     }
 }

@@ -15,6 +15,10 @@ namespace PharmacyApi.DTOs
         public int StockQuantity { get; set; }
         public string? Batch { get; set; }
         public DateTime? ExpiryDate { get; set; }
+        public string? Manufacturer { get; set; }
+        public string? DosageForm { get; set; }
+        public string? Strength { get; set; }
+        public string? UseFor { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public string? CreatedBy { get; set; }
@@ -38,6 +42,19 @@ namespace PharmacyApi.DTOs
         public string? GenericName { get; set; }
         public DateTime? ExpiryFrom { get; set; }
         public DateTime? ExpiryTo { get; set; }
+        public string? Manufacturer { get; set; }
+        public string? DosageForm { get; set; }
+        public string? Strength { get; set; }
+        public string? UseFor { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+    }
+
+    public class PurchaseSearchParameters
+    {
+        public string? SearchText { get; set; } // Supplier name or invoice number
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 10;
     }
@@ -65,24 +82,88 @@ namespace PharmacyApi.DTOs
     public class PurchaseMasterDto
     {
         public int PurchaseId { get; set; }
+        public string GrnCode { get; set; } = string.Empty;
+
+        [Required]
         public int SupplierId { get; set; }
         public string? SupplierName { get; set; }
+        public string? SupplierPhone { get; set; }
+
+        [StringLength(50)]
         public string InvoiceNumber { get; set; } = string.Empty;
+        public DateTime? InvoiceDate { get; set; }
+
+        [Required]
         public DateTime PurchaseDate { get; set; }
-        public decimal TotalAmount { get; set; }
+
+        // Financial summary
+        public decimal SubTotal { get; set; }
+        public decimal TotalDiscount { get; set; }
+        public decimal TotalTax { get; set; }
+        public decimal Adjustment { get; set; }
+        public decimal GrandTotal { get; set; }
+
+        // Payment summary
+        public decimal PaidAmount { get; set; }
+        public decimal DueAmount { get; set; }
+        public string PaymentStatus { get; set; } = "Due";
+
         public List<PurchaseDetailDto> PurchaseDetails { get; set; } = new();
+        public List<PurchasePaymentDto> PurchasePayments { get; set; } = new();
     }
 
     public class PurchaseDetailDto
     {
         public int PurchaseDetailId { get; set; }
+
+        [Required]
         public int MedicineId { get; set; }
         public string? MedicineName { get; set; }
+
+        [Required]
+        [StringLength(50)]
         public string BatchNumber { get; set; } = string.Empty;
+
         public DateTime? ExpiryDate { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1.")]
         public int Quantity { get; set; }
+
+        // UOM — FK + snapshot
+        public int? UomId { get; set; }
+        public string UomName { get; set; } = string.Empty;
+
+        [Range(0, double.MaxValue, ErrorMessage = "Unit cost must be at least 0.")]
         public decimal UnitCost { get; set; }
-        public decimal Subtotal { get; set; }
+
+        public decimal DiscountPercent { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal TaxPercent { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal SalePrice { get; set; }
+        public decimal LineTotal { get; set; }
+    }
+
+    public class PurchasePaymentDto
+    {
+        public int PurchasePaymentId { get; set; }
+        public int PurchaseId { get; set; }
+
+        [Required]
+        [StringLength(30)]
+        public string PaymentMethod { get; set; } = string.Empty; // Cash | MobileBanking | Bank | Card
+
+        [Range(0, double.MaxValue)]
+        public decimal Amount { get; set; }
+
+        [StringLength(100)]
+        public string? AccountNumber { get; set; }
+
+        [StringLength(100)]
+        public string? TransactionId { get; set; }
+
+        [StringLength(250)]
+        public string? Remarks { get; set; }
     }
 
     public class SalesMasterDto
@@ -94,7 +175,23 @@ namespace PharmacyApi.DTOs
         public decimal GrandTotal { get; set; }
         public decimal Discount { get; set; }
         public string PaymentMethod { get; set; } = "Cash";
+        public decimal PaidAmount { get; set; }
+        public decimal DueAmount { get; set; }
+        public string PaymentStatus { get; set; } = "Paid";
         public List<SalesDetailDto> SalesDetails { get; set; } = new();
+        public List<SalesPaymentDto> SalesPayments { get; set; } = new();
+    }
+
+    public class SalesPaymentDto
+    {
+        public int SalesPaymentId { get; set; }
+        public int SaleId { get; set; }
+        public string PaymentMethod { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string? AccountNumber { get; set; }
+        public string? TransactionId { get; set; }
+        public string? Remarks { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 
     public class SalesDetailDto
@@ -213,6 +310,78 @@ namespace PharmacyApi.DTOs
 
         [StringLength(250)]
         public string? Description { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class ManufacturerDto
+    {
+        public int ManufacturerId { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(250)]
+        public string? Description { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class DosageFormDto
+    {
+        public int DosageFormId { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(250)]
+        public string? Description { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class CommonStrengthDto
+    {
+        public int CommonStrengthId { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(250)]
+        public string? Description { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class UseForDto
+    {
+        public int UseForId { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(250)]
+        public string? Remarks { get; set; }
 
         public bool IsActive { get; set; } = true;
     }

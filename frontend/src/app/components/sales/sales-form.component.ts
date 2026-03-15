@@ -5,12 +5,12 @@ import { Medicine, MedicineService } from '../../services/medicine.service';
 import { SalesService } from '../../services/sales.service';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 
 @Component({
   selector: 'app-sales-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, DropdownModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, SelectModule],
   template: `
     <div class="pos-shell animate-fadein-up">
 

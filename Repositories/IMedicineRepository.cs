@@ -11,5 +11,6 @@ namespace PharmacyApi.Repositories
         Task<bool> DeleteAsync(int id);
         Task<string> GetNextCodeAsync();
         Task<bool> ExistsByNameAsync(string name, int? excludeId = null);
+        Task<bool> BatchExistsAsync(int medicineId, string batchNumber);
     }
 }

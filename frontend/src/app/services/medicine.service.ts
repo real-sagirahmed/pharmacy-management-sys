@@ -15,6 +15,10 @@ export interface Medicine {
   stockQuantity: number;
   batch?: string;
   expiryDate?: string;
+  manufacturer?: string;
+  dosageForm?: string;
+  strength?: string;
+  useFor?: string;
   isActive: boolean;
   createdAt: string;
   createdBy: string;
@@ -36,6 +40,10 @@ export interface MedicineSearchParameters {
   genericName?: string;
   expiryFrom?: string;
   expiryTo?: string;
+  manufacturer?: string;
+  dosageForm?: string;
+  strength?: string;
+  useFor?: string;
   pageNumber: number;
   pageSize: number;
 }
@@ -90,5 +98,9 @@ export class MedicineService {
 
   deleteMedicine(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`);
+  }
+
+  checkBatchExists(medicineId: number, batchNumber: string): Observable<boolean> {
+    return this.http.get<boolean>(`${this.apiUrl}/check-batch/${medicineId}/${encodeURIComponent(batchNumber)}`);
   }
 }
