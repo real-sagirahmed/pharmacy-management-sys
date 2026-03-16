@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PharmacyApi.Data;
 
@@ -11,9 +12,11 @@ using PharmacyApi.Data;
 namespace PharmacyApi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260315053155_AddRolePermissions")]
+    partial class AddRolePermissions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -300,6 +303,64 @@ namespace PharmacyApi.Migrations
                     b.ToTable("CommonStrengths");
                 });
 
+            modelBuilder.Entity("PharmacyApi.Models.Customer", b =>
+                {
+                    b.Property<int>("CustomerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRegistered")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Mobile")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("CustomerId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Customers");
+                });
+
             modelBuilder.Entity("PharmacyApi.Models.DosageForm", b =>
                 {
                     b.Property<int>("DosageFormId")
@@ -516,7 +577,6 @@ namespace PharmacyApi.Migrations
                         .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("Cell")
-                        .IsRequired()
                         .HasMaxLength(15)
                         .HasColumnType("nvarchar(15)");
 
@@ -877,6 +937,9 @@ namespace PharmacyApi.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
+
                     b.Property<string>("CustomerName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -902,9 +965,6 @@ namespace PharmacyApi.Migrations
                     b.Property<decimal>("PaidAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("PartyId")
-                        .HasColumnType("int");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
@@ -951,10 +1011,10 @@ namespace PharmacyApi.Migrations
 
                     b.HasKey("SaleId");
 
+                    b.HasIndex("CustomerId");
+
                     b.HasIndex("InvoiceCode")
                         .IsUnique();
-
-                    b.HasIndex("PartyId");
 
                     b.ToTable("SalesMasters");
                 });
@@ -1291,11 +1351,11 @@ namespace PharmacyApi.Migrations
 
             modelBuilder.Entity("PharmacyApi.Models.SalesMaster", b =>
                 {
-                    b.HasOne("PharmacyApi.Models.Party", "Party")
-                        .WithMany()
-                        .HasForeignKey("PartyId");
+                    b.HasOne("PharmacyApi.Models.Customer", "Customer")
+                        .WithMany("Sales")
+                        .HasForeignKey("CustomerId");
 
-                    b.Navigation("Party");
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("PharmacyApi.Models.SalesPayment", b =>
@@ -1307,6 +1367,11 @@ namespace PharmacyApi.Migrations
                         .IsRequired();
 
                     b.Navigation("SalesMaster");
+                });
+
+            modelBuilder.Entity("PharmacyApi.Models.Customer", b =>
+                {
+                    b.Navigation("Sales");
                 });
 
             modelBuilder.Entity("PharmacyApi.Models.PurchaseMaster", b =>

@@ -166,43 +166,139 @@ namespace PharmacyApi.DTOs
         public string? Remarks { get; set; }
     }
 
+    public class CustomerDto
+    {
+        public int CustomerId { get; set; }
+
+        public string Code { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string FullName { get; set; } = string.Empty;
+
+        // Bangladesh mobile: 01XXXXXXXXX (11 digits)
+        [StringLength(15)]
+        [RegularExpression(@"^(?:\+88|88)?01[3-9]\d{8}$",
+            ErrorMessage = "Mobile must be a valid Bangladeshi number (e.g. 01XXXXXXXXX).")]
+        public string? Mobile { get; set; }
+
+        [StringLength(150)]
+        [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
+        public string? Email { get; set; }
+
+        [StringLength(250)]
+        public string? Address { get; set; }
+
+        public bool IsRegistered { get; set; } = false;
+        public bool IsActive { get; set; } = true;
+    }
+
     public class SalesMasterDto
     {
         public int SaleId { get; set; }
-        public string CustomerName { get; set; } = string.Empty;
-        public string CustomerPhone { get; set; } = string.Empty;
+        public string InvoiceCode { get; set; } = string.Empty;
+
+        // Party
+        public int? PartyId { get; set; }
+        public string CustomerName { get; set; } = "Walking Guest";
+        public string? CustomerPhone { get; set; }
+        public bool CustomerIsRegistered { get; set; } = false;
+
         public DateTime SaleDate { get; set; }
+        public DateTime? SaleTime { get; set; }
+
+        // Financial summary
+        public decimal SubTotal { get; set; }
+        public decimal TotalDiscount { get; set; }
+        public decimal TotalTax { get; set; }
+        public decimal SpecialDiscount { get; set; }
         public decimal GrandTotal { get; set; }
-        public decimal Discount { get; set; }
-        public string PaymentMethod { get; set; } = "Cash";
+
+        // Payment summary
         public decimal PaidAmount { get; set; }
+        public decimal ChangeAmount { get; set; }
         public decimal DueAmount { get; set; }
+        public string PaymentMethod { get; set; } = "Cash";
         public string PaymentStatus { get; set; } = "Paid";
+        public string SaleStatus { get; set; } = "Completed";
+        public string? CreatedBy { get; set; }
+
         public List<SalesDetailDto> SalesDetails { get; set; } = new();
         public List<SalesPaymentDto> SalesPayments { get; set; } = new();
+    }
+
+    public class SalesDetailDto
+    {
+        public int SalesDetailId { get; set; }
+
+        [Required]
+        public int MedicineId { get; set; }
+        public string? MedicineName { get; set; }
+
+        [StringLength(50)]
+        public string BatchNumber { get; set; } = string.Empty;
+        public DateTime? ExpiryDate { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1.")]
+        public int Quantity { get; set; }
+
+        // UOM
+        public int? UomId { get; set; }
+        public string UomName { get; set; } = string.Empty;
+
+        [Range(0, double.MaxValue)]
+        public decimal UnitPrice { get; set; }
+
+        public decimal DiscountPercent { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal TaxPercent { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal LineTotal { get; set; }
+
+        // Legacy (kept for backward compat)
+        public decimal Tax { get; set; }
+        public decimal Subtotal { get; set; }
     }
 
     public class SalesPaymentDto
     {
         public int SalesPaymentId { get; set; }
         public int SaleId { get; set; }
+
+        [Required]
+        [StringLength(30)]
         public string PaymentMethod { get; set; } = string.Empty;
+
+        [Range(0, double.MaxValue)]
         public decimal Amount { get; set; }
+
+        [StringLength(100)]
         public string? AccountNumber { get; set; }
+        [StringLength(100)]
         public string? TransactionId { get; set; }
+        [StringLength(250)]
         public string? Remarks { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
-    public class SalesDetailDto
+    // FEFO Batch info returned to Sales Form
+    public class SaleBatchInfoDto
     {
-        public int SalesDetailId { get; set; }
-        public int MedicineId { get; set; }
-        public string? MedicineName { get; set; }
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public decimal Tax { get; set; }
-        public decimal Subtotal { get; set; }
+        public string BatchNumber { get; set; } = string.Empty;
+        public DateTime? ExpiryDate { get; set; }
+        public int AvailableQty { get; set; }
+        public decimal SalePrice { get; set; }
+        public bool IsNearExpiry { get; set; } // within 90 days
+    }
+
+    public class SaleSearchParameters
+    {
+        public string? SearchText { get; set; } // InvoiceCode, CustomerName, Mobile
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public string? SaleStatus { get; set; } // Completed / Hold
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 15;
     }
 
     // ─── Master Data DTOs ───────────────────────────────────────────────────
@@ -211,9 +307,8 @@ namespace PharmacyApi.DTOs
     {
         public int PartyId { get; set; }
 
-        [Required]
         [StringLength(20)]
-        public string Code { get; set; } = string.Empty;
+        public string? Code { get; set; }
 
         // "Customer" | "Supplier"
         [Required]
@@ -224,9 +319,10 @@ namespace PharmacyApi.DTOs
         [StringLength(150)]
         public string FullName { get; set; } = string.Empty;
 
+        [Required]
         [StringLength(15)]
         [Phone]
-        public string? Cell { get; set; }
+        public string Cell { get; set; } = string.Empty;
 
         [StringLength(100)]
         [EmailAddress]

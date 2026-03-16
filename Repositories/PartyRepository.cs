@@ -5,7 +5,7 @@ using PharmacyApi.Models;
 
 namespace PharmacyApi.Repositories
 {
-    public class PartyRepository : IRepository<Party, PartyDto>
+    public class PartyRepository : IPartyRepository
     {
         private readonly ApplicationDbContext _context;
 
@@ -17,16 +17,61 @@ namespace PharmacyApi.Repositories
         public async Task<IEnumerable<PartyDto>> GetAllAsync()
         {
             return await _context.Parties
+                .OrderBy(p => p.FullName)
                 .Select(p => new PartyDto
                 {
-                    PartyId   = p.PartyId,
-                    Code      = p.Code,
+                    PartyId = p.PartyId,
+                    Code = p.Code,
                     PartyType = p.PartyType,
-                    FullName  = p.FullName,
-                    Cell      = p.Cell,
-                    Email     = p.Email,
-                    Address   = p.Address,
-                    IsActive  = p.IsActive
+                    FullName = p.FullName,
+                    Cell = p.Cell,
+                    Email = p.Email,
+                    Address = p.Address,
+                    IsActive = p.IsActive
+                }).ToListAsync();
+        }
+
+        public async Task<IEnumerable<PartyDto>> SearchAsync(string query, string? type = null)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return await _context.Parties
+                    .Where(p => p.IsActive && (type == null || p.PartyType == type))
+                    .OrderBy(p => p.FullName)
+                    .Take(20)
+                    .Select(p => new PartyDto
+                    {
+                        PartyId = p.PartyId,
+                        Code = p.Code,
+                        PartyType = p.PartyType,
+                        FullName = p.FullName,
+                        Cell = p.Cell,
+                        Email = p.Email,
+                        Address = p.Address,
+                        IsActive = p.IsActive
+                    }).ToListAsync();
+
+            var q = query.Trim();
+            // Optional: Strip common prefixes like +88 or 88 for more flexible mobile search
+            var qClean = q.StartsWith("+88") ? q.Substring(3) : (q.StartsWith("88") ? q.Substring(2) : q);
+
+            return await _context.Parties
+                .Where(p => p.IsActive && 
+                       (type == null || p.PartyType == type) &&
+                       (p.FullName.Contains(q) || 
+                        p.Code.Contains(q) || 
+                        (p.Cell != null && (p.Cell.Contains(q) || p.Cell.Contains(qClean)))))
+                .OrderBy(p => p.FullName)
+                .Take(20)
+                .Select(p => new PartyDto
+                {
+                    PartyId = p.PartyId,
+                    Code = p.Code,
+                    PartyType = p.PartyType,
+                    FullName = p.FullName,
+                    Cell = p.Cell,
+                    Email = p.Email,
+                    Address = p.Address,
+                    IsActive = p.IsActive
                 }).ToListAsync();
         }
 
@@ -103,7 +148,7 @@ namespace PharmacyApi.Repositories
             if (await _context.Parties.AnyAsync(p => p.Code == dto.Code && p.PartyId != id))
                 throw new InvalidOperationException($"Another Party with Code '{dto.Code}' already exists.");
 
-            entity.Code      = dto.Code;
+            entity.Code      = dto.Code ?? entity.Code;
             entity.PartyType = dto.PartyType;
             entity.FullName  = dto.FullName;
             entity.Cell      = dto.Cell;

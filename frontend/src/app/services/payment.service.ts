@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { SalesPayment } from './sales.service';
+import { SalePayment } from './sales.service';
 import { PurchasePayment } from './purchase.service';
 
 export interface DueRecord {
@@ -36,7 +36,7 @@ export class PaymentService {
     return this.http.get<DueRecord[]>(`${this.apiUrl}/PurchaseDues`);
   }
 
-  collectSalesDue(payment: SalesPayment): Observable<any> {
+  collectSalesDue(payment: SalePayment): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/CollectSalesDue`, payment);
   }
 
@@ -44,8 +44,8 @@ export class PaymentService {
     return this.http.post<any>(`${this.apiUrl}/PayPurchaseDue`, payment);
   }
 
-  getSalesHistory(saleId: number): Observable<SalesPayment[]> {
-    return this.http.get<SalesPayment[]>(`${this.apiUrl}/SalesHistory/${saleId}`);
+  getSalesHistory(saleId: number): Observable<SalePayment[]> {
+    return this.http.get<SalePayment[]>(`${this.apiUrl}/SalesHistory/${saleId}`);
   }
 
   getPurchaseHistory(purchaseId: number): Observable<PurchasePayment[]> {

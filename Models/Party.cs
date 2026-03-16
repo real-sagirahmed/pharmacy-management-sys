@@ -20,9 +20,10 @@ namespace PharmacyApi.Models
         [StringLength(150)]
         public string FullName { get; set; } = string.Empty;
 
+        [Required]
         [StringLength(15)]
         [Phone]
-        public string? Cell { get; set; }
+        public string Cell { get; set; } = string.Empty;
 
         [StringLength(100)]
         [EmailAddress]

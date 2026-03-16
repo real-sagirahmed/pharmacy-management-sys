@@ -11,9 +11,9 @@ namespace PharmacyApi.Controllers
     [ApiController]
     public class PartiesController : ControllerBase
     {
-        private readonly IRepository<Party, PartyDto> _repo;
+        private readonly IPartyRepository _repo;
 
-        public PartiesController(IRepository<Party, PartyDto> repo)
+        public PartiesController(IPartyRepository repo)
         {
             _repo = repo;
         }
@@ -22,6 +22,16 @@ namespace PharmacyApi.Controllers
         public async Task<ActionResult<IEnumerable<PartyDto>>> GetAll()
         {
             try { return Ok(await _repo.GetAllAsync()); }
+            catch (Exception ex) { return StatusCode(500, ex.Message); }
+        }
+
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<PartyDto>>> Search([FromQuery] string q, [FromQuery] string? type)
+        {
+            try
+            {
+                return Ok(await _repo.SearchAsync(q, type));
+            }
             catch (Exception ex) { return StatusCode(500, ex.Message); }
         }
 

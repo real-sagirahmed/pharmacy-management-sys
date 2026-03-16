@@ -182,7 +182,7 @@ export class ForgotPasswordComponent {
     this.success = '';
     this.authService.forgotPassword(this.forgotForm.value.email).subscribe({
       next: (res) => {
-        this.success = `Link sent! For testing, your token is: ${res.token}`;
+        this.success = res.message || 'If that email address is in our database, we will send you an email to reset your password.';
         this.loading = false;
       },
       error: () => {

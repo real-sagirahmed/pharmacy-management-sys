@@ -4,6 +4,16 @@
 
 ---
 
+- [2026-03-16 07:15 AM] - Stock Accuracy & UI Clarity Overhaul
+- **Task:** Fixing Stock Discrepancy & Enhancing Sales Entry UX
+- **Details:**
+  - **Stock Logic Fix:** `MedicineRepository` এবং `SalesRepository`-তে ইউনিফাইড স্টক ক্যালকুলেশন লজিক ইমপ্লিমেন্ট করা হয়েছে। এটি ডাবল-কাউন্টিং বন্ধ করেছে এবং ড্রপডাউনে **Opening Stock**-কে বিক্রির জন্য দৃশ্যমান করেছে।
+  - **Discount UI:** সেলস ফর্মে ডিসকাউন্ট টগলকে একটি হাই-কন্ট্রাস্ট **Black & White Pills** ডিজাইনে রূপান্তর করা হয়েছে, যা অত্যন্ত স্পষ্টভাবে `%` এবং `৳` সুইচ করতে সাহায্য করবে।
+  - **Field Clarity:** ভ্যাট কলামে `%` এবং টোটাল কলামে `৳` চিহ্ন যুক্ত করে হেডারগুলোকে আরও পরিষ্কার করা হয়েছে।
+  - **Build Stability:** ডটনেট বিল্ড এরর (decimal to int conversion) এবং পসিবল নাল রেফারেন্স ওয়ার্নিংগুলো স্থায়ীভাবে সমাধান করা হয়েছে।
+- **Technology:** ASP.NET Core 8, Angular 19, CSS (High-Contrast Design).
+- **Status:** COMPLETED & VERIFIED
+
 - [2026-03-15 07:25 AM] - Deep Infrastructure & Project State Analysis
 - **Task:** Comprehensive Audit & Reporting of Database, Backend, and Frontend
 - **Details:**

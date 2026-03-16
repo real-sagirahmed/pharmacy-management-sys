@@ -8,8 +8,10 @@ import { MedicineListComponent } from './components/medicines/medicine-list.comp
 import { PurchaseListComponent } from './components/purchases/purchase-list.component';
 import { PurchaseFormComponent } from './components/purchases/purchase-form.component';
 import { SalesFormComponent } from './components/sales/sales-form.component';
+import { SalesListComponent } from './components/sales/sales-list.component';
 import { DueCollectionComponent } from './components/due-collection/due-collection.component';
 import { UserManagementComponent } from './components/dashboard/user-management/user-management.component';
+import { RoleManagementComponent } from './components/dashboard/user-management/role-management.component';
 import { AuthGuard } from './guards/auth.guard';
 
 // ─── Master Data Components ───
@@ -36,9 +38,12 @@ export const routes: Routes = [
       { path: 'medicines',   component: MedicineListComponent },
       { path: 'purchases',       component: PurchaseListComponent },
       { path: 'purchases/new',   component: PurchaseFormComponent },
-      { path: 'sales',       component: SalesFormComponent },
+      { path: 'sales',       component: SalesListComponent },
+      { path: 'sales/new',   component: SalesFormComponent },
+      { path: 'sales/edit/:id', component: SalesFormComponent },
       { path: 'due-collection', component: DueCollectionComponent },
       { path: 'users',       component: UserManagementComponent },
+      { path: 'roles',       component: RoleManagementComponent },
       // ─── Master Data Routes ───
       { path: 'parties',    component: PartyListComponent },
       { path: 'taxes',      component: TaxListComponent },

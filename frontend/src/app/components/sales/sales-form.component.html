@@ -1,0 +1,477 @@
+<p-toast position="top-right" />
+<p-confirmDialog />
+
+<div class="pos-page">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PAGE HEADER
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="header-icon"><i class="pi pi-desktop"></i></div>
+      <div>
+        <h1 class="page-title">New Sale</h1>
+        <p class="page-sub">Point of Sale — Enter items and complete the transaction</p>
+      </div>
+    </div>
+    <div class="invoice-badge">
+      <span class="inv-label">Invoice</span>
+      <span class="inv-code">{{ invoiceCode || '—' }}</span>
+    </div>
+  </div>
+
+  <div class="pos-body">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         LEFT: FORM BODY
+    ═══════════════════════════════════════════════════════════════ -->
+    <div class="pos-left">
+
+      <!-- ── SALES INFORMATION ─────────────────────────────────── -->
+      <div class="card-section">
+        <div class="section-header">
+          <i class="pi pi-file-edit section-icon"></i>
+          <span>SALES INFORMATION</span>
+        </div>
+        <div class="info-grid">
+          <div class="info-field">
+            <label class="field-label">Invoice ID</label>
+            <div class="inv-readonly">{{ invoiceCode }}</div>
+          </div>
+          <div class="info-field">
+            <label class="field-label required-star">Date</label>
+            <p-datepicker [(ngModel)]="saleDate" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full"
+              inputStyleClass="field-input" placeholder="dd/mm/yyyy" appendTo="body" />
+          </div>
+          <div class="info-field">
+            <label class="field-label">Time</label>
+            <div class="field-readonly-text">{{ saleTime }}</div>
+          </div>
+          <div class="info-field">
+            <label class="field-label">Sales By</label>
+            <div class="field-readonly-text">{{ salesBy }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CUSTOMER INFORMATION ──────────────────────────────── -->
+      <div class="card-section">
+        <div class="section-header">
+          <i class="pi pi-user section-icon teal"></i>
+          <span>CUSTOMER INFORMATION</span>
+          <span class="reg-badge" *ngIf="selectedCustomer && isRegisteredCustomer">
+            <i class="pi pi-verified"></i> Registered
+          </span>
+          <span class="unreg-badge" *ngIf="selectedCustomer && !isRegisteredCustomer">
+            <i class="pi pi-user"></i> Unregistered
+          </span>
+          <span class="guest-badge" *ngIf="!selectedCustomer">
+            <i class="pi pi-walking"></i> Walking Guest
+          </span>
+        </div>
+
+        <div class="customer-search-row">
+          <p-autoComplete [(ngModel)]="customerQuery" [suggestions]="customerSuggestions"
+            (completeMethod)="searchCustomer($event)" (onSelect)="onCustomerSelect($event)" field="fullName"
+            placeholder="Search by Name or Mobile…" [forceSelection]="false" styleClass="w-full"
+            inputStyleClass="field-input" [minLength]="1" appendTo="body">
+            <ng-template let-c pTemplate="item">
+              <div class="cust-suggestion">
+                <span class="cust-name">{{ c.fullName }}</span>
+                <span class="cust-phone">{{ c.mobile || '—' }}</span>
+                <span class="cust-reg" *ngIf="c.isRegistered">✓ Registered</span>
+              </div>
+            </ng-template>
+          </p-autoComplete>
+          <button class="btn-add-inline" (click)="openQuickCustomer()" title="Add New Customer">
+            <i class="pi pi-plus"></i>
+          </button>
+          <button class="btn-clear-inline" (click)="clearCustomer()" *ngIf="selectedCustomer" title="Clear">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+
+        <!-- Selected Customer Details -->
+        <div class="cust-info-row" *ngIf="selectedCustomer">
+          <div class="cust-info-item">
+            <label>Name</label>
+            <span>{{ selectedCustomer.fullName }}</span>
+          </div>
+          <div class="cust-info-item">
+            <label>Mobile</label>
+            <span>{{ selectedCustomer.mobile || '—' }}</span>
+          </div>
+          <div class="cust-info-item">
+            <label>Address</label>
+            <span>{{ selectedCustomer.address || '—' }}</span>
+          </div>
+        </div>
+
+        <!-- Guest Details (If no customer selected) -->
+        <div class="guest-details-form" *ngIf="!selectedCustomer">
+          <div class="guest-field">
+            <label>Guest Name</label>
+            <input class="field-input" [(ngModel)]="guestName" placeholder="e.g. Walk-in Customer" />
+          </div>
+          <div class="guest-field">
+            <label>Guest Mobile</label>
+            <input class="field-input" [(ngModel)]="guestPhone" placeholder="01XXXXXXXXX" />
+          </div>
+          <div class="guest-hint">
+            <i class="pi pi-info-circle"></i>
+            <span>Recorded as <strong>Walking Guest</strong>. Due not allowed.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MEDICINE SALES ENTRY ───────────────────────────────── -->
+      <div class="card-section medicine-section">
+        <div class="section-header">
+          <i class="pi pi-pills section-icon violet"></i>
+          <span>MEDICINE SALES ENTRY</span>
+        </div>
+
+        <div class="med-table-wrapper">
+          <table class="med-table">
+            <thead>
+              <tr>
+                <th class="col-prod">Product</th>
+                <th class="col-batch">Batch</th>
+                <th class="col-exp">Exp</th>
+                <th class="col-stock">Stock</th>
+                <th class="col-qty">Qty</th>
+                <th class="col-price">Price</th>
+                <th class="col-disc">Discount (Type)</th>
+                <th class="col-tax">VAT (%)</th>
+                <th class="col-total">Total (৳)</th>
+                <th class="col-del"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of rows(); let i = index" 
+                [class.near-expiry-row]="row.isNearExpiry"
+                [class.row-active]="activeRowIndex() === i"
+                (focusin)="activeRowIndex.set(i)"
+                (focusout)="activeRowIndex.set(null)">
+
+                <!-- Product -->
+                <td class="col-prod">
+                  <p-autoComplete [(ngModel)]="row.medicine" [suggestions]="row.medicineSuggestions"
+                    (completeMethod)="searchMedicine($event, row)" [dropdown]="true" field="name"
+                    placeholder="Search medicine..." (onSelect)="onMedicineSelect($event, row)"
+                    (onClear)="onMedicineClear(row)" (onUnselect)="onMedicineClear(row)"
+                    [forceSelection]="true" styleClass="med-input" inputStyleClass="w-full p-inputtext-sm"
+                    [panelStyle]="{'width':'600px'}" [emptyMessage]="'No medicine found'" appendTo="body">
+                    <ng-template let-m pTemplate="item">
+                      <div class="med-suggestion">
+                        <span class="med-name">{{ m.name }}</span>
+                        <div class="med-mid">
+                          <span class="med-meta">{{ m.code }} | {{ m.genericName }}</span>
+                        </div>
+                        <div class="med-badges">
+                          <span class="sug-badge stock" [class.low]="m.stockQuantity <= 10">
+                            {{ m.stockQuantity }} in stock
+                          </span>
+                          <span class="sug-badge price">৳{{ m.salePrice | number:'1.2-2' }}</span>
+                        </div>
+                      </div>
+                    </ng-template>
+                  </p-autoComplete>
+                </td>
+
+                <!-- Batch -->
+                <td class="col-batch">
+                  <p-select [options]="row.batchOptions" [(ngModel)]="row.batchNumber" optionLabel="batchNumber"
+                    optionValue="batchNumber" placeholder="Select batch" [disabled]="!row.medicineId"
+                    styleClass="w-full batch-select" appendTo="body"
+                    (onChange)="onBatchSelect($event.value, row)">
+                    <ng-template let-b pTemplate="item">
+                      <div class="batch-option">
+                        <span>{{ b.batchNumber }}</span>
+                        <span class="batch-qty">Qty: {{ b.availableQty }}</span>
+                        <span class="near-exp-dot" *ngIf="b.isNearExpiry" title="Near Expiry">⚠️</span>
+                      </div>
+                    </ng-template>
+                  </p-select>
+                </td>
+
+                <!-- Expiry -->
+                <td class="col-exp">
+                  <span [class.expiry-near]="row.isNearExpiry">
+                    {{ expiryLabel(row.expiryDate) }}
+                    <span class="near-badge" *ngIf="row.isNearExpiry" title="Near Expiry">!</span>
+                  </span>
+                </td>
+
+                <!-- Stock -->
+                <td class="col-stock">
+                  <span class="stock-badge" [class.low]="row.availableQty <= 10" [class.no]="row.availableQty === 0">
+                    {{ row.availableQty }}
+                  </span>
+                </td>
+
+                <!-- Qty -->
+                <td class="col-qty">
+                  <div class="qty-adjuster">
+                    <button class="btn-qty" (click)="adjustQty(row, -1)" [disabled]="row.quantity <= 1">
+                      <i class="pi pi-minus"></i>
+                    </button>
+                    <p-inputNumber [(ngModel)]="row.quantity" [min]="1" [max]="row.availableQty"
+                      (ngModelChange)="recalcRow(row)" styleClass="qty-input" inputStyleClass="qty-num"
+                      (keydown)="onKeyDown($event)" />
+                    <button class="btn-qty" (click)="adjustQty(row, 1)" [disabled]="row.quantity >= row.availableQty">
+                      <i class="pi pi-plus"></i>
+                    </button>
+                  </div>
+                </td>
+
+                <!-- Price -->
+                <td class="col-price">
+                  <p-inputNumber [(ngModel)]="row.unitPrice" mode="decimal" [minFractionDigits]="2"
+                    (ngModelChange)="recalcRow(row)" styleClass="price-input" inputStyleClass="price-num" prefix="৳" />
+                </td>
+
+                <!-- Discount -->
+                <td class="col-disc">
+                  <div class="disc-cell-v2">
+                    <div class="type-switcher" (click)="toggleDiscountType(row)" [title]="'Click to change to ' + (row.discountType === 'percent' ? 'Taka' : 'Percentage')">
+                      <div class="sw-pill" [class.active]="row.discountType === 'percent'">%</div>
+                      <div class="sw-pill" [class.active]="row.discountType === 'amount'">৳</div>
+                    </div>
+                    <p-inputNumber [(ngModel)]="row.discountValue" [min]="0"
+                      [max]="row.discountType === 'percent' ? 100 : row.unitPrice * row.quantity"
+                      [minFractionDigits]="0" [maxFractionDigits]="2" (ngModelChange)="recalcRow(row)"
+                      [prefix]="row.discountType === 'amount' ? '৳' : ''"
+                      [suffix]="row.discountType === 'percent' ? '%' : ''"
+                      styleClass="disc-input-v2" inputStyleClass="disc-num-v2" />
+                  </div>
+                </td>
+
+                <!-- VAT -->
+                <td class="col-tax">
+                  <p-select [options]="taxes" [(ngModel)]="row.taxId" optionLabel="name" optionValue="taxId"
+                    placeholder="None" [showClear]="true" styleClass="tax-select" appendTo="body" (onChange)="onTaxChange(row)" />
+                </td>
+
+                <!-- Line Total -->
+                <td class="col-total">
+                  <div class="total-result-box">
+                    <span class="currency-label">৳</span>
+                    <span class="line-total-val">{{ (row.lineTotal || 0) | number:'1.2-2' }}</span>
+                  </div>
+                </td>
+
+                <!-- Delete -->
+                <td class="col-del">
+                  <button class="btn-del-row" (click)="removeRow(i)" title="Remove">
+                    <i class="pi pi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <button class="btn-add-row" (click)="addRow()">
+          <i class="pi pi-plus-circle"></i> Add Another Medicine
+        </button>
+      </div>
+
+      <!-- ── NEW FOOTER GRID ───────────────────────────────────── -->
+      <div class="pos-footer-grid">
+        
+        <!-- Column 1: Payment Details -->
+        <div class="footer-col">
+          <!-- ── PAYMENT MODE ────────────────────────────────────────── -->
+          <div class="payment-card">
+            <div class="pay-title">PAYMENT MODE</div>
+            <div class="pay-methods" *ngIf="!splitEnabled">
+              <button *ngFor="let m of paymentMethods" class="pay-btn"
+                [class.pay-active]="payments()[0]?.method === m.label" (click)="setMethod(payments()[0], m.label)">
+                <i class="pi {{ m.icon }}"></i>
+                <span>{{ m.label }}</span>
+              </button>
+            </div>
+
+            <!-- Single Payment Amount -->
+            <div class="pay-amount-row mt-3" *ngIf="!splitEnabled">
+              <div class="field-label-row">
+                <span class="field-label">Amount Paid</span>
+                <span class="pay-ref-total">(Payable: ৳{{ grandTotal() | number:'1.2-2' }})</span>
+              </div>
+              <p-inputNumber [(ngModel)]="payments()[0].amount" mode="decimal" [minFractionDigits]="2" prefix="৳"
+                styleClass="w-full" inputStyleClass="pay-amount-num" (ngModelChange)="triggerPaymentsUpdate()" />
+            </div>
+
+            <!-- Single Payment References -->
+            <div class="pay-ref-grid mt-3" *ngIf="!splitEnabled && payments()[0]?.showRef">
+              <div class="ref-field">
+                <input pInputText [(ngModel)]="payments()[0].accountNumber" placeholder="A/C Number / Card No" class="w-full" />
+              </div>
+              <div class="ref-field">
+                <input pInputText [(ngModel)]="payments()[0].transactionId" placeholder="Transaction ID" class="w-full" />
+              </div>
+            </div>
+
+            <!-- Split Payments -->
+            <div class="split-rows mt-3" *ngIf="splitEnabled">
+              <div *ngFor="let pm of payments(); let i = index" class="split-row-group">
+                <div class="split-row">
+                  <p-select [options]="paymentMethods" [(ngModel)]="pm.method" optionLabel="label" optionValue="label"
+                    styleClass="split-method" appendTo="body" (onChange)="setMethod(pm, pm.method)" />
+                  <p-inputNumber [(ngModel)]="pm.amount" mode="decimal" [minFractionDigits]="2" [min]="0" prefix="৳"
+                    styleClass="split-amt" inputStyleClass="split-num" (ngModelChange)="triggerPaymentsUpdate()" />
+                  <button class="btn-del-pm" (click)="removePayment(i)" *ngIf="payments().length > 1">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+                <!-- Ref for Split Row -->
+                <div class="pay-ref-grid mt-2 mb-3" *ngIf="pm.showRef">
+                  <div class="ref-field">
+                    <input pInputText [(ngModel)]="pm.accountNumber" placeholder="A/C No" class="w-full p-inputtext-sm" />
+                  </div>
+                  <div class="ref-field">
+                    <input pInputText [(ngModel)]="pm.transactionId" placeholder="Trx ID" class="w-full p-inputtext-sm" />
+                  </div>
+                </div>
+              </div>
+              <button class="btn-add-pm" (click)="addPayment()">
+                <i class="pi pi-plus"></i> Add Payment
+              </button>
+            </div>
+            <div class="split-toggle">
+              <label class="split-label">
+                <input type="checkbox" [(ngModel)]="splitEnabled" />
+                Split Payment
+              </label>
+            </div>
+          </div>
+
+          <!-- ── PAYMENT SUMMARY ─────────────────────────────────────── -->
+          <div class="pay-summary-card mt-3">
+            <div class="pay-sum-title">PAYMENT SUMMARY</div>
+            <div class="pay-sum-lines">
+              <div class="pay-sum-line">
+                <span>Paid Amount</span>
+                <span class="paid-val">৳{{ totalPaid() | number:'1.2-2' }}</span>
+              </div>
+              <div class="pay-sum-line change" *ngIf="changeAmt() > 0">
+                <span>Change (Return)</span>
+                <span class="change-val">৳{{ changeAmt() | number:'1.2-2' }}</span>
+              </div>
+              <div class="pay-sum-line due" [class.due-error]="dueAmount() > 0 && !isRegisteredCustomer">
+                <span>Due Amount</span>
+                <span class="due-val">৳{{ dueAmount() | number:'1.2-2' }}</span>
+              </div>
+            </div>
+
+            <!-- Prominent Change Return Block -->
+            <div class="change-return-block mt-3" *ngIf="changeAmt() > 0">
+              <div class="cr-label">CASH TO RETURN</div>
+              <div class="cr-value">৳{{ changeAmt() | number:'1.2-2' }}</div>
+            </div>
+
+            <div class="due-reg-note" *ngIf="dueAmount() > 0 && !isRegisteredCustomer">
+              <i class="pi pi-exclamation-triangle"></i>
+              Due is only allowed for Registered Customers
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Final Summary & Actions -->
+        <div class="footer-col">
+          <!-- ── SALES SUMMARY ───────────────────────────────────────── -->
+          <div class="summary-card">
+            <div class="summary-title">SALES SUMMARY</div>
+            <div class="summary-lines">
+              <div class="sum-line">
+                <span>Subtotal</span>
+                <span>৳{{ subTotal() | number:'1.2-2' }}</span>
+              </div>
+              <div class="sum-line disc">
+                <span>Item Discounts</span>
+                <span>- ৳{{ totalDiscount() | number:'1.2-2' }}</span>
+              </div>
+              <div class="sum-line tax">
+                <span>VAT / Tax</span>
+                <span>+ ৳{{ totalTax() | number:'1.2-2' }}</span>
+              </div>
+              <div class="sum-line special">
+                <span>Special Discount</span>
+                <p-inputNumber [ngModel]="specialDiscount()" [min]="0" [minFractionDigits]="2" styleClass="sp-disc-inp"
+                  inputStyleClass="sp-disc-num" (ngModelChange)="specialDiscount.set($event ?? 0)" />
+              </div>
+            </div>
+            <div class="grand-total-block">
+              <div class="gt-label">TOTAL PAYABLE</div>
+              <div class="gt-value" [class.pulse]="grandTotalPulse()">৳{{ grandTotal() | number:'1.2-2' }}</div>
+            </div>
+          </div>
+
+          <!-- ── ACTION BUTTONS ──────────────────────────────────────── -->
+          <div class="action-buttons mt-3">
+            <button class="btn-sale-print" (click)="completeSale(true)" [disabled]="saving" style="width: 100%;">
+              <i class="pi pi-print" *ngIf="!saving"></i>
+              <i class="pi pi-spin pi-spinner" *ngIf="saving"></i>
+              Sale &amp; Print Invoice
+            </button>
+            <div class="action-grid-mini mt-2">
+              <button class="btn-sale" (click)="completeSale(false)" [disabled]="saving">
+                <i class="pi pi-check-circle"></i>
+                Sale
+              </button>
+              <button class="btn-hold" (click)="holdSale()" [disabled]="saving">
+                <i class="pi pi-pause-circle"></i>
+                Hold
+              </button>
+              <button class="btn-cancel" (click)="cancelSale()">
+                <i class="pi pi-times-circle"></i>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /pos-footer-grid -->
+    </div><!-- /pos-left -->
+  </div><!-- /pos-body -->
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     QUICK ADD CUSTOMER DIALOG
+══════════════════════════════════════════════════════════════════════ -->
+<p-dialog [(visible)]="showQuickCustomer" header="Quick Add Customer" [modal]="true" [style]="{width:'460px'}"
+  [draggable]="false">
+  <div class="quick-form">
+    <div class="qf-field">
+      <label class="required-star">Full Name *</label>
+      <input class="qf-input" [(ngModel)]="quickCustomer.fullName" placeholder="e.g. Md. Rahim Uddin" />
+    </div>
+    <div class="qf-field">
+      <label class="required-star">Mobile (BD) *</label>
+      <input class="qf-input" [(ngModel)]="quickCustomer.mobile" placeholder="e.g. 01712345678" />
+    </div>
+    <div class="qf-field">
+      <label>Email</label>
+      <input class="qf-input" [(ngModel)]="quickCustomer.email" placeholder="e.g. rahim@example.com" />
+    </div>
+    <div class="qf-field">
+      <label>Address</label>
+      <input class="qf-input" [(ngModel)]="quickCustomer.address" placeholder="e.g. Dhaka, Bangladesh" />
+    </div>
+    <div class="qf-field qf-toggle">
+      <label>
+        <input type="checkbox" [(ngModel)]="quickCustomer.isRegistered" />
+        &nbsp;Registered Customer (can have Due balance)
+      </label>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <button class="btn-dialog-cancel" (click)="showQuickCustomer = false">Cancel</button>
+    <button class="btn-dialog-save" (click)="saveQuickCustomer()" [disabled]="quickSaving">
+      <i class="pi pi-spin pi-spinner" *ngIf="quickSaving"></i>
+      <i class="pi pi-save" *ngIf="!quickSaving"></i>
+      Save Customer
+    </button>
+  </ng-template>
+</p-dialog>

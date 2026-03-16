@@ -56,92 +56,109 @@ import { SalesService } from '../../services/sales.service';
               <span class="nav-label">Dashboard</span>
             </a>
 
-            <a class="nav-item" *ngIf="isPharmacist() || isAdmin()"
-               routerLink="/dashboard/medicines" routerLinkActive="nav-active">
-              <i class="pi pi-box nav-icon"></i>
-              <span class="nav-label">Medicines</span>
-            </a>
+            <!-- ─── Inventory & Stock ─── -->
+            <div class="nav-group" [class.group-open]="inventoryOpen()" [class.group-active]="isGroupActive('inventory')" *ngIf="isPharmacist() || isAdmin() || isManager()">
+              <div class="nav-item group-header" (click)="toggleGroup('inventory')">
+                <i class="pi pi-box nav-icon"></i>
+                <span class="nav-label">Inventory & Stock</span>
+                <i class="pi pi-chevron-down group-arrow"></i>
+              </div>
+              <div class="sub-nav">
+                <a class="nav-item sub-item" routerLink="/dashboard/medicines" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label">Medicines</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="isAdmin() || isManager()" routerLink="/dashboard/purchases" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label">Procurement</span>
+                </a>
+              </div>
+            </div>
 
-            <a class="nav-item" *ngIf="isManager() || isAdmin()"
-               routerLink="/dashboard/purchases" routerLinkActive="nav-active">
-              <i class="pi pi-shopping-bag nav-icon"></i>
-              <span class="nav-label">Procurement</span>
-            </a>
+            <!-- ─── Sales & CRM ─── -->
+            <div class="nav-group" [class.group-open]="salesOpen()" [class.group-active]="isGroupActive('sales')" *ngIf="isCashier() || isAdmin() || isManager()">
+              <div class="nav-item group-header" (click)="toggleGroup('sales')">
+                <i class="pi pi-receipt nav-icon"></i>
+                <span class="nav-label">Sales & CRM</span>
+                <i class="pi pi-chevron-down group-arrow"></i>
+              </div>
+              <div class="sub-nav">
+                <a class="nav-item sub-item" routerLink="/dashboard/sales" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label">Sales POS</span>
+                </a>
+                <a class="nav-item sub-item" routerLink="/dashboard/due-collection" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label">Due Collection</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="isAdmin() || isManager()" routerLink="/dashboard/parties" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label">Customers & Parties</span>
+                </a>
+              </div>
+            </div>
 
-            <a class="nav-item" *ngIf="isCashier() || isAdmin()"
-               routerLink="/dashboard/sales" routerLinkActive="nav-active">
-              <i class="pi pi-receipt nav-icon"></i>
-              <span class="nav-label">Sales POS</span>
-            </a>
+            <!-- ─── Administration ─── -->
+            <div class="nav-group" [class.group-open]="adminOpen()" [class.group-active]="isGroupActive('admin')" *ngIf="isAdmin()">
+              <div class="nav-item group-header" (click)="toggleGroup('admin')">
+                <i class="pi pi-shield nav-icon"></i>
+                <span class="nav-label">Administration</span>
+                <i class="pi pi-chevron-down group-arrow"></i>
+              </div>
+              <div class="sub-nav">
+                <a class="nav-item sub-item" routerLink="/dashboard/users" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label">Manage Users</span>
+                </a>
+                <a class="nav-item sub-item" routerLink="/dashboard/roles" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label">Roles & Permissions</span>
+                </a>
+              </div>
+            </div>
 
-            <a class="nav-item" *ngIf="isAdmin() || isManager() || isCashier()"
-               routerLink="/dashboard/due-collection" routerLinkActive="nav-active">
-              <i class="pi pi-wallet nav-icon"></i>
-              <span class="nav-label">Due Collection</span>
-            </a>
-
-            <a class="nav-item" *ngIf="isAdmin()"
-               routerLink="/dashboard/users" routerLinkActive="nav-active">
-              <i class="pi pi-users nav-icon"></i>
-              <span class="nav-label">Users</span>
-            </a>
-
-            <!-- ─── Master Data Section ─── -->
-            <div class="nav-section-label" style="margin-top:12px">MASTER DATA</div>
-
-            <a class="nav-item" *ngIf="isAdmin() || isManager()"
-               routerLink="/dashboard/parties" routerLinkActive="nav-active">
-              <i class="pi pi-address-book nav-icon"></i>
-              <span class="nav-label">Parties</span>
-            </a>
-
-            <a class="nav-item" *ngIf="isAdmin() || isManager()"
-               routerLink="/dashboard/taxes" routerLinkActive="nav-active">
-              <i class="pi pi-percentage nav-icon"></i>
-              <span class="nav-label">Tax</span>
-            </a>
-
-            <a class="nav-item" *ngIf="isAdmin() || isManager()"
-               routerLink="/dashboard/uoms" routerLinkActive="nav-active">
-              <i class="pi pi-th-large nav-icon"></i>
-              <span class="nav-label">UOM</span>
-            </a>
-
-            <a class="nav-item" *ngIf="isAdmin() || isManager()"
-               routerLink="/dashboard/generics" routerLinkActive="nav-active">
-              <i class="pi pi-list nav-icon"></i>
-              <span class="nav-label">Generics</span>
-            </a>
-
-            <a class="nav-item" *ngIf="isAdmin() || isManager()"
-               routerLink="/dashboard/categories" routerLinkActive="nav-active">
-              <i class="pi pi-tags nav-icon"></i>
-              <span class="nav-label">Categories</span>
-            </a>
-
-            <a class="nav-item" *ngIf="isAdmin() || isManager()"
-               routerLink="/dashboard/manufacturers" routerLinkActive="nav-active">
-              <i class="pi pi-briefcase nav-icon"></i>
-              <span class="nav-label">Manufacturers</span>
-            </a>
-
-            <a class="nav-item" *ngIf="isAdmin() || isManager()"
-               routerLink="/dashboard/dosage-forms" routerLinkActive="nav-active">
-              <i class="pi pi-box nav-icon"></i>
-              <span class="nav-label">Dosage Forms</span>
-            </a>
-
-            <a class="nav-item" *ngIf="isAdmin() || isManager()"
-               routerLink="/dashboard/strengths" routerLinkActive="nav-active">
-              <i class="pi pi-bolt nav-icon"></i>
-              <span class="nav-label">Strengths</span>
-            </a>
-
-            <a class="nav-item" *ngIf="isAdmin() || isManager()"
-               routerLink="/dashboard/indications" routerLinkActive="nav-active">
-              <i class="pi pi-heart nav-icon"></i>
-              <span class="nav-label">Indications</span>
-            </a>
+            <!-- ─── Configurations (Master Data) ─── -->
+            <div class="nav-group" [class.group-open]="configOpen()" [class.group-active]="isGroupActive('config')" *ngIf="isAdmin() || isManager()">
+              <div class="nav-item group-header" (click)="toggleGroup('config')">
+                <i class="pi pi-cog nav-icon"></i>
+                <span class="nav-label">Configurations</span>
+                <i class="pi pi-chevron-down group-arrow"></i>
+              </div>
+              <div class="sub-nav">
+                <a class="nav-item sub-item" routerLink="/dashboard/taxes" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Tax Settings</span>
+                </a>
+                <a class="nav-item sub-item" routerLink="/dashboard/uoms" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Units of Measure</span>
+                </a>
+                <a class="nav-item sub-item" routerLink="/dashboard/generics" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Generics</span>
+                </a>
+                <a class="nav-item sub-item" routerLink="/dashboard/categories" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Categories</span>
+                </a>
+                <a class="nav-item sub-item" routerLink="/dashboard/manufacturers" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Manufacturers</span>
+                </a>
+                <a class="nav-item sub-item" routerLink="/dashboard/dosage-forms" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Dosage Forms</span>
+                </a>
+                <a class="nav-item sub-item" routerLink="/dashboard/strengths" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Strengths</span>
+                </a>
+                <a class="nav-item sub-item" routerLink="/dashboard/indications" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Indications</span>
+                </a>
+              </div>
+            </div>
           </nav>
 
           <div class="sidebar-footer">
@@ -347,42 +364,88 @@ import { SalesService } from '../../services/sales.service';
       padding: 20px 12px 12px;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 4px;
       overflow-y: auto;
       overflow-x: hidden;
     }
+    .sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    .sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
     .nav-section-label {
       font-size: .64rem;
       font-weight: 700;
       color: #475569;
-      letter-spacing: .1em;
-      padding: 4px 10px 10px;
+      letter-spacing: .12em;
+      padding: 10px 14px 6px;
       white-space: nowrap;
+      text-transform: uppercase;
     }
     .nav-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 11px 14px;
-      border-radius: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
       color: #94a3b8;
-      font-size: .875rem;
+      font-size: .9rem;
       font-weight: 500;
       cursor: pointer;
       text-decoration: none;
-      transition: background .15s, color .15s, border-color .15s;
+      transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
       border-left: 3px solid transparent;
       white-space: nowrap;
     }
-    .nav-item:hover { background: #334155; color: #f1f5f9; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #f1f5f9; }
     .nav-active {
-      background: rgba(13,148,136,.15) !important;
+      background: rgba(13,148,136,.12) !important;
       color: #2dd4bf !important;
       border-left-color: #0d9488 !important;
+      font-weight: 600;
+      box-shadow: inset 0 0 10px rgba(13, 148, 136, 0.1);
     }
-    .nav-active .nav-icon { color: #0d9488 !important; }
-    .nav-icon { font-size: 1rem; flex-shrink: 0; }
-    .nav-label { flex: 1; }
+    .nav-active .nav-icon { color: #0d9488 !important; transform: scale(1.1); }
+    .nav-icon { font-size: 1.05rem; flex-shrink: 0; transition: transform 0.2s; color: #64748b; }
+    .nav-label { flex: 1; transition: color 0.2s; }
+
+    /* ─── Grouped Nav ─── */
+    .nav-group { display: flex; flex-direction: column; margin-bottom: 2px; }
+    .group-header { position: relative; }
+    .group-arrow { font-size: 0.65rem; transition: transform 0.35s; opacity: 0.4; margin-left: auto; }
+    .group-open .group-header { color: #f1f5f9; background: rgba(255,255,255,0.03); }
+    .group-open .group-arrow { transform: rotate(180deg); opacity: 0.8; color: #0d9488; }
+    
+    .group-active .group-header { color: #5eead4; background: rgba(13, 148, 136, 0.05); }
+    .group-active .group-header i:first-child { color: #0d9488; }
+    
+    .sub-nav {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+      opacity: 0;
+      background: rgba(0,0,0,0.15);
+      margin: 0 8px;
+      border-radius: 0 0 12px 12px;
+    }
+    .group-open .sub-nav { max-height: 600px; opacity: 1; padding: 4px 0 8px; margin-bottom: 8px; }
+    
+    .sub-item {
+      padding: 10px 16px 10px 42px !important;
+      font-size: 0.825rem !important;
+      border-radius: 8px !important;
+      margin: 0 8px;
+      color: #728197;
+      border-left: none !important;
+    }
+    .sub-item.nav-active { background: transparent !important; color: #2dd4bf !important; position: relative; }
+    .sub-item.nav-active::before {
+       content: ''; position: absolute; left: 16px; top: 18px; width: 6px; height: 6px; 
+       background: #0d9488; border-radius: 50%; box-shadow: 0 0 8px #0d9488;
+    }
+    
+    .nav-icon-dot { font-size: 0.4rem; opacity: 0.4; }
+    .sub-item.nav-active .nav-icon-dot { display: none; }
 
     .sidebar-footer {
       padding: 16px 12px;
@@ -534,6 +597,12 @@ export class DashboardComponent implements OnInit {
   sidebarOpen = signal(true);
   currentUrl = signal('/dashboard');
 
+  // Group visibility signals
+  inventoryOpen = signal(false);
+  salesOpen = signal(false);
+  adminOpen = signal(false);
+  configOpen = signal(false);
+
   constructor(
     private router: Router,
     private authService: AuthService,
@@ -552,7 +621,10 @@ export class DashboardComponent implements OnInit {
     // এতে blink/flash সমস্যা দূর হবে
     this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe((e: any) => this.currentUrl.set(e.urlAfterRedirects));
+      .subscribe((e: any) => {
+        this.currentUrl.set(e.urlAfterRedirects);
+        this.autoOpenGroups();
+      });
 
     if (this.isPharmacist() || this.isAdmin()) {
       this.medicineService.getMedicines({ pageNumber: 1, pageSize: 1 }).subscribe(res => {
@@ -561,7 +633,43 @@ export class DashboardComponent implements OnInit {
       // For low stock, we might need a dedicated API or a large page size, but for now let's just use a reasonable number or a filtered query if the API supports it
       // Actually, I'll just set it to 0 or hide it if it's too expensive, or just fetch a large chunk.
       // Given the client wants a wow effect, let's just fetch a reasonable amount for now.
+      // Given the client wants a wow effect, let's just fetch a reasonable amount for now.
     }
+
+    // Auto-open group based on current URL
+    this.autoOpenGroups();
+  }
+
+  autoOpenGroups() {
+    const url = this.router.url;
+    if (url.includes('/medicines') || url.includes('/purchases')) this.inventoryOpen.set(true);
+    if (url.includes('/sales') || url.includes('/due-collection') || url.includes('/parties')) this.salesOpen.set(true);
+    if (url.includes('/users') || url.includes('/roles')) this.adminOpen.set(true);
+    if (url.includes('/taxes') || url.includes('/uoms') || url.includes('/generics') || 
+        url.includes('/categories') || url.includes('/manufacturers') || 
+        url.includes('/dosage-forms') || url.includes('/strengths') || url.includes('/indications')) {
+      this.configOpen.set(true);
+    }
+  }
+
+  toggleGroup(group: string) {
+    if (group === 'inventory') this.inventoryOpen.set(!this.inventoryOpen());
+    if (group === 'sales') this.salesOpen.set(!this.salesOpen());
+    if (group === 'admin') this.adminOpen.set(!this.adminOpen());
+    if (group === 'config') this.configOpen.set(!this.configOpen());
+  }
+
+  isGroupActive(group: string): boolean {
+    const url = this.currentUrl();
+    if (group === 'inventory') return url.includes('/medicines') || url.includes('/purchases');
+    if (group === 'sales') return url.includes('/sales') || url.includes('/due-collection') || url.includes('/parties');
+    if (group === 'admin') return url.includes('/users') || url.includes('/roles');
+    if (group === 'config') {
+      return url.includes('/taxes') || url.includes('/uoms') || url.includes('/generics') || 
+             url.includes('/categories') || url.includes('/manufacturers') || 
+             url.includes('/dosage-forms') || url.includes('/strengths') || url.includes('/indications');
+    }
+    return false;
   }
 
   updateTime() {

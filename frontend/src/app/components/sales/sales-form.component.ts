@@ -1,483 +1,705 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Medicine, MedicineService } from '../../services/medicine.service';
-import { SalesService } from '../../services/sales.service';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
+import {
+  Component, OnInit, signal, computed, effect, untracked, inject
+} from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged, forkJoin } from 'rxjs';
+
+// PrimeNG
+import { AutoCompleteModule } from 'primeng/autocomplete';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
+import { DatePickerModule } from 'primeng/datepicker';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ToastModule } from 'primeng/toast';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { InputTextModule } from 'primeng/inputtext';
+import { DividerModule } from 'primeng/divider';
+
+// Services & Models
+import { SalesService, SaleMaster, SaleDetail, SalePayment, SaleBatchInfo } from '../../services/sales.service';
+import { CustomerService, Customer } from '../../services/customer.service';
+import { MedicineService, Medicine } from '../../services/medicine.service';
+import { TaxService } from '../../services/tax.service';
+import { UomService } from '../../services/uom.service';
+import { SalesInvoicePrintService } from '../../services/invoice-print.service';
+
+// ─── Interfaces ──────────────────────────────────────────────────────────────
+
+interface MedRow {
+  medicineId: number;
+  medicineName: string;
+  batchNumber: string;
+  expiryDate: Date | null;
+  availableQty: number;
+  quantity: number;
+  uomId: number | null;
+  uomName: string;
+  unitPrice: number;
+  discountType: 'amount' | 'percent';
+  discountValue: number;
+  discountAmount: number;
+  discountPercent: number;
+  taxId: number | null;
+  taxPercent: number;
+  taxAmount: number;
+  lineTotal: number;
+  isNearExpiry: boolean;
+  // Dropdown data
+  medicineSuggestions: Medicine[];
+  batchOptions: SaleBatchInfo[];
+  medicine?: Medicine | null;
+}
+
+interface PayRow {
+  method: string;
+  amount: number;
+  accountNumber: string;
+  transactionId: string;
+  remarks: string;
+  showRef: boolean;
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 @Component({
   selector: 'app-sales-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, SelectModule],
-  template: `
-    <div class="pos-shell animate-fadein-up">
-
-      <!-- ─── LEFT: POS Entry Form ─── -->
-      <div class="pos-form-card">
-        <div class="pos-header">
-          <div class="pos-icon"><i class="pi pi-desktop"></i></div>
-          <div>
-            <h2 class="pos-title">Point of Sale</h2>
-            <p class="pos-sub">New customer transaction</p>
-          </div>
-        </div>
-
-        <form [formGroup]="salesForm" (ngSubmit)="onSubmit()">
-
-          <!-- Customer Info -->
-          <div class="section-label">CUSTOMER INFO</div>
-          <div class="form-grid-2">
-            <div class="form-field">
-              <label class="field-label">Customer Name</label>
-              <input class="field-input" formControlName="customerName" placeholder="Guest Customer">
-            </div>
-            <div class="form-field">
-              <label class="field-label">Phone</label>
-              <input class="field-input" formControlName="customerPhone" placeholder="01XXX-XXXXXX">
-            </div>
-          </div>
-
-          <!-- Medicines Section -->
-          <div class="medicines-header">
-            <div class="section-label">MEDICINES</div>
-            <button type="button" class="btn-add-item" (click)="addItem()">
-              <i class="pi pi-plus"></i> Add Item
-            </button>
-          </div>
-
-          <div formArrayName="salesDetails" class="items-list">
-            <div *ngFor="let item of salesDetails.controls; let i=index"
-                 [formGroupName]="i" class="item-row">
-
-              <div class="item-med-select">
-                <label class="field-label-sm">Medicine</label>
-                <p-select [options]="medicines" formControlName="medicineId"
-                            optionLabel="name" optionValue="medicineId"
-                            placeholder="Select medicine…" [filter]="true"
-                            filterPlaceholder="Search…" styleClass="w-full"
-                            (onChange)="onMedicineChange(i)"></p-select>
-              </div>
-
-              <div class="item-qty">
-                <label class="field-label-sm">Qty</label>
-                <input class="field-input" type="number" formControlName="quantity"
-                       min="1" (input)="itemTotal(i)" style="text-align:center">
-              </div>
-
-              <div class="item-price">
-                <label class="field-label-sm">Unit Price</label>
-                <input class="field-input field-readonly" type="number"
-                       formControlName="unitPrice" [readonly]="true">
-              </div>
-
-              <div class="item-subtotal">
-                <label class="field-label-sm">Subtotal</label>
-                <div class="subtotal-value">{{ item.get('subtotal')?.value | currency }}</div>
-              </div>
-
-              <button type="button" class="item-remove" (click)="removeItem(i)" title="Remove">
-                <i class="pi pi-trash"></i>
-              </button>
-            </div>
-
-            <!-- Empty items state -->
-            <div *ngIf="salesDetails.controls.length === 0" class="items-empty">
-              <i class="pi pi-shopping-cart" style="font-size:1.5rem;color:#cbd5e1"></i>
-              <span>No items added. Click "Add Item" to start.</span>
-            </div>
-          </div>
-
-        </form>
-      </div>
-
-      <!-- ─── RIGHT: Order Summary ─── -->
-      <div class="summary-panel">
-
-        <!-- Totals Card -->
-        <div class="summary-card">
-          <div class="summary-title">ORDER SUMMARY</div>
-
-          <div class="summary-lines">
-            <div class="summary-line">
-              <span>Subtotal</span>
-              <span>{{ subtotal | currency }}</span>
-            </div>
-            <div class="summary-line">
-              <span>Tax (5%)</span>
-              <span>{{ taxTotal | currency }}</span>
-            </div>
-            <div class="summary-line discount-line">
-              <span>Discount</span>
-              <input class="discount-input" type="number" [formControl]="salesForm.controls.discount"
-                     (input)="updateTotals()" placeholder="0">
-            </div>
-          </div>
-
-          <div class="total-block">
-            <div class="total-label">PAYABLE AMOUNT</div>
-            <div class="total-value">{{ grandTotal | currency }}</div>
-          </div>
-        </div>
-
-        <!-- Payment Method -->
-        <div class="payment-card">
-          <div class="payment-title">PAYMENT METHOD</div>
-          <div class="payment-methods">
-            <button type="button" class="pay-btn"
-                    [class.pay-active]="salesForm.get('paymentMethod')?.value === 'Cash'"
-                    (click)="salesForm.patchValue({paymentMethod:'Cash'})">
-              <i class="pi pi-money-bill"></i>
-              <span>Cash</span>
-            </button>
-            <button type="button" class="pay-btn"
-                    [class.pay-active]="salesForm.get('paymentMethod')?.value === 'Card'"
-                    (click)="salesForm.patchValue({paymentMethod:'Card'})">
-              <i class="pi pi-credit-card"></i>
-              <span>Card</span>
-            </button>
-            <button type="button" class="pay-btn"
-                    [class.pay-active]="salesForm.get('paymentMethod')?.value === 'Mobile'"
-                    (click)="salesForm.patchValue({paymentMethod:'Mobile'})">
-              <i class="pi pi-mobile"></i>
-              <span>Mobile</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Checkout Button -->
-        <button class="checkout-btn" (click)="onSubmit()"
-                [disabled]="salesForm.invalid || isSubmitting">
-          <span *ngIf="!isSubmitting">
-            <i class="pi pi-check-circle"></i> Complete Sale
-          </span>
-          <span *ngIf="isSubmitting">
-            <i class="pi pi-spin pi-spinner"></i> Processing…
-          </span>
-        </button>
-
-        <div class="sale-success" *ngIf="lastSuccess">
-          <i class="pi pi-check-circle"></i> Sale #{{ lastSuccess }} completed!
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    :host { display: block; width: 100%; }
-
-    .pos-shell {
-      display: flex;
-      gap: 20px;
-      width: 100%;
-      align-items: flex-start;
-      flex-wrap: wrap;
-    }
-
-    /* ─── Form Card ─── */
-    .pos-form-card {
-      flex: 1;
-      min-width: 340px;
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .pos-header { display: flex; align-items: center; gap: 14px; }
-    .pos-icon {
-      width: 48px; height: 48px;
-      background: #ccfbf1; color: #0d9488;
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem;
-    }
-    .pos-title { font-size: 1.3rem; font-weight: 800; color: #0f172a; margin: 0; }
-    .pos-sub   { font-size: .8rem; color: #64748b; margin: 0; }
-
-    /* Form fields */
-    .section-label {
-      font-size: .65rem; font-weight: 700; color: #94a3b8;
-      letter-spacing: .1em; margin-bottom: 10px;
-    }
-    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .form-field { display: flex; flex-direction: column; gap: 6px; }
-    .field-label { font-size: .8rem; font-weight: 600; color: #475569; }
-    .field-label-sm { font-size: .72rem; font-weight: 600; color: #94a3b8; }
-    .field-input {
-      padding: 9px 12px;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 10px;
-      font-size: .875rem;
-      font-family: 'Inter', sans-serif;
-      color: #0f172a;
-      outline: none;
-      transition: border-color .15s;
-      width: 100%;
-    }
-    .field-input:focus { border-color: #0d9488; }
-    .field-readonly { background: #f8fafc; color: #64748b; }
-
-    /* Medicines Section */
-    .medicines-header {
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .btn-add-item {
-      display: flex; align-items: center; gap: 6px;
-      background: #eff6ff; color: #3b82f6;
-      border: 1px solid #bfdbfe; border-radius: 8px;
-      padding: 7px 14px; font-size: .8rem; font-weight: 600;
-      cursor: pointer; transition: background .15s;
-      font-family: 'Inter', sans-serif;
-    }
-    .btn-add-item:hover { background: #dbeafe; }
-
-    /* Item rows */
-    .items-list { display: flex; flex-direction: column; gap: 10px; }
-    .item-row {
-      display: grid;
-      grid-template-columns: 2fr 80px 100px 100px 36px;
-      gap: 10px;
-      align-items: end;
-      background: #f8fafc;
-      padding: 14px;
-      border-radius: 12px;
-      border: 1px solid #f1f5f9;
-    }
-    .subtotal-value {
-      font-weight: 700; color: #0d9488; font-size: .95rem;
-      padding: 8px 0;
-    }
-    .item-remove {
-      width: 36px; height: 36px;
-      background: #fff1f2; border: none; border-radius: 8px;
-      color: #f87171; cursor: pointer; transition: background .15s;
-      display: flex; align-items: center; justify-content: center;
-      font-size: .875rem;
-    }
-    .item-remove:hover { background: #ffe4e6; color: #ef4444; }
-
-    .items-empty {
-      display: flex; align-items: center; gap: 10px;
-      justify-content: center;
-      padding: 24px;
-      color: #94a3b8;
-      font-size: .875rem;
-      background: #f8fafc;
-      border-radius: 12px;
-      border: 1px dashed #e2e8f0;
-    }
-
-    /* ─── Summary Panel ─── */
-    .summary-panel {
-      width: 300px;
-      min-width: 280px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .summary-card {
-      background: #0f172a;
-      border-radius: 16px;
-      padding: 24px;
-      color: #fff;
-    }
-    .summary-title {
-      font-size: .65rem; font-weight: 700; color: #4ade80;
-      letter-spacing: .1em; margin-bottom: 16px;
-    }
-    .summary-lines { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-    .summary-line {
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: .875rem; color: #94a3b8;
-    }
-    .summary-line span:last-child { color: #f1f5f9; font-weight: 600; }
-    .discount-line span:last-child { color: inherit; font-weight: normal; }
-    .discount-input {
-      width: 90px;
-      padding: 6px 10px;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      background: #1e293b;
-      color: #f1f5f9;
-      font-size: .875rem;
-      text-align: right;
-      font-family: 'Inter', sans-serif;
-      outline: none;
-    }
-    .total-block {
-      border-top: 1px solid #1e293b;
-      padding-top: 16px;
-    }
-    .total-label { font-size: .65rem; font-weight: 700; color: #64748b; letter-spacing: .1em; margin-bottom: 4px; }
-    .total-value { font-size: 2rem; font-weight: 900; color: #fff; }
-
-    /* Payment */
-    .payment-card {
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 20px;
-    }
-    .payment-title { font-size: .65rem; font-weight: 700; color: #94a3b8; letter-spacing: .1em; margin-bottom: 12px; }
-    .payment-methods { display: flex; gap: 8px; }
-    .pay-btn {
-      flex: 1;
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-      padding: 12px 8px;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 10px;
-      background: #f8fafc;
-      color: #64748b;
-      cursor: pointer;
-      transition: all .15s;
-      font-size: .75rem; font-weight: 600;
-      font-family: 'Inter', sans-serif;
-    }
-    .pay-btn i { font-size: 1.1rem; }
-    .pay-btn:hover { border-color: #0d9488; color: #0d9488; background: #f0fdfa; }
-    .pay-active {
-      border-color: #0d9488 !important;
-      background: #ccfbf1 !important;
-      color: #0f766e !important;
-    }
-
-    /* Checkout */
-    .checkout-btn {
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, #0d9488, #0f766e);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-size: 1rem; font-weight: 700;
-      cursor: pointer;
-      transition: opacity .15s;
-      font-family: 'Inter', sans-serif;
-    }
-    .checkout-btn:hover:not(:disabled) { opacity: .9; }
-    .checkout-btn:disabled { opacity: .5; cursor: not-allowed; }
-
-    .sale-success {
-      display: flex; align-items: center; gap: 8px;
-      background: #d1fae5; color: #065f46;
-      border-radius: 10px; padding: 12px 16px;
-      font-size: .875rem; font-weight: 600;
-      animation: fadein .3s ease-out;
-    }
-
-    @keyframes fadein { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .pos-shell { flex-direction: column; }
-      .summary-panel { width: 100%; }
-      .item-row { grid-template-columns: 1fr; }
-      .form-grid-2 { grid-template-columns: 1fr; }
-    }
-  `]
+  imports: [
+    CommonModule, FormsModule,
+    AutoCompleteModule, InputNumberModule, SelectModule,
+    DatePickerModule, ButtonModule, TableModule,
+    DialogModule, ConfirmDialogModule, ToastModule,
+    InputTextModule, DividerModule
+  ],
+  providers: [ConfirmationService, MessageService, DatePipe],
+  templateUrl: './sales-form.component.html',
+  styleUrls: ['./sales-form.component.scss']
 })
 export class SalesFormComponent implements OnInit {
-  salesForm: FormGroup;
-  medicines: Medicine[] = [];
-  subtotal  = 0;
-  taxTotal  = 0;
-  grandTotal = 0;
-  isSubmitting = false;
-  lastSuccess: string | null = null;
 
-  constructor(
-    private fb: FormBuilder,
-    private medicineService: MedicineService,
-    private salesService: SalesService
-  ) {
-    this.salesForm = this.fb.group({
-      customerName:  ['Guest'],
-      customerPhone: [''],
-      saleDate:      [new Date()],
-      grandTotal:    [0],
-      discount:      [0],
-      paymentMethod: ['Cash', Validators.required],
-      salesDetails:  this.fb.array([], Validators.required)
+  // ── Sales Header ──────────────────────────────────────────────────────────
+  invoiceCode = '';
+  saleDate: Date = new Date();
+  saleTime = '';
+  salesBy = '';
+
+  // ── Customer ──────────────────────────────────────────────────────────────
+  customerQuery = '';
+  customerSuggestions: Customer[] = [];
+  selectedCustomer: Customer | null = null;
+  isRegisteredCustomer = false;
+  guestName = '';
+  guestPhone = '';
+
+  // Quick-add customer dialog
+  showQuickCustomer = false;
+  quickCustomer = { fullName: '', mobile: '', email: '', address: '', isRegistered: false };
+  quickSaving = false;
+
+  // ── Medicine Rows ─────────────────────────────────────────────────────────
+  rows = signal<MedRow[]>([]);
+  taxes: any[] = [];
+  uoms: any[] = [];
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+  specialDiscount = signal(0);
+  adjustment = signal(0);
+
+  subTotal       = computed(() => this.rows().reduce((s, r) => s + r.quantity * r.unitPrice, 0));
+  totalDiscount  = computed(() => this.rows().reduce((s, r) => s + r.discountAmount, 0));
+  totalTax       = computed(() => this.rows().reduce((s, r) => s + r.taxAmount, 0));
+  grandTotal     = computed(() =>
+    parseFloat((this.subTotal() - this.totalDiscount() + this.totalTax() - this.specialDiscount()).toFixed(2)));
+
+  // ── Payment ───────────────────────────────────────────────────────────────
+  payments = signal<PayRow[]>([
+    { method: 'Cash', amount: 0, accountNumber: '', transactionId: '', remarks: '', showRef: false }
+  ]);
+  splitEnabled = false;
+
+  totalPaid   = computed(() => this.payments().reduce((s, p) => s + (p.amount || 0), 0));
+  changeAmt   = computed(() => parseFloat(Math.max(0, this.totalPaid() - this.grandTotal()).toFixed(2)));
+  dueAmount   = computed(() => parseFloat(Math.max(0, this.grandTotal() - this.totalPaid()).toFixed(2)));
+
+  // Helper for template because spread operator isn't allowed in expressions
+  triggerPaymentsUpdate() {
+    this.payments.set([...this.payments()]);
+  }
+
+  // Pulse effect for grand total
+  grandTotalPulse = signal(false);
+  activeRowIndex = signal<number | null>(null);
+  private lastTotal = 0;
+
+  // ── UI State ──────────────────────────────────────────────────────────────
+  saving = false;
+  editSaleId: number | null = null;
+
+  // ── Payment Methods ──────────────────────────────────────────────────────
+  paymentMethods = [
+    { label: 'Cash', icon: 'pi-money-bill' },
+    { label: 'Mobile Banking', icon: 'pi-mobile' },
+    { label: 'Bank', icon: 'pi-building-columns' },
+    { label: 'Card', icon: 'pi-credit-card' }
+  ];
+  
+  private searchSubject = new Subject<string>();
+
+  private salesService = inject(SalesService);
+  private customerService = inject(CustomerService);
+  private medicineService = inject(MedicineService);
+  private taxService = inject(TaxService);
+  private uomService = inject(UomService);
+  private printService: SalesInvoicePrintService = inject(SalesInvoicePrintService);
+  private messageService = inject(MessageService);
+  private confirmationService = inject(ConfirmationService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private datePipe = inject(DatePipe);
+
+  constructor() {
+    // Auto-sync grandTotal → first payment amount + pulse effect
+    effect(() => {
+      const total = this.grandTotal();
+      if (total === this.lastTotal) return;
+      this.lastTotal = total;
+      
+      untracked(() => {
+        const ps = this.payments();
+        if (ps.length === 1 && !this.splitEnabled) {
+          ps[0].amount = total;
+          this.payments.set([...ps]);
+        }
+        // Pulse animation
+        this.grandTotalPulse.set(true);
+        setTimeout(() => this.grandTotalPulse.set(false), 600);
+      });
     });
   }
 
   ngOnInit() {
-    this.medicineService.getMedicines({ pageNumber: 1, pageSize: 1000 }).subscribe(res => {
-      this.medicines = res.items;
-    });
-    this.addItem();
-  }
-
-  get salesDetails() {
-    return this.salesForm.get('salesDetails') as FormArray;
-  }
-
-  addItem() {
-    const item = this.fb.group({
-      medicineId: [null, Validators.required],
-      quantity:   [1, [Validators.required, Validators.min(1)]],
-      unitPrice:  [0],
-      tax:        [0],
-      subtotal:   [0]
-    });
-    this.salesDetails.push(item);
-  }
-
-  removeItem(index: number) {
-    this.salesDetails.removeAt(index);
-    this.updateTotals();
-  }
-
-  onMedicineChange(index: number) {
-    const item  = this.salesDetails.at(index);
-    const medId = item.get('medicineId')?.value;
-    const med   = this.medicines.find(m => m.medicineId === medId);
-    if (med) {
-      item.patchValue({ unitPrice: med.salePrice });
-      this.itemTotal(index);
+    this.loadMeta();
+    this.loadInvoiceCode();
+    const userStr = localStorage.getItem('currentUser');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      this.salesBy = user.fullName || user.name || user.username || 'User';
+    } else {
+      this.salesBy = 'User';
     }
-  }
+    this.updateTime();
+    setInterval(() => this.updateTime(), 60000);
 
-  itemTotal(index: number) {
-    const item  = this.salesDetails.at(index);
-    const qty   = item.get('quantity')?.value || 0;
-    const price = item.get('unitPrice')?.value || 0;
-    const total = qty * price;
-    item.patchValue({ tax: total * 0.05, subtotal: total });
-    this.updateTotals();
-  }
+    // Check for edit mode
+    this.route.params.subscribe(p => {
+      if (p['id']) {
+        this.editSaleId = +p['id'];
+        this.loadSaleForEdit(this.editSaleId);
+      } else {
+        this.addRow();
+      }
+    });
 
-  updateTotals() {
-    this.subtotal  = this.salesDetails.controls.reduce((a, c) => a + (c.get('subtotal')?.value || 0), 0);
-    this.taxTotal  = this.salesDetails.controls.reduce((a, c) => a + (c.get('tax')?.value || 0), 0);
-    const disc     = this.salesForm.get('discount')?.value || 0;
-    this.grandTotal = this.subtotal + this.taxTotal - disc;
-    this.salesForm.patchValue({ grandTotal: this.grandTotal });
-  }
-
-  onSubmit() {
-    if (this.salesForm.valid) {
-      this.isSubmitting = true;
-      this.lastSuccess = null;
-      this.salesService.createSale(this.salesForm.value).subscribe({
-        next: (res: any) => {
-          this.isSubmitting = false;
-          this.lastSuccess  = res?.saleId || 'NEW';
-          // Reset form
-          while (this.salesDetails.length) this.salesDetails.removeAt(0);
-          this.salesForm.patchValue({ customerName: 'Guest', customerPhone: '', discount: 0, paymentMethod: 'Cash' });
-          this.subtotal = this.taxTotal = this.grandTotal = 0;
-          this.addItem();
-        },
-        error: (err) => {
-          this.isSubmitting = false;
-          alert(err.error || 'Error completing sale');
-        }
+    // Setup debounced customer search
+    this.searchSubject.pipe(
+      debounceTime(400),
+      distinctUntilChanged()
+    ).subscribe(q => {
+      if (!q || q.length < 1) {
+        this.customerSuggestions = [];
+        return;
+      }
+      this.customerService.search(q).subscribe({
+        next: (data) => this.customerSuggestions = data,
+        error: (err) => console.error('Customer Search Error', err)
       });
+    });
+  }
+
+  private updateTime() {
+    this.saleTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  }
+
+  loadMeta() {
+    this.taxService.getAll().subscribe(d => this.taxes = d.filter((x: any) => x.isActive));
+    this.uomService.getAll().subscribe(d => this.uoms = d);
+  }
+
+  loadInvoiceCode() {
+    this.salesService.getNextInvoiceCode().subscribe(r => this.invoiceCode = r.invoiceCode);
+  }
+
+  // ── Customer Search ───────────────────────────────────────────────────────
+  searchCustomer(event: any) {
+    this.guestName = event.query; // Sync search query to guest name
+    this.searchSubject.next(event.query);
+  }
+
+  onCustomerSelect(event: any) {
+    const c: Customer = event.value ?? event;
+    this.selectedCustomer = c;
+    this.isRegisteredCustomer = true; // All parties are registered
+    this.customerQuery = c.fullName;
+    this.guestName = '';
+    this.guestPhone = '';
+  }
+
+  clearCustomer() {
+    this.selectedCustomer = null;
+    this.isRegisteredCustomer = false;
+    this.customerQuery = '';
+    this.guestName = '';
+    this.guestPhone = '';
+  }
+
+  openQuickCustomer() {
+    this.quickCustomer = { fullName: this.customerQuery, mobile: '', email: '', address: '', isRegistered: true };
+    this.showQuickCustomer = true;
+  }
+
+  saveQuickCustomer() {
+    const bdPhone = /^(?:\+88|88)?01[3-9]\d{8}$/;
+    const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!this.quickCustomer.fullName.trim()) {
+      this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Customer name is required.' });
+      return;
     }
+    if (!this.quickCustomer.mobile?.trim()) {
+      this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Mobile number is required for registration.' });
+      return;
+    }
+    if (this.quickCustomer.mobile && !bdPhone.test(this.quickCustomer.mobile)) {
+      this.messageService.add({ severity: 'error', summary: 'Invalid Mobile', detail: 'Enter valid BD number (e.g. 01XXXXXXXXX).' });
+      return;
+    }
+    if (this.quickCustomer.email && !emailRx.test(this.quickCustomer.email)) {
+      this.messageService.add({ severity: 'error', summary: 'Invalid Email', detail: 'Enter a valid email address.' });
+      return;
+    }
+
+    this.quickSaving = true;
+    
+    // Prepare payload: send null for empty optional fields to satisfy backend validation
+    const payload = {
+      fullName: this.quickCustomer.fullName.trim(),
+      cell: this.quickCustomer.mobile?.trim() || null,
+      email: this.quickCustomer.email?.trim() || null,
+      address: this.quickCustomer.address?.trim() || null,
+      partyType: 'Customer',
+      isActive: true
+    };
+
+    console.log('Saving Customer Payload:', payload);
+
+    this.customerService.create(payload).subscribe({
+      next: (c) => {
+        this.quickSaving = false;
+        this.showQuickCustomer = false;
+        this.selectedCustomer = c;
+        this.isRegisteredCustomer = true;
+        this.customerQuery = c.fullName;
+        this.messageService.add({ severity: 'success', summary: 'Customer Added', detail: `${c.fullName} added successfully!` });
+      },
+      error: (err) => {
+        this.quickSaving = false;
+        console.error('Customer Creation Error:', err);
+        
+        let detail = 'Failed to add customer.';
+        const errorData = err?.error;
+        
+        if (errorData) {
+          if (Array.isArray(errorData.errors)) {
+            detail = errorData.errors.join(', ');
+          } else if (errorData.errors && typeof errorData.errors === 'object') {
+            // Handle ASP.NET Core default validation object (field: [errors])
+            const vals = Object.values(errorData.errors).flat();
+            if (vals.length > 0) detail = vals.join(', ');
+          } else if (errorData.message) {
+            detail = errorData.message;
+          }
+        }
+        
+        this.messageService.add({ severity: 'error', summary: 'Error', detail, life: 7000 });
+      }
+    });
+  }
+
+  // ── Medicine Rows ─────────────────────────────────────────────────────────
+  private loadSaleForEdit(id: number) {
+    this.salesService.getSaleById(id).subscribe({
+      next: (s) => {
+        this.invoiceCode = s.invoiceCode || '';
+        this.saleDate = s.saleDate ? new Date(s.saleDate) : new Date();
+        this.specialDiscount.set(s.specialDiscount || 0);
+
+        // Set customer
+        if (s.partyId) {
+          this.customerService.getById(s.partyId).subscribe(c => {
+            this.onCustomerSelect(c);
+          });
+        } else {
+          this.guestName = s.customerName || '';
+          this.guestPhone = s.customerPhone || '';
+        }
+
+        // Set payments
+        if (s.salesPayments && s.salesPayments.length > 0) {
+          this.splitEnabled = s.salesPayments.length > 1;
+          this.payments.set(s.salesPayments.map(p => ({
+            method: p.paymentMethod,
+            amount: p.amount,
+            accountNumber: p.accountNumber || '',
+            transactionId: p.transactionId || '',
+            remarks: p.remarks || '',
+            showRef: p.paymentMethod !== 'Cash'
+          })));
+        }
+
+        // Set rows (Load batches for each row)
+        const rowTasks = s.salesDetails.map(d => {
+          return this.salesService.getMedicineBatches(d.medicineId);
+        });
+
+        if (rowTasks.length > 0) {
+          forkJoin(rowTasks).subscribe(allBatches => {
+            const medRows: MedRow[] = s.salesDetails.map((d, i) => {
+              const batches = allBatches[i];
+              const selectedBatch = batches.find(b => b.batchNumber === d.batchNumber);
+              return {
+                medicineId: d.medicineId,
+                medicineName: d.medicineName || '',
+                batchNumber: d.batchNumber,
+                expiryDate: d.expiryDate ? new Date(d.expiryDate) : null,
+                availableQty: selectedBatch ? selectedBatch.availableQty + d.quantity : d.quantity,
+                quantity: d.quantity,
+                uomId: d.uomId || null,
+                uomName: d.uomName || '',
+                unitPrice: d.unitPrice,
+                discountType: d.discountPercent > 0 ? 'percent' : 'amount',
+                discountValue: d.discountPercent > 0 ? d.discountPercent : d.discountAmount,
+                discountAmount: d.discountAmount,
+                discountPercent: d.discountPercent,
+                taxId: null,
+                taxPercent: d.taxPercent,
+                taxAmount: d.taxAmount,
+                lineTotal: d.lineTotal,
+                isNearExpiry: selectedBatch?.isNearExpiry || false,
+                medicineSuggestions: [],
+                batchOptions: batches
+              };
+            });
+            this.rows.set(medRows);
+          });
+        }
+      },
+      error: (err) => this.messageService.add({ severity: 'error', summary: 'Load Error', detail: 'Failed to load sale for editing.' })
+    });
+  }
+
+  addRow(): void {
+    const row: MedRow = {
+      medicineId: 0, medicineName: '',
+      batchNumber: '', expiryDate: null, availableQty: 0,
+      quantity: 1, uomId: null, uomName: '',
+      unitPrice: 0,
+      discountType: 'amount', discountValue: 0, discountAmount: 0, discountPercent: 0,
+      taxId: null, taxPercent: 0, taxAmount: 0,
+      lineTotal: 0, isNearExpiry: false,
+      medicineSuggestions: [], batchOptions: [],
+      medicine: null
+    };
+    this.rows.update(r => [...r, row]);
+  }
+
+  removeRow(i: number) {
+    this.rows.update(r => { const c = [...r]; c.splice(i, 1); return c; });
+  }
+
+  searchMedicine(event: any, row: MedRow) {
+    if (!event.query) return;
+    this.medicineService.getMedicines({ searchText: event.query, pageNumber: 1, pageSize: 20 })
+      .subscribe({
+        next: res => row.medicineSuggestions = res.items,
+        error: err => console.error('Medicine search error', err)
+      });
+  }
+
+  onMedicineSelect(event: any, row: MedRow) {
+    const med: Medicine = event.value ?? event;
+    row.medicineId = med.medicineId;
+    row.medicineName = med.name;
+    row.unitPrice = med.salePrice || 0;
+    row.uomId = null; 
+    row.uomName = med.uom || '';
+
+    // Reset row details to ensure full dependency on medicine selection
+    row.batchOptions = [];
+    row.batchNumber = '';
+    row.expiryDate = null;
+    row.availableQty = 0;
+    row.quantity = 1;
+    row.discountValue = 0;
+    row.discountAmount = 0;
+    row.discountPercent = 0;
+    row.isNearExpiry = false;
+
+    // Load FEFO batches
+    this.salesService.getMedicineBatches(med.medicineId).subscribe(batches => {
+      row.batchOptions = batches;
+      if (batches.length > 0) {
+        // Auto-select the first FEFO batch (nearest expiry)
+        this.onBatchSelect(batches[0], row);
+      } else {
+        this.recalcRow(row);
+      }
+    });
+
+    this.recalcRow(row);
+  }
+
+  onMedicineClear(row: MedRow) {
+    row.medicine = null;
+    row.medicineId = 0;
+    row.medicineName = '';
+    row.batchOptions = [];
+    row.batchNumber = '';
+    row.expiryDate = null;
+    row.availableQty = 0;
+    row.quantity = 1;
+    row.unitPrice = 0;
+    row.discountType = 'amount';
+    row.discountValue = 0;
+    row.discountAmount = 0;
+    row.discountPercent = 0;
+    row.taxPercent = 0;
+    row.taxAmount = 0;
+    row.lineTotal = 0;
+    row.isNearExpiry = false;
+    this.recalcRow(row);
+  }
+
+  onBatchSelect(batchOrNum: any, row: MedRow) {
+    const batch = typeof batchOrNum === 'string'
+      ? row.batchOptions.find(b => b.batchNumber === batchOrNum)
+      : batchOrNum;
+
+    if (!batch) return;
+
+    row.batchNumber = batch.batchNumber;
+    row.expiryDate = batch.expiryDate ? new Date(batch.expiryDate) : null;
+    row.availableQty = batch.availableQty;
+    row.unitPrice = batch.salePrice || row.unitPrice;
+    row.isNearExpiry = batch.isNearExpiry;
+    this.recalcRow(row);
+    this.focusQty(row);
+  }
+
+  focusQty(row: MedRow) {
+    const idx = this.rows().indexOf(row);
+    if (idx === -1) return;
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('.qty-num input');
+      if (inputs[idx]) (inputs[idx] as HTMLElement).focus();
+    }, 50);
+  }
+
+  adjustQty(row: MedRow, delta: number) {
+    const newQty = (row.quantity || 0) + delta;
+    if (newQty >= 1 && newQty <= row.availableQty) {
+      row.quantity = newQty;
+      this.recalcRow(row);
+    }
+  }
+
+  onTaxChange(row: MedRow) {
+    const t = this.taxes.find((x: any) => x.taxId === row.taxId);
+    row.taxPercent = t ? t.taxRate : 0;
+    this.recalcRow(row);
+  }
+
+  toggleDiscountType(row: MedRow) {
+    row.discountType = row.discountType === 'amount' ? 'percent' : 'amount';
+    row.discountValue = 0;
+    this.recalcRow(row);
+  }
+
+  recalcRow(row: MedRow) {
+    const gross = row.quantity * row.unitPrice;
+    if (row.discountType === 'percent') {
+      row.discountPercent = row.discountValue;
+      row.discountAmount = parseFloat(((gross * row.discountValue) / 100).toFixed(2));
+    } else {
+      row.discountAmount = row.discountValue;
+      row.discountPercent = gross > 0 ? parseFloat(((row.discountValue / gross) * 100).toFixed(2)) : 0;
+    }
+    const afterDiscount = gross - row.discountAmount;
+    row.taxAmount = parseFloat(((afterDiscount * row.taxPercent) / 100).toFixed(2));
+    row.lineTotal = parseFloat((afterDiscount + row.taxAmount).toFixed(2));
+    this.rows.set([...this.rows()]);
+  }
+
+  onKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      const target = event.target as HTMLElement;
+      // Only add row if we are in the last medicine row and it's a numeric field or similar
+      const lastRow = this.rows()[this.rows().length - 1];
+      if (lastRow.medicineId) {
+        this.addRow();
+        // Prevent default to avoid form submission if any
+        event.preventDefault();
+      }
+    }
+  }
+
+  // ── Payment ───────────────────────────────────────────────────────────────
+  setMethod(pm: PayRow, method: string) {
+    pm.method = method;
+    pm.showRef = method !== 'Cash';
+    this.payments.set([...this.payments()]);
+  }
+
+  addPayment() {
+    this.payments.update(p => [...p, { method: 'Cash', amount: 0, accountNumber: '', transactionId: '', remarks: '', showRef: false }]);
+  }
+
+  removePayment(i: number) {
+    if (this.payments().length > 1)
+      this.payments.update(p => { const c = [...p]; c.splice(i, 1); return c; });
+  }
+
+  // ── Build Payload ─────────────────────────────────────────────────────────
+  private buildPayload(): SaleMaster {
+    return {
+      saleId: this.editSaleId ?? undefined,
+      partyId: this.selectedCustomer?.partyId ?? null,
+      customerName: this.selectedCustomer?.fullName || this.guestName || 'Walking Guest',
+      customerPhone: this.selectedCustomer?.cell || this.guestPhone,
+      customerIsRegistered: this.isRegisteredCustomer,
+      saleDate: this.datePipe.transform(this.saleDate, 'yyyy-MM-dd') || '',
+      subTotal: this.subTotal(),
+      totalDiscount: this.totalDiscount(),
+      totalTax: this.totalTax(),
+      specialDiscount: this.specialDiscount(),
+      grandTotal: this.grandTotal(),
+      paidAmount: this.totalPaid(),
+      changeAmount: this.changeAmt(),
+      dueAmount: this.dueAmount(),
+      paymentMethod: this.payments()[0]?.method || 'Cash',
+      salesDetails: this.rows().map(r => ({
+        medicineId: r.medicineId,
+        batchNumber: r.batchNumber,
+        expiryDate: r.expiryDate ? this.datePipe.transform(r.expiryDate, 'yyyy-MM-dd') : null,
+        quantity: r.quantity,
+        uomId: r.uomId,
+        uomName: r.uomName,
+        unitPrice: r.unitPrice,
+        discountPercent: r.discountPercent,
+        discountAmount: r.discountAmount,
+        taxPercent: r.taxPercent,
+        taxAmount: r.taxAmount,
+        lineTotal: r.lineTotal
+      })),
+      salesPayments: this.payments()
+        .filter(p => p.amount > 0)
+        .map(p => ({
+          paymentMethod: p.method,
+          amount: p.amount,
+          accountNumber: p.accountNumber || undefined,
+          transactionId: p.transactionId || undefined,
+          remarks: p.remarks || undefined
+        }))
+    };
+  }
+
+  // ── Validation ────────────────────────────────────────────────────────────
+  private validate(): boolean {
+    const rows = this.rows();
+    if (rows.length === 0 || !rows[0].medicineId) {
+      this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please add at least one medicine.' });
+      return false;
+    }
+    for (const r of rows) {
+      if (!r.medicineId) {
+        this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select a medicine for each row.' });
+        return false;
+      }
+      if (!r.batchNumber) {
+        this.messageService.add({ severity: 'warn', summary: 'Required', detail: `Please select a batch for ${r.medicineName || 'a medicine'}.` });
+        return false;
+      }
+      if (r.quantity > r.availableQty) {
+        this.messageService.add({ severity: 'error', summary: 'Stock Error', detail: `Qty (${r.quantity}) exceeds available stock (${r.availableQty}) for ${r.medicineName}.`, life: 5000 });
+        return false;
+      }
+    }
+    if (this.dueAmount() > 0 && !this.isRegisteredCustomer) {
+      this.messageService.add({ severity: 'error', summary: 'Due Not Allowed', detail: 'Cannot leave Due for a Walking Guest. Please collect full payment or register the customer.', life: 6000 });
+      return false;
+    }
+    return true;
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  completeSale(shouldPrint = false) {
+    if (!this.validate()) return;
+    this.saving = true;
+    this.salesService.createSale(this.buildPayload()).subscribe({
+      next: (res) => {
+        this.saving = false;
+        this.messageService.add({ severity: 'success', summary: 'Sale Completed!', detail: `Invoice ${res.invoiceCode} saved.` });
+        if (shouldPrint) this.printService.generatePDF(res);
+        setTimeout(() => this.router.navigate(['/dashboard/sales']), 1200);
+      },
+      error: (err) => {
+        this.saving = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save sale.', life: 5000 });
+      }
+    });
+  }
+
+  holdSale() {
+    if (!this.validate()) return;
+    this.confirmationService.confirm({
+      message: 'Do you want to save this sale as Hold? Stock will NOT be deducted.',
+      header: 'Hold Sale',
+      icon: 'pi pi-pause-circle',
+      accept: () => {
+        this.saving = true;
+        this.salesService.holdSale(this.buildPayload()).subscribe({
+          next: (res) => {
+            this.saving = false;
+            this.messageService.add({ severity: 'info', summary: 'Sale Held', detail: `Invoice ${res.invoiceCode} held. Resume from Sales List.` });
+            setTimeout(() => this.router.navigate(['/dashboard/sales']), 1500);
+          },
+          error: (err) => {
+            this.saving = false;
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to hold sale.', life: 5000 });
+          }
+        });
+      }
+    });
+  }
+
+  cancelSale() {
+    this.confirmationService.confirm({
+      message: 'Are you sure you want to cancel? All unsaved data will be lost.',
+      header: 'Cancel Sale',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.router.navigate(['/dashboard/sales'])
+    });
+  }
+
+  goBack() { this.router.navigate(['/dashboard/sales']); }
+
+  expiryLabel(date: Date | null): string {
+    if (!date) return '—';
+    return this.datePipe.transform(date, 'MMM-yy') || '—';
   }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using PharmacyApi.Models;
+using PharmacyApi.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -15,12 +16,14 @@ namespace PharmacyApi.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
+        private readonly IEmailService _emailService;
 
-        public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration)
+        public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration, IEmailService emailService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         [HttpPost("register")]
@@ -28,6 +31,9 @@ namespace PharmacyApi.Controllers
         {
             var userExists = await _userManager.FindByNameAsync(model.Username);
             if (userExists != null) return BadRequest("User already exists!");
+
+            var emailExists = await _userManager.FindByEmailAsync(model.Email);
+            if (emailExists != null) return BadRequest("Email is already in use!");
 
             ApplicationUser user = new()
             {
@@ -103,11 +109,15 @@ namespace PharmacyApi.Controllers
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             
             // In a real application, send this token via email.
-            // For development, returning it directly in the response.
+            var frontendUrl = _configuration["Cors:AllowedOrigins"] ?? "http://localhost:4200";
+            var resetLink = $"{frontendUrl}/reset-password?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(user.Email!)}";
+
+            await _emailService.SendEmailAsync(user.Email!, "Reset Your Password", 
+                $"Please reset your password by clicking here: <a href='{resetLink}'>Reset Password</a>");
+            
             return Ok(new 
             { 
-                Message = "Password reset link generated successfully.", 
-                Token = token 
+                Message = "If that email address is in our database, we will send you an email to reset your password."
             });
         }
 

@@ -30,6 +30,7 @@ namespace PharmacyApi.Data
         public DbSet<DosageForm> DosageForms { get; set; }
         public DbSet<CommonStrength> CommonStrengths { get; set; }
         public DbSet<UseFor> UseFors { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -61,15 +62,26 @@ namespace PharmacyApi.Data
             // PurchasePayment
             builder.Entity<PurchasePayment>().Property(p => p.Amount).HasPrecision(18, 2);
             builder.Entity<SalesMaster>().Property(s => s.GrandTotal).HasPrecision(18, 2);
-            builder.Entity<SalesMaster>().Property(s => s.Discount).HasPrecision(18, 2);
+            builder.Entity<SalesMaster>().Property(s => s.SubTotal).HasPrecision(18, 2);
+            builder.Entity<SalesMaster>().Property(s => s.TotalDiscount).HasPrecision(18, 2);
+            builder.Entity<SalesMaster>().Property(s => s.TotalTax).HasPrecision(18, 2);
+            builder.Entity<SalesMaster>().Property(s => s.SpecialDiscount).HasPrecision(18, 2);
             builder.Entity<SalesMaster>().Property(s => s.PaidAmount).HasPrecision(18, 2);
+            builder.Entity<SalesMaster>().Property(s => s.ChangeAmount).HasPrecision(18, 2);
             builder.Entity<SalesMaster>().Property(s => s.DueAmount).HasPrecision(18, 2);
-            
+            builder.Entity<SalesMaster>().HasIndex(s => s.InvoiceCode).IsUnique();
+
             builder.Entity<SalesDetail>().Property(s => s.UnitPrice).HasPrecision(18, 2);
+            builder.Entity<SalesDetail>().Property(s => s.DiscountAmount).HasPrecision(18, 2);
+            builder.Entity<SalesDetail>().Property(s => s.DiscountPercent).HasPrecision(5, 2);
+            builder.Entity<SalesDetail>().Property(s => s.TaxAmount).HasPrecision(18, 2);
+            builder.Entity<SalesDetail>().Property(s => s.TaxPercent).HasPrecision(5, 2);
+            builder.Entity<SalesDetail>().Property(s => s.LineTotal).HasPrecision(18, 2);
             builder.Entity<SalesDetail>().Property(s => s.Tax).HasPrecision(18, 2);
             builder.Entity<SalesDetail>().Property(s => s.Subtotal).HasPrecision(18, 2);
-            
+
             builder.Entity<SalesPayment>().Property(s => s.Amount).HasPrecision(18, 2);
+
 
             // ─── Master Data: Unique Index on Code & Name ───
             builder.Entity<Party>().HasIndex(p => p.Code).IsUnique();

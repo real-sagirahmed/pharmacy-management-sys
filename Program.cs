@@ -6,6 +6,7 @@ using PharmacyApi.Data;
 using PharmacyApi.DTOs;
 using PharmacyApi.Models;
 using PharmacyApi.Repositories;
+using PharmacyApi.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +17,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // ─── Master Data Repositories (DI Registration) ───
-builder.Services.AddScoped<IRepository<Party, PartyDto>, PartyRepository>();
+builder.Services.AddScoped<IPartyRepository, PartyRepository>();
 builder.Services.AddScoped<IRepository<Tax, TaxDto>, TaxRepository>();
 builder.Services.AddScoped<IRepository<Uom, UomDto>, UomRepository>();
 builder.Services.AddScoped<IRepository<PharmacyApi.Models.Generic, GenericDto>, GenericMedicineRepository>();
@@ -27,6 +28,9 @@ builder.Services.AddScoped<IRepository<CommonStrength, CommonStrengthDto>, Commo
 builder.Services.AddScoped<IRepository<UseFor, UseForDto>, UseForRepository>();
 builder.Services.AddScoped<IMedicineRepository, MedicineRepository>();
 builder.Services.AddScoped<IPurchaseRepository, PurchaseRepository>();
+builder.Services.AddScoped<ISalesRepository, SalesRepository>();
+builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<IEmailService, FileEmailService>();
 
 // Configure CORS
 builder.Services.AddCors(options =>

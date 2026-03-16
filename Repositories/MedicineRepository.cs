@@ -14,6 +14,18 @@ namespace PharmacyApi.Repositories
             _context = context;
         }
 
+        private DateTime GetBdNow()
+        {
+            try
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Bangladesh Standard Time"));
+            }
+            catch
+            {
+                return DateTime.UtcNow.AddHours(6); // Fallback
+            }
+        }
+
         public async Task<PagedResult<MedicineDto>> GetPagedAsync(MedicineSearchParameters parms)
         {
             var query = _context.Medicines.AsQueryable();
@@ -118,12 +130,13 @@ namespace PharmacyApi.Repositories
                 UpdatedBy = m.UpdatedBy
             };
 
-            // Calculate Stock Per Batch (FEFO Logic)
-            // 1. Initial Batch from Medicine (Opening Stock)
-            var batchStock = new List<MedicineBatchDto>();
+            // 1. Collect all "Inputs" (Opening Stock + Purchases)
+            var allBatches = new List<MedicineBatchDto>();
+
+            // Add Opening Stock (initial balance from Medicine table)
             if (m.StockQuantity > 0 || !string.IsNullOrEmpty(m.Batch))
             {
-                batchStock.Add(new MedicineBatchDto
+                allBatches.Add(new MedicineBatchDto
                 {
                     BatchNumber = string.IsNullOrEmpty(m.Batch) ? "OPENING" : m.Batch,
                     ExpiryDate = m.ExpiryDate,
@@ -132,7 +145,7 @@ namespace PharmacyApi.Repositories
                 });
             }
 
-            // 2. Add Purchases
+            // Add Purchases (from PurchaseDetails table)
             var purchases = await _context.PurchaseDetails
                 .Where(pd => pd.MedicineId == id)
                 .Select(pd => new MedicineBatchDto { 
@@ -143,10 +156,10 @@ namespace PharmacyApi.Repositories
                 })
                 .ToListAsync();
             
-            batchStock.AddRange(purchases);
+            allBatches.AddRange(purchases);
 
-            // 3. Group by Batch + Expiry to handle multiple entries for same batch
-            var groupedBatches = batchStock
+            // 2. Group by Batch + Expiry to get total infusion per batch
+            var groupedBatches = allBatches
                 .GroupBy(b => new { 
                     Batch = (b.BatchNumber ?? "N/A").Trim().ToUpper(), 
                     Expiry = b.ExpiryDate?.Date 
@@ -156,14 +169,14 @@ namespace PharmacyApi.Repositories
                     BatchNumber = g.Key.Batch,
                     ExpiryDate = g.Key.Expiry,
                     RemainingQuantity = g.Sum(x => x.RemainingQuantity),
-                    PurchasePrice = g.Max(x => x.PurchasePrice) // Use latest or max price
+                    PurchasePrice = g.Max(x => x.PurchasePrice)
                 })
                 .OrderBy(b => b.ExpiryDate ?? DateTime.MaxValue)
                 .ToList();
 
-            // 4. Subtract Sales (FEFO)
+            // 3. Subtract ALL Sales (FEFO) to find current remaining stock per batch
             var totalSales = await _context.SalesDetails
-                .Where(sd => sd.MedicineId == id)
+                .Where(sd => sd.MedicineId == id && sd.SalesMaster!.SaleStatus == "Completed")
                 .SumAsync(sd => sd.Quantity);
 
             int remainingToSubtract = totalSales;
@@ -210,7 +223,7 @@ namespace PharmacyApi.Repositories
                 Strength = dto.Strength,
                 UseFor = dto.UseFor,
                 IsActive = true,
-                CreatedAt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Bangladesh Standard Time")),
+                CreatedAt = GetBdNow(),
                 CreatedBy = username
             };
 
@@ -245,7 +258,7 @@ namespace PharmacyApi.Repositories
             entity.Strength = dto.Strength;
             entity.UseFor = dto.UseFor;
             entity.IsActive = dto.IsActive;
-            entity.UpdatedAt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Bangladesh Standard Time"));
+            entity.UpdatedAt = GetBdNow();
             entity.UpdatedBy = username;
 
             _context.Entry(entity).State = EntityState.Modified;
@@ -290,20 +303,20 @@ namespace PharmacyApi.Repositories
             var b = batchNumber.Trim().ToLower();
             
             // Check in Medicine table (Opening Stock)
-            var existsInMedicine = await _context.Medicines.AnyAsync(m => m.MedicineId == medicineId && m.Batch.ToLower() == b);
+            var existsInMedicine = await _context.Medicines.AnyAsync(m => m.MedicineId == medicineId && m.Batch != null && m.Batch.ToLower() == b);
             if (existsInMedicine) return true;
             
             // Check in PurchaseDetails table
-            var existsInPurchases = await _context.PurchaseDetails.AnyAsync(pd => pd.MedicineId == medicineId && pd.BatchNumber.ToLower() == b);
+            var existsInPurchases = await _context.PurchaseDetails.AnyAsync(pd => pd.MedicineId == medicineId && pd.BatchNumber != null && pd.BatchNumber.ToLower() == b);
             return existsInPurchases;
         }
 
         public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
         {
             if (excludeId.HasValue)
-                return await _context.Medicines.AnyAsync(m => m.Name.ToLower() == name.ToLower() && m.MedicineId != excludeId.Value);
+                return await _context.Medicines.AnyAsync(m => m.Name != null && m.Name.ToLower() == name.ToLower() && m.MedicineId != excludeId.Value);
             
-            return await _context.Medicines.AnyAsync(m => m.Name.ToLower() == name.ToLower());
+            return await _context.Medicines.AnyAsync(m => m.Name != null && m.Name.ToLower() == name.ToLower());
         }
     }
 }

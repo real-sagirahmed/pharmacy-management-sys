@@ -1,6 +1,7 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { UserService } from '../../../services/user.service';
 import { AuthService } from '../../../services/auth.service';
 import { TableModule } from 'primeng/table';
@@ -9,6 +10,9 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
+import { DialogModule } from 'primeng/dialog';
+import { DropdownModule } from 'primeng/dropdown';
+import { PasswordModule } from 'primeng/password';
 import { ConfirmationService, MessageService } from 'primeng/api';
 
 @Component({
@@ -16,7 +20,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule, 
-    InputTextModule, TagModule, ConfirmDialogModule, ToastModule
+    InputTextModule, TagModule, ConfirmDialogModule, ToastModule,
+    DialogModule, DropdownModule, PasswordModule
   ],
   providers: [ConfirmationService, MessageService],
   template: `
@@ -31,7 +36,15 @@ import { ConfirmationService, MessageService } from 'primeng/api';
             <h1 class="page-title">User Management</h1>
             <p class="page-sub text-xs">Manage system users and their roles.</p>
           </div>
-          <span class="admin-badge"><i class="pi pi-lock"></i> Admin Only</span>
+          <div class="flex items-center gap-2">
+            <button pButton icon="pi pi-shield" label="Roles & Permissions" 
+                    class="p-button-outlined p-button-sm p-button-secondary"
+                    (click)="showRoleManagement()"></button>
+            <button pButton icon="pi pi-plus" label="Add New User" 
+                    class="p-button-sm p-button-success"
+                    (click)="showAddDialog()"></button>
+            <span class="admin-badge"><i class="pi pi-lock"></i> Admin Only</span>
+          </div>
         </div>
 
         <!-- ─── Table Toolbar ─── -->
@@ -49,9 +62,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
             <span class="result-count font-semibold">{{ filteredUsers().length }} results</span>
             <div class="summary-row">
               <div class="chip chip-slate"><i class="pi pi-users"></i> {{ users().length }} Total</div>
-              <div class="chip chip-purple"><i class="pi pi-shield"></i> {{ countRole('Admin') }} Admins</div>
-              <div class="chip chip-teal"><i class="pi pi-briefcase"></i> {{ countRole('Manager') }} Managers</div>
-              <div class="chip chip-green"><i class="pi pi-receipt"></i> {{ countRole('Cashier') }} Cashiers</div>
+              <div class="chip chip-emerald"><i class="pi pi-check-circle"></i> {{ countStatus(true) }} Active</div>
+              <div class="chip chip-rose"><i class="pi pi-times-circle"></i> {{ countStatus(false) }} Inactive</div>
             </div>
           </div>
         </div>
@@ -70,7 +82,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                 <tr>
                   <th style="min-width: 250px;" pSortableColumn="fullName">User Details <p-sortIcon field="fullName"></p-sortIcon></th>
                   <th style="min-width: 150px;">Roles</th>
-                  <th style="min-width: 150px;">Change Role</th>
+                  <th style="min-width: 120px;">Status</th>
+                  <th style="min-width: 150px;">Operations</th>
                   <th alignFrozen="right" pFrozenColumn style="min-width: 80px;">Actions</th>
                 </tr>
               </ng-template>
@@ -95,16 +108,32 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                     </div>
                   </td>
                   <td>
-                    <select class="role-select" (change)="onRoleChange(u.id, $any($event.target).value)">
-                      <option value="" disabled selected>Change Role…</option>
-                      <option value="Admin">Admin</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Pharmacist">Pharmacist</option>
-                      <option value="Cashier">Cashier</option>
-                    </select>
+                    <p-tag [severity]="u.isActive ? 'success' : 'danger'" 
+                           [value]="u.isActive ? 'Active' : 'Inactive'"
+                           [rounded]="true"></p-tag>
+                  </td>
+                  <td>
+                    <div class="flex gap-2">
+                       <select class="role-select" (change)="onRoleChange(u.id, $any($event.target).value)">
+                        <option value="" disabled selected>Role…</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Pharmacist">Pharmacist</option>
+                        <option value="Cashier">Cashier</option>
+                      </select>
+                      <button class="act-btn" [class.act-lock]="u.isActive" [class.act-unlock]="!u.isActive"
+                              [title]="u.isActive ? 'Deactivate' : 'Activate'"
+                              (click)="onToggleStatus(u.id)"
+                              [disabled]="isCurrentUser(u.userName)">
+                        <i class="pi" [class.pi-lock]="u.isActive" [class.pi-lock-open]="!u.isActive"></i>
+                      </button>
+                    </div>
                   </td>
                   <td alignFrozen="right" pFrozenColumn>
                     <div class="action-btns">
+                      <button class="act-btn act-edit" title="Edit user" (click)="showEditDialog(u)">
+                        <i class="pi pi-pencil"></i>
+                      </button>
                       <button class="act-btn act-del" title="Delete user" 
                               (click)="onDelete(u.id)"
                               [disabled]="isCurrentUser(u.userName)">
@@ -115,12 +144,71 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                 </tr>
               </ng-template>
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="4"><div class="empty-state"><i class="pi pi-users empty-icon"></i><p class="empty-text">No users found</p></div></td></tr>
+                <tr><td colspan="5"><div class="empty-state"><i class="pi pi-users empty-icon"></i><p class="empty-text">No users found</p></div></td></tr>
               </ng-template>
             </p-table>
           </div>
         </div>
       </div>
+
+      <!-- Add User Dialog -->
+      <p-dialog [(visible)]="displayAddDialog" [modal]="true" header="Add New User" [style]="{width: '450px'}" styleClass="p-fluid">
+        <ng-template pTemplate="content">
+          <div class="field mb-3">
+            <label for="fullName" class="block font-bold mb-1">Full Name</label>
+            <input type="text" pInputText id="fullName" [(ngModel)]="newUser.fullName" required autofocus />
+          </div>
+          <div class="field mb-3">
+            <label for="userName" class="block font-bold mb-1">Username</label>
+            <input type="text" pInputText id="userName" [(ngModel)]="newUser.userName" required />
+          </div>
+          <div class="field mb-3">
+            <label for="email" class="block font-bold mb-1">Email</label>
+            <input type="email" pInputText id="email" [(ngModel)]="newUser.email" required />
+          </div>
+          <div class="field mb-3">
+            <label for="password" class="block font-bold mb-1">Password</label>
+            <p-password [(ngModel)]="newUser.password" [feedback]="false" [toggleMask]="true" styleClass="w-full"></p-password>
+          </div>
+          <div class="field mb-3">
+            <label for="role" class="block font-bold mb-1">Initial Role</label>
+            <p-dropdown [options]="availableRoles" [(ngModel)]="newUser.role" placeholder="Select a Role"></p-dropdown>
+          </div>
+        </ng-template>
+
+        <ng-template pTemplate="footer">
+          <button pButton label="Cancel" icon="pi pi-times" class="p-button-text" (click)="displayAddDialog = false"></button>
+          <button pButton label="Create User" icon="pi pi-check" class="p-button-success" (click)="saveUser()" [loading]="saving"></button>
+        </ng-template>
+      </p-dialog>
+
+      <!-- Edit User Dialog -->
+      <p-dialog [(visible)]="displayEditDialog" [modal]="true" header="Edit User Details" [style]="{width: '450px'}" styleClass="p-fluid">
+        <ng-template pTemplate="content">
+          <div class="field mb-3">
+            <label for="efullName" class="block font-bold mb-1">Full Name</label>
+            <input type="text" pInputText id="efullName" [(ngModel)]="editUser.fullName" required />
+          </div>
+          <div class="field mb-3">
+            <label class="block font-bold mb-1">Username</label>
+            <input type="text" pInputText [value]="editUser.userName" disabled class="p-disabled" />
+            <small class="text-muted">Username cannot be changed.</small>
+          </div>
+          <div class="field mb-3">
+            <label for="eemail" class="block font-bold mb-1">Email</label>
+            <input type="email" pInputText id="eemail" [(ngModel)]="editUser.email" required />
+          </div>
+          <div class="field mb-3">
+            <label for="epassword" class="block font-bold mb-1">New Password (leave blank to keep current)</label>
+            <p-password [(ngModel)]="editUser.password" [feedback]="false" [toggleMask]="true" styleClass="w-full" placeholder="Optional"></p-password>
+          </div>
+        </ng-template>
+
+        <ng-template pTemplate="footer">
+          <button pButton label="Cancel" icon="pi pi-times" class="p-button-text" (click)="displayEditDialog = false"></button>
+          <button pButton label="Update User" icon="pi pi-check" class="p-button-info" (click)="updateUser()" [loading]="saving"></button>
+        </ng-template>
+      </p-dialog>
     </div>
   `,
   styles: [`
@@ -200,6 +288,9 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     .act-btn { width: 30px; height: 30px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .1s; }
     .act-btn:hover:not(:disabled) { transform: scale(1.1); }
     .act-del  { background: #fff1f2; color: #f43f5e; }
+    .act-edit { background: #eff6ff; color: #3b82f6; }
+    .act-lock { background: #fef2f2; color: #ef4444; }
+    .act-unlock { background: #f0fdf4; color: #22c55e; }
     .act-btn:disabled { opacity: 0.35; cursor: not-allowed; }
     
     .empty-state { display: flex; flex-direction: column; align-items: center; padding: 48px 20px; gap: 8px; }
@@ -210,6 +301,17 @@ export class UserManagementComponent implements OnInit {
   users = signal<any[]>([]);
   searchText = '';
   loading = signal(false);
+  saving = false;
+
+  // Add User Dialog
+  displayAddDialog = false;
+  newUser = { fullName: '', userName: '', email: '', password: '', role: 'Cashier' };
+  
+  // Edit User Dialog
+  displayEditDialog = false;
+  editUser = { id: '', fullName: '', userName: '', email: '', password: '' };
+
+  availableRoles = ['Admin', 'Manager', 'Pharmacist', 'Cashier'];
 
   filteredUsers = computed(() => {
     const q = this.searchText.toLowerCase().trim();
@@ -227,7 +329,8 @@ export class UserManagementComponent implements OnInit {
     private userService: UserService, 
     private authService: AuthService,
     private confirmationService: ConfirmationService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private router: Router
   ) {}
 
   ngOnInit() { this.loadUsers(); }
@@ -261,6 +364,99 @@ export class UserManagementComponent implements OnInit {
 
   isCurrentUser(username: string): boolean {
     return this.authService.currentUserValue?.userName === username;
+  }
+
+  countStatus(active: boolean): number {
+    return this.users().filter(u => u.isActive === active).length;
+  }
+
+  onToggleStatus(userId: string) {
+    const user = this.users().find(u => u.id === userId);
+    if (!user) return;
+
+    this.confirmationService.confirm({
+      message: `Are you sure you want to <b>${user.isActive ? 'Deactivate' : 'Activate'}</b> this user?`,
+      header: 'Confirm Status Change',
+      icon: 'pi pi-exclamation-circle',
+      accept: () => {
+        this.userService.toggleStatus(userId).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'User status updated.' });
+            this.loadUsers();
+          },
+          error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' })
+        });
+      }
+    });
+  }
+
+  showAddDialog() {
+    this.newUser = { fullName: '', userName: '', email: '', password: '', role: 'Cashier' };
+    this.displayAddDialog = true;
+  }
+
+  hideAddDialog() {
+    this.displayAddDialog = false;
+  }
+
+  saveUser() {
+    if (!this.newUser.fullName || !this.newUser.userName || !this.newUser.email || !this.newUser.password) {
+      this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill all fields.' });
+      return;
+    }
+
+    this.saving = true;
+    this.userService.createByAdmin(this.newUser).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Created', detail: 'User created successfully.' });
+        this.displayAddDialog = false;
+        this.saving = false;
+        this.loadUsers();
+      },
+      error: (err) => {
+        console.error('Failed to create user', err);
+        const detail = err.error?.[0]?.description || 'Failed to create user.';
+        this.messageService.add({ severity: 'error', summary: 'Error', detail });
+        this.saving = false;
+      }
+    });
+  }
+
+  showEditDialog(user: any) {
+    this.editUser = {
+      id: user.id,
+      fullName: user.fullName,
+      userName: user.userName,
+      email: user.email,
+      password: ''
+    };
+    this.displayEditDialog = true;
+  }
+
+  updateUser() {
+    if (!this.editUser.fullName || !this.editUser.email) {
+      this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Name and Email are required.' });
+      return;
+    }
+
+    this.saving = true;
+    this.userService.updateUser(this.editUser.id, this.editUser).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Updated', detail: 'User details updated.' });
+        this.displayEditDialog = false;
+        this.saving = false;
+        this.loadUsers();
+      },
+      error: (err) => {
+        const detail = err.error?.[0]?.description || 'Failed to update user.';
+        this.messageService.add({ severity: 'error', summary: 'Error', detail });
+        this.saving = false;
+      }
+    });
+  }
+
+  showRoleManagement() {
+    this.router.navigate(['/dashboard/roles']);
   }
 
   onRoleChange(userId: string, newRole: string) {

@@ -16,7 +16,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -29,7 +29,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, TableModule, ButtonModule,
     InputTextModule, InputNumberModule, TagModule, DialogModule, SelectModule,
-    CalendarModule, PaginatorModule, ToastModule, ConfirmDialogModule
+    DatePickerModule, PaginatorModule, ToastModule, ConfirmDialogModule
   ],
   template: `
     <div class="page-wrap animate-fadein-up">
@@ -389,10 +389,10 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                   <label class="field-label-premium">
                     <i class="pi pi-calendar label-icon"></i> Expiry Date
                   </label>
-                  <p-calendar formControlName="expiryDate" #expiry
+                  <p-datepicker formControlName="expiryDate" #expiry
                               [showIcon]="true" appendTo="body"
                               (keydown.enter)="onEnter(stock)"
-                              placeholder="Select Date" styleClass="w-full premium-calendar"></p-calendar>
+                              placeholder="Select Date" styleClass="w-full premium-calendar"></p-datepicker>
                 </div>
 
                 <div class="form-field-premium">
