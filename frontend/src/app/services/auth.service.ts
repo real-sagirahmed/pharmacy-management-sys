@@ -27,6 +27,21 @@ export class AuthService {
         return user;
       }));
   }
+  
+  hasPermission(moduleName: string, action: 'view' | 'create' | 'edit' | 'delete' = 'view'): boolean {
+    if (this.getRoles().includes('Admin')) return true;
+    const permissions = this.currentUserValue.permissions || [];
+    const perm = permissions.find((p: any) => p.moduleName === moduleName);
+    if (!perm) return false;
+
+    switch (action) {
+      case 'view': return perm.canView;
+      case 'create': return perm.canCreate;
+      case 'edit': return perm.canEdit;
+      case 'delete': return perm.canDelete;
+      default: return false;
+    }
+  }
 
   logout() {
     localStorage.removeItem('currentUser');

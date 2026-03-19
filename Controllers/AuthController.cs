@@ -17,13 +17,15 @@ namespace PharmacyApi.Controllers
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
+        private readonly IUserManagementService _userService;
 
-        public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration, IEmailService emailService)
+        public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration, IEmailService emailService, IUserManagementService userService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
             _emailService = emailService;
+            _userService = userService;
         }
 
         [HttpPost("register")]
@@ -86,12 +88,15 @@ namespace PharmacyApi.Controllers
                     signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
                     );
 
+                var permissions = await _userService.GetEffectivePermissionsAsync(user.Id);
+
                 return Ok(new
                 {
                     token = new JwtSecurityTokenHandler().WriteToken(token),
                     expiration = token.ValidTo,
                     roles = userRoles,
-                    fullName = user.FullName
+                    fullName = user.FullName,
+                    permissions = permissions
                 });
             }
             return Unauthorized();

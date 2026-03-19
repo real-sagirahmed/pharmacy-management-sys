@@ -98,6 +98,61 @@ import { SalesService } from '../../services/sales.service';
               </div>
             </div>
 
+            <!-- ─── Reports & Analytics ─── -->
+            <div class="nav-group" [class.group-open]="reportsOpen()" [class.group-active]="isGroupActive('reports')" *ngIf="hasAnyReportPermission()">
+              <div class="nav-item group-header" (click)="toggleGroup('reports')">
+                <i class="pi pi-chart-line nav-icon"></i>
+                <span class="nav-label">Reports & Analytics</span>
+                <i class="pi pi-chevron-down group-arrow"></i>
+              </div>
+              <div class="sub-nav">
+                <a class="nav-item sub-item" *ngIf="hasAnyReportPermission()" routerLink="/dashboard/analytics" routerLinkActive="nav-active">
+                  <i class="pi pi-chart-bar nav-icon-dot text-teal-500"></i>
+                  <span class="nav-label text-xs font-bold text-teal-600">Visual Dashboard</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Sales Reports')" routerLink="/dashboard/reports/sales-summary" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Sales Summary</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Purchase Reports')" routerLink="/dashboard/reports/purchase-summary" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Purchase Summary</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Inventory Reports')" routerLink="/dashboard/reports/stock-status" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Stock Status</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Financial Reports')" routerLink="/dashboard/reports/profit-loss" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Profit & Loss</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Expiry Reports')" routerLink="/dashboard/reports/expiry" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Expiry Report</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Top Selling Reports')" routerLink="/dashboard/reports/top-selling" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Top Selling</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Low Stock Reports')" routerLink="/dashboard/reports/low-stock" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Low Stock Alert</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Ledger Reports')" routerLink="/dashboard/reports/ledger" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Ledger Report</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('User Performance Reports')" routerLink="/dashboard/reports/user-performance" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">Staff Performance</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="canViewReport('VAT Reports')" routerLink="/dashboard/reports/vat" routerLinkActive="nav-active">
+                  <i class="pi pi-circle nav-icon-dot"></i>
+                  <span class="nav-label text-xs">VAT Collection</span>
+                </a>
+              </div>
+            </div>
+
             <!-- ─── Administration ─── -->
             <div class="nav-group" [class.group-open]="adminOpen()" [class.group-active]="isGroupActive('admin')" *ngIf="isAdmin()">
               <div class="nav-item group-header" (click)="toggleGroup('admin')">
@@ -602,6 +657,7 @@ export class DashboardComponent implements OnInit {
   salesOpen = signal(false);
   adminOpen = signal(false);
   configOpen = signal(false);
+  reportsOpen = signal(false);
 
   constructor(
     private router: Router,
@@ -645,6 +701,7 @@ export class DashboardComponent implements OnInit {
     if (url.includes('/medicines') || url.includes('/purchases')) this.inventoryOpen.set(true);
     if (url.includes('/sales') || url.includes('/due-collection') || url.includes('/parties')) this.salesOpen.set(true);
     if (url.includes('/users') || url.includes('/roles')) this.adminOpen.set(true);
+    if (url.includes('/reports')) this.reportsOpen.set(true);
     if (url.includes('/taxes') || url.includes('/uoms') || url.includes('/generics') || 
         url.includes('/categories') || url.includes('/manufacturers') || 
         url.includes('/dosage-forms') || url.includes('/strengths') || url.includes('/indications')) {
@@ -657,6 +714,7 @@ export class DashboardComponent implements OnInit {
     if (group === 'sales') this.salesOpen.set(!this.salesOpen());
     if (group === 'admin') this.adminOpen.set(!this.adminOpen());
     if (group === 'config') this.configOpen.set(!this.configOpen());
+    if (group === 'reports') this.reportsOpen.set(!this.reportsOpen());
   }
 
   isGroupActive(group: string): boolean {
@@ -664,6 +722,7 @@ export class DashboardComponent implements OnInit {
     if (group === 'inventory') return url.includes('/medicines') || url.includes('/purchases');
     if (group === 'sales') return url.includes('/sales') || url.includes('/due-collection') || url.includes('/parties');
     if (group === 'admin') return url.includes('/users') || url.includes('/roles');
+    if (group === 'reports') return url.includes('/reports');
     if (group === 'config') {
       return url.includes('/taxes') || url.includes('/uoms') || url.includes('/generics') || 
              url.includes('/categories') || url.includes('/manufacturers') || 
@@ -682,6 +741,23 @@ export class DashboardComponent implements OnInit {
   isPharmacist() { return this.authService.getRoles().includes('Pharmacist'); }
   isManager()    { return this.authService.getRoles().includes('Manager'); }
   isCashier()    { return this.authService.getRoles().includes('Cashier'); }
+
+  canViewReport(reportModule: string) {
+    return this.authService.hasPermission(reportModule, 'view');
+  }
+
+  hasAnyReportPermission() {
+    return this.canViewReport('Sales Reports') || 
+           this.canViewReport('Purchase Reports') || 
+           this.canViewReport('Inventory Reports') || 
+           this.canViewReport('Financial Reports') ||
+           this.canViewReport('Expiry Reports') ||
+           this.canViewReport('Top Selling Reports') ||
+           this.canViewReport('Low Stock Reports') ||
+           this.canViewReport('Ledger Reports') ||
+           this.canViewReport('User Performance Reports') ||
+           this.canViewReport('VAT Reports');
+  }
 
   navigate(path: string) { this.router.navigate([path]); }
 

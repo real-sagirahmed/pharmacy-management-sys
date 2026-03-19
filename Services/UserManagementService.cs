@@ -19,6 +19,7 @@ namespace PharmacyApi.Services
         Task<IdentityResult> DeleteUserAsync(string userId);
         Task<IEnumerable<PermissionDto>> GetPermissionsByRoleAsync(string roleId);
         Task UpdatePermissionsAsync(string roleId, IEnumerable<PermissionDto> permissions);
+        Task<IEnumerable<PermissionDto>> GetEffectivePermissionsAsync(string userId);
     }
 
     public class UserManagementService : IUserManagementService
@@ -201,6 +202,34 @@ namespace PharmacyApi.Services
 
             await _context.RolePermissions.AddRangeAsync(newPermissions);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<PermissionDto>> GetEffectivePermissionsAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return Enumerable.Empty<PermissionDto>();
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var roleIds = await _roleManager.Roles
+                .Where(r => roles.Contains(r.Name!))
+                .Select(r => r.Id)
+                .ToListAsync();
+
+            var permissions = await _context.RolePermissions
+                .Where(p => roleIds.Contains(p.RoleId))
+                .ToListAsync();
+
+            // Group by module and take the maximum permission (OR logic)
+            return permissions
+                .GroupBy(p => p.ModuleName)
+                .Select(g => new PermissionDto
+                {
+                    ModuleName = g.Key,
+                    CanView = g.Any(p => p.CanView),
+                    CanCreate = g.Any(p => p.CanCreate),
+                    CanEdit = g.Any(p => p.CanEdit),
+                    CanDelete = g.Any(p => p.CanDelete)
+                }).ToList();
         }
     }
 }

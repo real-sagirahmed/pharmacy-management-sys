@@ -31,6 +31,7 @@ builder.Services.AddScoped<IPurchaseRepository, PurchaseRepository>();
 builder.Services.AddScoped<ISalesRepository, SalesRepository>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IEmailService, FileEmailService>();
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
 
 // Configure CORS
 builder.Services.AddCors(options =>

@@ -42,6 +42,20 @@ export const routes: Routes = [
       { path: 'sales/new',   component: SalesFormComponent },
       { path: 'sales/edit/:id', component: SalesFormComponent },
       { path: 'due-collection', component: DueCollectionComponent },
+      
+      // Reports
+      { path: 'analytics', loadComponent: () => import('./components/analytics/visual-dashboard.component').then(m => m.VisualDashboardComponent) },
+      { path: 'reports/sales-summary', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+      { path: 'reports/purchase-summary', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+      { path: 'reports/stock-status', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+      { path: 'reports/profit-loss', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+      { path: 'reports/expiry', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+      { path: 'reports/top-selling', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+      { path: 'reports/low-stock', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+      { path: 'reports/ledger', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+      { path: 'reports/user-performance', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+      { path: 'reports/vat', loadComponent: () => import('./components/reports/report-viewer.component').then(m => m.ReportViewerComponent) },
+
       { path: 'users',       component: UserManagementComponent },
       { path: 'roles',       component: RoleManagementComponent },
       // ─── Master Data Routes ───
