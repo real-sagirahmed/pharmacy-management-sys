@@ -298,8 +298,9 @@ export class TaxListComponent implements OnInit {
   }
 
   toggleStatus(t: Tax) {
+    t.isActive = !t.isActive;
     this.taxService.update(t.taxId, t).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Status Updated', detail: `${t.name} is now ${t.isActive ? 'Active' : 'Inactive'}.` }),
+      next: () => this.messageService.add({ severity: t.isActive ? 'success' : 'warn', summary: 'Status Updated', detail: `${t.name} is now ${t.isActive ? 'Active' : 'Inactive'}.` }),
       error: () => {
         t.isActive = !t.isActive;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' });

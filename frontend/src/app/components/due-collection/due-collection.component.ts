@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaymentService, DueRecord } from '../../services/payment.service';
@@ -27,8 +27,31 @@ import { MoneyReceiptService } from './money-receipt.service';
 export class DueCollectionComponent implements OnInit {
   salesDues = signal<DueRecord[]>([]);
   purchaseDues = signal<DueRecord[]>([]);
+  searchText = signal<string>('');
   loading = false;
   activeTab = 0; // 0: Sales, 1: Purchase
+
+  // ─── Filtered Computeds ──────────────────────────────────────────────
+  filteredSalesDues = computed(() => {
+    const search = this.searchText().toLowerCase().trim();
+    const data = this.salesDues();
+    if (!search) return data;
+    return data.filter(d => 
+      d.customerName?.toLowerCase().includes(search) || 
+      d.customerPhone?.toLowerCase().includes(search) ||
+      (d as any).invoiceCode?.toLowerCase().includes(search)
+    );
+  });
+
+  filteredPurchaseDues = computed(() => {
+    const search = this.searchText().toLowerCase().trim();
+    const data = this.purchaseDues();
+    if (!search) return data;
+    return data.filter(d => 
+      d.supplierName?.toLowerCase().includes(search) || 
+      d.grnCode?.toLowerCase().includes(search)
+    );
+  });
 
   // History state
   expandedRows: any = {};
@@ -112,12 +135,20 @@ export class DueCollectionComponent implements OnInit {
         next: (res) => {
           this.paymentHistory.set(res);
           this.loadingHistory = false;
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load payment history' });
+          this.loadingHistory = false;
         }
       });
     } else {
       this.paymentService.getPurchaseHistory(record.purchaseId).subscribe({
         next: (res) => {
           this.paymentHistory.set(res);
+          this.loadingHistory = false;
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load payment history' });
           this.loadingHistory = false;
         }
       });
@@ -152,6 +183,14 @@ export class DueCollectionComponent implements OnInit {
     return this.paymentRows().reduce((sum, row) => sum + (row.amount || 0), 0);
   }
 
+  getTotalSalesDue(): number {
+    return this.filteredSalesDues().reduce((sum, d) => sum + (d.dueAmount || 0), 0);
+  }
+
+  getTotalPurchaseDue(): number {
+    return this.filteredPurchaseDues().reduce((sum, d) => sum + (d.dueAmount || 0), 0);
+  }
+
   savePayment() {
     if (!this.selectedDue) return;
 
@@ -161,47 +200,35 @@ export class DueCollectionComponent implements OnInit {
       return;
     }
 
-    if (totalAmount > this.selectedDue.dueAmount + 0.01) { // 0.01 for rounding
+    if (totalAmount > this.selectedDue.dueAmount + 0.01) { 
       this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Payment amount cannot exceed due amount' });
       return;
     }
 
     this.saving = true;
     
-    // Process each payment row
-    // In a real scenario, we'd want a bulk API, but for now we'll call sequentially or update backend.
-    // Let's call sequentially for simplicity in this step, but in the next tool call I might update backend to handle bulk if needed.
-    // Actually, let's just process them one by one for now to avoid major backend breaking changes.
+    // Prepare bulk data
+    const validPayments = this.paymentRows().filter(r => r.amount > 0);
     
-    const observables = this.paymentRows()
-      .filter(row => row.amount > 0)
-      .map(row => {
-        const paymentData: any = { ...row };
-        if (this.activeTab === 0) {
-          paymentData.saleId = this.selectedDue?.saleId;
-          return this.paymentService.collectSalesDue(paymentData);
-        } else {
-          paymentData.purchaseId = this.selectedDue?.purchaseId;
-          return this.paymentService.payPurchaseDue(paymentData);
-        }
+    if (this.activeTab === 0) {
+      const bulkData = {
+        saleId: this.selectedDue.saleId!,
+        payments: validPayments
+      };
+      this.paymentService.bulkCollectSalesDue(bulkData).subscribe({
+        next: () => this.handleSuccess(),
+        error: (err) => this.handleError(err)
       });
-
-    // We use forkJoin or similar to wait for all.
-    // But since these affect the SAME record, sequential is safer to avoid concurrency issues with DueAmount calculation.
-    this.processSequential(observables);
-  }
-
-  private processSequential(obs: any[]) {
-    if (obs.length === 0) {
-      this.handleSuccess();
-      return;
+    } else {
+      const bulkData = {
+        purchaseId: this.selectedDue.purchaseId!,
+        payments: validPayments
+      };
+      this.paymentService.bulkPayPurchaseDue(bulkData).subscribe({
+        next: () => this.handleSuccess(),
+        error: (err) => this.handleError(err)
+      });
     }
-
-    const current = obs.shift();
-    current.subscribe({
-      next: () => this.processSequential(obs),
-      error: (err: any) => this.handleError(err)
-    });
   }
 
   handleSuccess() {
@@ -218,7 +245,14 @@ export class DueCollectionComponent implements OnInit {
   }
 
   handleError(err: any) {
-    this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error || 'Failed to record payment' });
+    console.error('Payment Error:', err);
+    this.messageService.add({ 
+      severity: 'error', 
+      summary: 'Error', 
+      detail: err.error?.message || err.error || 'Failed to record payment' 
+    });
     this.saving = false;
+    // CRITICAL FIX: refresh dues even on error to ensure frontend state is in sync with backend partially applied states (though bulk should prevent that)
+    this.loadDues(); 
   }
 }

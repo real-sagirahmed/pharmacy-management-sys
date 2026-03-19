@@ -256,8 +256,9 @@ export class DosageFormListComponent implements OnInit {
     });
   }
   toggleStatus(d: DosageForm) {
+    d.isActive = !d.isActive;
     this.dosageFormService.update(d.dosageFormId, d).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Status Updated', detail: `${d.name} is now ${d.isActive ? 'Active' : 'Inactive'}.` }),
+      next: () => this.messageService.add({ severity: d.isActive ? 'success' : 'warn', summary: 'Status Updated', detail: `${d.name} is now ${d.isActive ? 'Active' : 'Inactive'}.` }),
       error: () => { d.isActive = !d.isActive; this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' }); }
     });
   }

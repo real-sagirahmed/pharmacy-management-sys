@@ -9,7 +9,11 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { DialogModule } from 'primeng/dialog';
+import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { PaymentService } from '../../services/payment.service';
+import { MoneyReceiptService } from '../due-collection/money-receipt.service';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
 @Component({
@@ -18,9 +22,9 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
   imports: [
     CommonModule, RouterModule, FormsModule,
     TableModule, ToastModule, ConfirmDialogModule,
-    PaginatorModule, DialogModule
+    PaginatorModule, DialogModule, SelectModule, InputNumberModule
   ],
-  providers: [],
+  providers: [MessageService, ConfirmationService],
   template: `
     <div class="page-wrap animate-fadein-up">
       <p-toast></p-toast>
@@ -100,6 +104,9 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                   </td>
                   <td alignFrozen="right" pFrozenColumn>
                     <div class="action-btns">
+                      <button *ngIf="p.dueAmount > 0" class="act-btn act-pay" (click)="openPayDialog(p)" title="Pay Due">
+                        <i class="pi pi-money-bill"></i>
+                      </button>
                       <button class="act-btn act-view" (click)="viewDetails(p)" title="View Details">
                         <i class="pi pi-eye"></i>
                       </button>
@@ -177,16 +184,34 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
           <!-- Payments -->
           <div *ngIf="p.purchasePayments && p.purchasePayments.length > 0" class="detail-section">
-            <div class="det-heading"><i class="pi pi-credit-card"></i> Payments</div>
+            <div class="det-heading"><i class="pi pi-credit-card"></i> Payment History</div>
             <table class="det-table">
-              <thead><tr><th>Method</th><th>Amount</th><th>Reference</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Method</th>
+                  <th class="text-right">Amount</th>
+                  <th>Reference</th>
+                </tr>
+              </thead>
               <tbody>
                 <tr *ngFor="let pm of p.purchasePayments">
+                  <td class="text-xs">{{ pm.createdAt | date:'dd/MM/yyyy hh:mm a' }}</td>
                   <td><span class="pay-badge">{{ pm.paymentMethod }}</span></td>
-                  <td class="font-bold">{{ pm.amount | number:'1.2-2' }} Tk</td>
-                  <td class="text-xs text-muted">{{ pm.transactionId || pm.accountNumber || '-' }}</td>
+                  <td class="text-right font-bold">{{ pm.amount | number:'1.2-2' }} Tk</td>
+                  <td class="text-xs text-muted">
+                      {{ pm.transactionId || pm.accountNumber || '-' }}
+                      <div *ngIf="pm.remarks" class="remarks-text">{{ pm.remarks }}</div>
+                  </td>
                 </tr>
               </tbody>
+              <tfoot>
+                <tr>
+                    <td colspan="2" class="text-right font-bold">Total Paid:</td>
+                    <td class="text-right font-black text-teal">{{ p.paidAmount | number:'1.2-2' }} Tk</td>
+                    <td></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -200,6 +225,61 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
               <span>Print GRN</span>
             </button>
           </div>
+        </ng-template>
+      </p-dialog>
+
+      <p-dialog [(visible)]="showPayDialog" [header]="'Pay Due: ' + selectedPurchase?.grnCode"
+        [modal]="true" [style]="{width:'500px'}" [draggable]="false" styleClass="pay-dialog p-dialog-max">
+        
+        <div *ngIf="selectedPurchase" class="pay-form">
+          <div class="pay-summary">
+            <div class="pay-sum-item"><span>Grand Total</span><strong>৳{{ selectedPurchase.grandTotal | number:'1.2-2' }}</strong></div>
+            <div class="pay-sum-item"><span>Paid</span><strong style="color:#0d9488">৳{{ selectedPurchase.paidAmount | number:'1.2-2' }}</strong></div>
+            <div class="pay-sum-item"><span>Balance Due</span><strong style="color:#dc2626">৳{{ selectedPurchase.dueAmount | number:'1.2-2' }}</strong></div>
+          </div>
+
+          <div class="pay-rows-title">
+              <span>Payment Breakdown</span>
+              <button class="btn-add-row" (click)="addPaymentRow()"><i class="pi pi-plus"></i> Add Split</button>
+          </div>
+
+          <div class="pay-rows-list">
+              <div *ngFor="let row of paymentRows(); let i = index" class="pay-row shadow-1">
+                  <div class="pay-row-top">
+                      <p-select [options]="paymentMethods" [(ngModel)]="row.paymentMethod" 
+                                styleClass="pay-method-select" />
+                      <p-inputNumber [(ngModel)]="row.amount" placeholder="Amount" 
+                                    [min]="0" mode="decimal" [minFractionDigits]="2"
+                                    [selectAllOnFocus]="true"
+                                    inputStyleClass="pay-amount-input" />
+                      <button *ngIf="paymentRows().length > 1" (click)="removePaymentRow(i)" class="btn-row-del">
+                          <i class="pi pi-trash"></i>
+                      </button>
+                  </div>
+                  <div class="pay-row-bottom" *ngIf="row.paymentMethod !== 'Cash'">
+                      <input type="text" [(ngModel)]="row.accountNumber" placeholder="Acc/Mobile No" class="pay-sub-input" />
+                      <input type="text" [(ngModel)]="row.transactionId" placeholder="Trx ID" class="pay-sub-input" />
+                  </div>
+                  <input type="text" [(ngModel)]="row.remarks" placeholder="Remarks (optional)" class="pay-sub-input w-full mt-1" />
+              </div>
+          </div>
+
+          <div class="pay-footer-stats">
+              <div class="flex justify-between items-center px-2">
+                  <span class="text-xs font-bold text-slate-500 uppercase">Total Paying</span>
+                  <span class="text-xl font-black" [class.text-red-500]="getTotalPaymentAmount() > selectedPurchase.dueAmount + 0.01">
+                      ৳{{ getTotalPaymentAmount() | number:'1.2-2' }}
+                  </span>
+              </div>
+          </div>
+        </div>
+
+        <ng-template pTemplate="footer">
+          <button class="btn-cancel" (click)="showPayDialog = false">Cancel</button>
+          <button class="btn-save" [disabled]="saving || getTotalPaymentAmount() <= 0 || getTotalPaymentAmount() > (selectedPurchase?.dueAmount || 0) + 0.01" (click)="savePayment()">
+            <i class="pi" [ngClass]="saving ? 'pi-spin pi-spinner' : 'pi-check-circle'"></i>
+            {{ saving ? 'Saving...' : 'Confirm & Print' }}
+          </button>
         </ng-template>
       </p-dialog>
     </div>
@@ -355,6 +435,33 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
       align-items: center !important;
       justify-content: center !important;
     }
+
+    /* Payment Dialog Styles */
+    .pay-dialog ::ng-deep .p-dialog-header { border-bottom: 1px solid #f1f5f9 !important; padding: 12px 20px !important; }
+    .pay-form { display: flex; flex-direction: column; gap: 16px; padding-top: 10px; }
+    .pay-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 12px; }
+    .pay-sum-item { display: flex; flex-direction: column; gap: 2px; }
+    .pay-sum-item span { font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+    .pay-sum-item strong { font-size: 0.9rem; color: #0f172a; }
+    .pay-rows-title { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding: 4px 0; }
+    .pay-rows-title span { font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn-add-row { background: #eff6ff; color: #3b82f6; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+    .pay-row { background: #fff; border: 1.5px solid #f1f5f9; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .pay-row-top { display: grid; grid-template-columns: 120px 1fr 34px; gap: 8px; }
+    .pay-row-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+    .pay-sub-input { width: 100%; border: 1.5px solid #f1f5f9; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; color: #0f172a; outline: none; }
+    .pay-sub-input:focus { border-color: #0d9488; }
+    .btn-row-del { width: 34px; height: 34px; background: #fff1f2; color: #f43f5e; border: none; border-radius: 6px; cursor: pointer; }
+    .pay-footer-stats { margin-top: 10px; border-top: 2px dashed #f1f5f9; padding-top: 10px; }
+    .pay-method-select { width: 100% !important; font-size: 0.8rem; border-radius: 6px; }
+    .pay-amount-input { width: 100%; font-weight: 700; font-size: 1rem; color: #0d9488; }
+    .justify-between { justify-content: space-between; }
+    .items-center { align-items: center; }
+    .font-black { font-weight: 900; }
+    .text-xl { font-size: 1.25rem; }
+    .text-teal { color: #0d9488; }
+    .remarks-text { font-style: italic; color: #94a3b8; font-size: 0.65rem; margin-top: 2px; }
+    .det-table tfoot td { padding: 8px; border-top: 2px solid #f1f5f9; }
   `]
 })
 export class PurchaseListComponent implements OnInit {
@@ -371,6 +478,12 @@ export class PurchaseListComponent implements OnInit {
 
   showDetails = false;
   selectedPurchase: PurchaseMaster | null = null;
+
+  // Payment Dialog State
+  showPayDialog = false;
+  paymentRows = signal<any[]>([]);
+  saving = false;
+  paymentMethods = ['Cash', 'MobileBanking', 'Bank', 'Card'];
 
   @HostListener('window:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent) {
@@ -394,6 +507,8 @@ export class PurchaseListComponent implements OnInit {
   constructor(
     public router: Router,
     private purchaseService: PurchaseService,
+    private paymentService: PaymentService,
+    private moneyReceiptService: MoneyReceiptService,
     private grnPrintService: GrnPrintService,
     private confirmationService: ConfirmationService,
     private messageService: MessageService
@@ -431,6 +546,60 @@ export class PurchaseListComponent implements OnInit {
   onPageChange(event: PaginatorState) {
     this.pageNumber = (event.page ?? 0) + 1;
     this.pageSize = event.rows ?? 10;
+    this.loadData();
+  }
+
+  // ─── Payment Methods ───────────────────────────────────────────────
+  openPayDialog(p: PurchaseMaster) {
+    this.selectedPurchase = p;
+    this.paymentRows.set([
+      { paymentMethod: 'Cash', amount: p.dueAmount, accountNumber: '', transactionId: '', remarks: '' }
+    ]);
+    this.showPayDialog = true;
+  }
+
+  addPaymentRow() {
+    this.paymentRows.update(rows => [...rows, { paymentMethod: 'Cash', amount: 0, accountNumber: '', transactionId: '', remarks: '' }]);
+  }
+
+  removePaymentRow(index: number) {
+    if (this.paymentRows().length > 1) {
+      this.paymentRows.update(rows => rows.filter((_, i) => i !== index));
+    }
+  }
+
+  getTotalPaymentAmount(): number {
+    return this.paymentRows().reduce((sum, row) => sum + (row.amount || 0), 0);
+  }
+
+  savePayment() {
+    if (!this.selectedPurchase) return;
+    const total = this.getTotalPaymentAmount();
+    if (total <= 0 || total > this.selectedPurchase.dueAmount + 0.01) return;
+
+    this.saving = true;
+    const validPayments = this.paymentRows().filter(r => r.amount > 0);
+    const bulkData = { purchaseId: this.selectedPurchase.purchaseId!, payments: validPayments };
+
+    this.paymentService.bulkPayPurchaseDue(bulkData).subscribe({
+      next: () => this.handleSuccess(),
+      error: (err) => this.handleError(err)
+    });
+  }
+
+  private handleSuccess() {
+    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Payment recorded successfully' });
+    if (this.selectedPurchase) {
+        this.moneyReceiptService.generateReceipt(this.selectedPurchase, this.paymentRows().filter(r => r.amount > 0), 'Purchase');
+    }
+    this.saving = false;
+    this.showPayDialog = false;
+    this.loadData();
+  }
+
+  private handleError(err: any) {
+    this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.message || err.error || 'Failed to record payment' });
+    this.saving = false;
     this.loadData();
   }
 

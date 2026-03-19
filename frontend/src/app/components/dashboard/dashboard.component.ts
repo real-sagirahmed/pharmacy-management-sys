@@ -663,7 +663,7 @@ export class DashboardComponent implements OnInit {
     private router: Router,
     private authService: AuthService,
     private medicineService: MedicineService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.user = this.authService.currentUserValue;
@@ -710,11 +710,29 @@ export class DashboardComponent implements OnInit {
   }
 
   toggleGroup(group: string) {
-    if (group === 'inventory') this.inventoryOpen.set(!this.inventoryOpen());
-    if (group === 'sales') this.salesOpen.set(!this.salesOpen());
-    if (group === 'admin') this.adminOpen.set(!this.adminOpen());
-    if (group === 'config') this.configOpen.set(!this.configOpen());
-    if (group === 'reports') this.reportsOpen.set(!this.reportsOpen());
+    // Check if the clicked group is already open
+    const isCurrentlyOpen = 
+      (group === 'inventory' && this.inventoryOpen()) ||
+      (group === 'sales' && this.salesOpen()) ||
+      (group === 'admin' && this.adminOpen()) ||
+      (group === 'config' && this.configOpen()) ||
+      (group === 'reports' && this.reportsOpen());
+
+    // Force close all groups
+    this.inventoryOpen.set(false);
+    this.salesOpen.set(false);
+    this.adminOpen.set(false);
+    this.configOpen.set(false);
+    this.reportsOpen.set(false);
+
+    // If it was NOT open, open it now (this keeps exactly 1 open at a time)
+    if (!isCurrentlyOpen) {
+      if (group === 'inventory') this.inventoryOpen.set(true);
+      if (group === 'sales') this.salesOpen.set(true);
+      if (group === 'admin') this.adminOpen.set(true);
+      if (group === 'config') this.configOpen.set(true);
+      if (group === 'reports') this.reportsOpen.set(true);
+    }
   }
 
   isGroupActive(group: string): boolean {
@@ -724,9 +742,9 @@ export class DashboardComponent implements OnInit {
     if (group === 'admin') return url.includes('/users') || url.includes('/roles');
     if (group === 'reports') return url.includes('/reports');
     if (group === 'config') {
-      return url.includes('/taxes') || url.includes('/uoms') || url.includes('/generics') || 
-             url.includes('/categories') || url.includes('/manufacturers') || 
-             url.includes('/dosage-forms') || url.includes('/strengths') || url.includes('/indications');
+      return url.includes('/taxes') || url.includes('/uoms') || url.includes('/generics') ||
+        url.includes('/categories') || url.includes('/manufacturers') ||
+        url.includes('/dosage-forms') || url.includes('/strengths') || url.includes('/indications');
     }
     return false;
   }
@@ -737,26 +755,26 @@ export class DashboardComponent implements OnInit {
   }
 
   isRoot() { return this.currentUrl() === '/dashboard'; }
-  isAdmin()      { return this.authService.getRoles().includes('Admin'); }
+  isAdmin() { return this.authService.getRoles().includes('Admin'); }
   isPharmacist() { return this.authService.getRoles().includes('Pharmacist'); }
-  isManager()    { return this.authService.getRoles().includes('Manager'); }
-  isCashier()    { return this.authService.getRoles().includes('Cashier'); }
+  isManager() { return this.authService.getRoles().includes('Manager'); }
+  isCashier() { return this.authService.getRoles().includes('Cashier'); }
 
   canViewReport(reportModule: string) {
     return this.authService.hasPermission(reportModule, 'view');
   }
 
   hasAnyReportPermission() {
-    return this.canViewReport('Sales Reports') || 
-           this.canViewReport('Purchase Reports') || 
-           this.canViewReport('Inventory Reports') || 
-           this.canViewReport('Financial Reports') ||
-           this.canViewReport('Expiry Reports') ||
-           this.canViewReport('Top Selling Reports') ||
-           this.canViewReport('Low Stock Reports') ||
-           this.canViewReport('Ledger Reports') ||
-           this.canViewReport('User Performance Reports') ||
-           this.canViewReport('VAT Reports');
+    return this.canViewReport('Sales Reports') ||
+      this.canViewReport('Purchase Reports') ||
+      this.canViewReport('Inventory Reports') ||
+      this.canViewReport('Financial Reports') ||
+      this.canViewReport('Expiry Reports') ||
+      this.canViewReport('Top Selling Reports') ||
+      this.canViewReport('Low Stock Reports') ||
+      this.canViewReport('Ledger Reports') ||
+      this.canViewReport('User Performance Reports') ||
+      this.canViewReport('VAT Reports');
   }
 
   navigate(path: string) { this.router.navigate([path]); }

@@ -29,6 +29,7 @@ builder.Services.AddScoped<IRepository<UseFor, UseForDto>, UseForRepository>();
 builder.Services.AddScoped<IMedicineRepository, MedicineRepository>();
 builder.Services.AddScoped<IPurchaseRepository, PurchaseRepository>();
 builder.Services.AddScoped<ISalesRepository, SalesRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IEmailService, FileEmailService>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();

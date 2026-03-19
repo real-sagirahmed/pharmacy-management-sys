@@ -261,8 +261,9 @@ export class GenericListComponent implements OnInit {
   }
 
   toggleStatus(g: Generic) {
+    g.isActive = !g.isActive;
     this.genericService.update(g.genericId, g).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Status Updated', detail: `${g.name} is now ${g.isActive ? 'Active' : 'Inactive'}.` }),
+      next: () => this.messageService.add({ severity: g.isActive ? 'success' : 'warn', summary: 'Status Updated', detail: `${g.name} is now ${g.isActive ? 'Active' : 'Inactive'}.` }),
       error: () => {
         g.isActive = !g.isActive;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' });

@@ -256,8 +256,9 @@ export class CommonStrengthListComponent implements OnInit {
     });
   }
   toggleStatus(s: CommonStrength) {
+    s.isActive = !s.isActive;
     this.strengthService.update(s.commonStrengthId, s).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Status Updated', detail: `${s.name} is now ${s.isActive ? 'Active' : 'Inactive'}.` }),
+      next: () => this.messageService.add({ severity: s.isActive ? 'success' : 'warn', summary: 'Status Updated', detail: `${s.name} is now ${s.isActive ? 'Active' : 'Inactive'}.` }),
       error: () => { s.isActive = !s.isActive; this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' }); }
     });
   }

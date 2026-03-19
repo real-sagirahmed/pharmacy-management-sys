@@ -51,4 +51,12 @@ export class PaymentService {
   getPurchaseHistory(purchaseId: number): Observable<PurchasePayment[]> {
     return this.http.get<PurchasePayment[]>(`${this.apiUrl}/PurchaseHistory/${purchaseId}`);
   }
+
+  bulkCollectSalesDue(bulkData: { saleId: number, payments: SalePayment[] }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/BulkCollectSalesDue`, bulkData);
+  }
+
+  bulkPayPurchaseDue(bulkData: { purchaseId: number, payments: PurchasePayment[] }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/BulkPayPurchaseDue`, bulkData);
+  }
 }

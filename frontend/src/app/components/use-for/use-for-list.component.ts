@@ -258,8 +258,9 @@ export class UseForListComponent implements OnInit {
     });
   }
   toggleStatus(u: UseFor) {
+    u.isActive = !u.isActive;
     this.useForService.update(u.useForId, u).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Status Updated', detail: `${u.name} is now ${u.isActive ? 'Active' : 'Inactive'}.` }),
+      next: () => this.messageService.add({ severity: u.isActive ? 'success' : 'warn', summary: 'Status Updated', detail: `${u.name} is now ${u.isActive ? 'Active' : 'Inactive'}.` }),
       error: () => { u.isActive = !u.isActive; this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' }); }
     });
   }

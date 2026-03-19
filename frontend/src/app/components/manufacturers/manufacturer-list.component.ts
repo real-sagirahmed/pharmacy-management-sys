@@ -254,8 +254,9 @@ export class ManufacturerListComponent implements OnInit {
     });
   }
   toggleStatus(m: Manufacturer) {
+    m.isActive = !m.isActive;
     this.manufacturerService.update(m.manufacturerId, m).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Status Updated', detail: `${m.name} is now ${m.isActive ? 'Active' : 'Inactive'}.` }),
+      next: () => this.messageService.add({ severity: m.isActive ? 'success' : 'warn', summary: 'Status Updated', detail: `${m.name} is now ${m.isActive ? 'Active' : 'Inactive'}.` }),
       error: () => { m.isActive = !m.isActive; this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' }); }
     });
   }

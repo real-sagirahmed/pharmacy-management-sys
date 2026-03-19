@@ -138,10 +138,17 @@ namespace PharmacyApi.Repositories
             if (!string.IsNullOrEmpty(parameters.SearchText))
             {
                 var s = parameters.SearchText.ToLower();
-                query = query.Where(x =>
-                    x.InvoiceCode.ToLower().Contains(s) ||
-                    x.CustomerName.ToLower().Contains(s) ||
-                    (x.CustomerPhone != null && x.CustomerPhone.Contains(s)));
+                if (s == "due" || s == "বকেয়া")
+                {
+                    query = query.Where(x => x.DueAmount > 0);
+                }
+                else
+                {
+                    query = query.Where(x =>
+                        x.InvoiceCode.ToLower().Contains(s) ||
+                        x.CustomerName.ToLower().Contains(s) ||
+                        (x.CustomerPhone != null && x.CustomerPhone.Contains(s)));
+                }
             }
 
             if (parameters.FromDate.HasValue)
@@ -151,7 +158,16 @@ namespace PharmacyApi.Repositories
                 query = query.Where(x => x.SaleDate <= parameters.ToDate.Value.Date);
 
             if (!string.IsNullOrEmpty(parameters.SaleStatus))
-                query = query.Where(x => x.SaleStatus == parameters.SaleStatus);
+            {
+                if (parameters.SaleStatus == "Due")
+                {
+                    query = query.Where(x => x.DueAmount > 0);
+                }
+                else
+                {
+                    query = query.Where(x => x.SaleStatus == parameters.SaleStatus);
+                }
+            }
 
             var totalCount = await query.CountAsync();
 
@@ -394,7 +410,18 @@ namespace PharmacyApi.Repositories
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
+                    // Protection: Do not allow deleting a sale that has payments (except the initial one if it was part of creation,
+                    // but usually, any payment means transaction started). 
+                    // Best practice: If Due Collection has been used, the sale is "locked" from direct deletion.
+                    if (sale.SalesPayments.Any())
+                    {
+                        // Optional: You could allow it if PaidAmount is 0, but usually SalesPayments table being populated means money changed hands.
+                        // I will return false to signal "cannot delete due to existing payments".
+                        return false; 
+                    }
+
                     if (sale.SaleStatus == "Completed")
+
                     {
                         foreach (var item in sale.SalesDetails)
                         {

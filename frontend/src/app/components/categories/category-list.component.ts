@@ -263,8 +263,9 @@ export class CategoryListComponent implements OnInit {
   }
 
   toggleStatus(c: Category) {
+    c.isActive = !c.isActive;
     this.categoryService.update(c.categoryId, c).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Status Updated', detail: `${c.name} is now ${c.isActive ? 'Active' : 'Inactive'}.` }),
+      next: () => this.messageService.add({ severity: c.isActive ? 'success' : 'warn', summary: 'Status Updated', detail: `${c.name} is now ${c.isActive ? 'Active' : 'Inactive'}.` }),
       error: () => {
         c.isActive = !c.isActive;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' });

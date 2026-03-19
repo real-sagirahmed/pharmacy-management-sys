@@ -517,8 +517,9 @@ export class PartyListComponent implements OnInit {
   }
 
   toggleStatus(p: Party) {
+    p.isActive = !p.isActive;
     this.partyService.update(p.partyId, p).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Status Updated', detail: `${p.fullName} is now ${p.isActive ? 'Active' : 'Inactive'}.` }),
+      next: () => this.messageService.add({ severity: p.isActive ? 'success' : 'warn', summary: 'Status Updated', detail: `${p.fullName} is now ${p.isActive ? 'Active' : 'Inactive'}.` }),
       error: () => {
         p.isActive = !p.isActive; // Revert on error
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' });

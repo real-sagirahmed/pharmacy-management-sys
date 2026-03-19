@@ -74,10 +74,17 @@ namespace PharmacyApi.Repositories
             if (!string.IsNullOrEmpty(parameters.SearchText))
             {
                 var s = parameters.SearchText.ToLower();
-                query = query.Where(p =>
-                    p.GrnCode.ToLower().Contains(s) ||
-                    p.InvoiceNumber.ToLower().Contains(s) ||
-                    (p.Party != null && p.Party.FullName.ToLower().Contains(s)));
+                if (s == "due" || s == "বকেয়া")
+                {
+                    query = query.Where(p => p.DueAmount > 0);
+                }
+                else
+                {
+                    query = query.Where(p =>
+                        p.GrnCode.ToLower().Contains(s) ||
+                        p.InvoiceNumber.ToLower().Contains(s) ||
+                        (p.Party != null && p.Party.FullName.ToLower().Contains(s)));
+                }
             }
 
             if (parameters.FromDate.HasValue)
@@ -177,7 +184,8 @@ namespace PharmacyApi.Repositories
                     Amount            = pm.Amount,
                     AccountNumber     = pm.AccountNumber,
                     TransactionId     = pm.TransactionId,
-                    Remarks           = pm.Remarks
+                    Remarks           = pm.Remarks,
+                    CreatedAt         = pm.CreatedAt
                 }).ToList()
             };
         }
@@ -215,11 +223,12 @@ namespace PharmacyApi.Repositories
                         Adjustment    = dto.Adjustment,
                         GrandTotal    = dto.GrandTotal,
                         PaidAmount    = dto.PaidAmount,
-                        DueAmount     = dto.GrandTotal - dto.PaidAmount,
                         CreatedBy     = username
                     };
 
+                    // Calculate DueAmount once from authoritative values
                     purchase.DueAmount = purchase.GrandTotal - purchase.PaidAmount;
+
                     if (purchase.DueAmount <= 0)
                         purchase.PaymentStatus = "Paid";
                     else if (purchase.PaidAmount > 0)
@@ -309,7 +318,14 @@ namespace PharmacyApi.Repositories
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
+                    // Protection: Do not allow deleting a purchase that has payments recorded in PurchasePayments
+                    if (p.PurchasePayments.Any())
+                    {
+                        return false;
+                    }
+
                     foreach (var item in p.PurchaseDetails)
+
                     {
                         var medicine = await _context.Medicines.FindAsync(item.MedicineId);
                         if (medicine != null)

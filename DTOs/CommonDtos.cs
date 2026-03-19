@@ -164,6 +164,25 @@ namespace PharmacyApi.DTOs
 
         [StringLength(250)]
         public string? Remarks { get; set; }
+
+        public DateTime CreatedAt { get; set; }  // ← added for history display
+    }
+
+    // Bulk payment DTOs — wraps multiple payment rows in one API call
+    public class BulkSalesPaymentDto
+    {
+        [Required]
+        public int SaleId { get; set; }
+        [Required]
+        public List<SalesPaymentDto> Payments { get; set; } = new();
+    }
+
+    public class BulkPurchasePaymentDto
+    {
+        [Required]
+        public int PurchaseId { get; set; }
+        [Required]
+        public List<PurchasePaymentDto> Payments { get; set; } = new();
     }
 
     public class CustomerDto

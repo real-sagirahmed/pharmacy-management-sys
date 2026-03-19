@@ -13,9 +13,12 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { DialogModule } from 'primeng/dialog';
+import { InputNumberModule } from 'primeng/inputnumber';
 
 import { SalesService, SaleMaster, SaleSearchParameters } from '../../services/sales.service';
 import { SalesInvoicePrintService } from '../../services/invoice-print.service';
+import { PaymentService } from '../../services/payment.service';
+import { MoneyReceiptService } from '../due-collection/money-receipt.service';
 
 @Component({
   selector: 'app-sales-list',
@@ -23,7 +26,7 @@ import { SalesInvoicePrintService } from '../../services/invoice-print.service';
   imports: [
     CommonModule, FormsModule,
     TableModule, ButtonModule, InputTextModule, TagModule,
-    DatePickerModule, SelectModule, ConfirmDialogModule, ToastModule, DialogModule
+    DatePickerModule, SelectModule, ConfirmDialogModule, ToastModule, DialogModule, InputNumberModule
   ],
   providers: [ConfirmationService, MessageService, DatePipe],
   template: `
@@ -108,6 +111,9 @@ import { SalesInvoicePrintService } from '../../services/invoice-print.service';
           <td><span style="font-size:0.8rem; color:#64748b">{{ s.createdBy }}</span></td>
           <td style="text-align:center">
             <div class="action-btns">
+              <button *ngIf="s.dueAmount > 0" class="act-btn pay" (click)="openPayDialog(s)" title="Collect Due">
+                <i class="pi pi-money-bill"></i>
+              </button>
               <button *ngIf="s.saleStatus === 'Hold'" class="act-btn edit" (click)="resumeHold(s.saleId!)" title="Resume/Edit">
                 <i class="pi pi-pencil"></i>
               </button>
@@ -166,11 +172,100 @@ import { SalesInvoicePrintService } from '../../services/invoice-print.service';
         <span>Sp. Disc: ৳{{ detailSale.specialDiscount | number:'1.2-2' }}</span>
         <strong>Total: ৳{{ detailSale.grandTotal | number:'1.2-2' }}</strong>
       </div>
+
+      <!-- Payment History Section -->
+      <div *ngIf="detailSale.salesPayments && detailSale.salesPayments.length > 0" class="history-section">
+          <div class="history-title"><i class="pi pi-history"></i> Payment History</div>
+          <table class="history-table">
+              <thead>
+                  <tr>
+                      <th>Date</th>
+                      <th>Method</th>
+                      <th class="text-right">Amount</th>
+                      <th>Reference/Remarks</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <tr *ngFor="let p of detailSale.salesPayments">
+                      <td>{{ p.createdAt | date:'dd/MM/yyyy hh:mm a' }}</td>
+                      <td><span class="pay-badge">{{ p.paymentMethod }}</span></td>
+                      <td class="text-right font-bold">৳{{ p.amount | number:'1.2-2' }}</td>
+                      <td class="text-xs text-slate-500">
+                          {{ p.transactionId || p.accountNumber || '' }}
+                          <div *ngIf="p.remarks" class="remarks-text">{{ p.remarks }}</div>
+                      </td>
+                  </tr>
+              </tbody>
+              <tfoot>
+                  <tr>
+                      <td colspan="2" class="text-right font-bold">Total Paid:</td>
+                      <td class="text-right font-black text-teal">৳{{ detailSale.paidAmount | number:'1.2-2' }}</td>
+                      <td></td>
+                  </tr>
+              </tfoot>
+          </table>
+      </div>
     </div>
     <ng-template pTemplate="footer">
       <button class="btn-dialog-close" (click)="showDetail = false">Close</button>
       <button class="btn-dialog-print" (click)="printInvoice(detailSale!.saleId!)">
         <i class="pi pi-print"></i> Print Invoice
+      </button>
+    </ng-template>
+  </p-dialog>
+
+  <!-- Payment Dialog -->
+  <p-dialog [(visible)]="showPayDialog" [header]="'Collect Due: ' + selectedSale?.invoiceCode"
+    [modal]="true" [style]="{width:'500px'}" [draggable]="false" styleClass="pay-dialog p-dialog-max">
+    
+    <div *ngIf="selectedSale" class="pay-form">
+      <div class="pay-summary">
+        <div class="pay-sum-item"><span>Grand Total</span><strong>৳{{ selectedSale.grandTotal | number:'1.2-2' }}</strong></div>
+        <div class="pay-sum-item"><span>Paid</span><strong style="color:#0d9488">৳{{ selectedSale.paidAmount | number:'1.2-2' }}</strong></div>
+        <div class="pay-sum-item"><span>Balance Due</span><strong style="color:#dc2626">৳{{ selectedSale.dueAmount | number:'1.2-2' }}</strong></div>
+      </div>
+
+      <div class="pay-rows-title">
+          <span>Payment Breakdown</span>
+          <button class="btn-add-row" (click)="addPaymentRow()"><i class="pi pi-plus"></i> Add Split</button>
+      </div>
+
+      <div class="pay-rows-list">
+          <div *ngFor="let row of paymentRows(); let i = index" class="pay-row shadow-1">
+              <div class="pay-row-top">
+                  <p-select [options]="paymentMethods" [(ngModel)]="row.paymentMethod" 
+                            styleClass="pay-method-select" />
+                  <p-inputNumber [(ngModel)]="row.amount" placeholder="Amount" 
+                                [min]="0" mode="decimal" [minFractionDigits]="2"
+                                [selectAllOnFocus]="true"
+                                inputStyleClass="pay-amount-input" />
+                  <button *ngIf="paymentRows().length > 1" (click)="removePaymentRow(i)" class="btn-row-del">
+                      <i class="pi pi-trash"></i>
+                  </button>
+              </div>
+              <div class="pay-row-bottom" *ngIf="row.paymentMethod !== 'Cash'">
+                  <input type="text" [(ngModel)]="row.accountNumber" placeholder="Acc/Mobile No" class="pay-sub-input" />
+                  <input type="text" [(ngModel)]="row.transactionId" placeholder="Trx ID" class="pay-sub-input" />
+              </div>
+              <input type="text" [(ngModel)]="row.remarks" placeholder="Remarks (optional)" class="pay-sub-input w-full mt-1" />
+          </div>
+      </div>
+
+      <div class="pay-footer-stats">
+          <div class="flex justify-between items-center px-2">
+              <span class="text-xs font-bold text-slate-500 uppercase">Total Paying</span>
+              <span class="text-xl font-black" [class.text-red-500]="getTotalPaymentAmount() > selectedSale.dueAmount + 0.01">
+                  ৳{{ getTotalPaymentAmount() | number:'1.2-2' }}
+              </span>
+          </div>
+      </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <button class="btn-cancel" (click)="showPayDialog = false">Cancel</button>
+      <button class="btn-save" [disabled]="saving || getTotalPaymentAmount() <= 0 || getTotalPaymentAmount() > (selectedSale?.dueAmount || 0) + 0.01" (click)="savePayment()">
+        <i class="pi" [ngClass]="saving ? 'pi-spin pi-spinner' : 'pi-check-circle'"></i>
+        {{ saving ? 'Saving...' : 'Confirm & Print' }}
       </button>
     </ng-template>
   </p-dialog>
@@ -205,7 +300,70 @@ import { SalesInvoicePrintService } from '../../services/invoice-print.service';
     .detail-summary { display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:#0f172a;border-radius:10px;padding:12px 16px;color:#94a3b8;font-size:.8rem; strong{color:#4ade80;font-size:1rem;margin-left:auto;} }
     .btn-dialog-close { padding:8px 18px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff;color:#64748b;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif; }
     .btn-dialog-print { padding:8px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:6px; }
-  `]
+
+    /* Payment Dialog Styles */
+    .pay-dialog ::ng-deep .p-dialog-header { border-bottom: 1px solid #f1f5f9 !important; padding: 12px 20px !important; }
+    .pay-form { display: flex; flex-direction: column; gap: 16px; padding-top: 10px; }
+    .pay-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 12px; }
+    .pay-sum-item { display: flex; flex-direction: column; gap: 2px; }
+    .pay-sum-item span { font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+    .pay-sum-item strong { font-size: 0.9rem; color: #0f172a; }
+    .pay-rows-title { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding: 4px 0; }
+    .pay-rows-title span { font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn-add-row { background: #eff6ff; color: #3b82f6; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+    .pay-row { background: #fff; border: 1.5px solid #f1f5f9; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .pay-row-top { display: grid; grid-template-columns: 120px 1fr 34px; gap: 8px; }
+    .pay-row-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+    .pay-sub-input { width: 100%; border: 1.5px solid #f1f5f9; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; color: #0f172a; outline: none; }
+    .pay-sub-input:focus { border-color: #0d9488; }
+    .btn-row-del { width: 34px; height: 34px; background: #fff1f2; color: #f43f5e; border: none; border-radius: 6px; cursor: pointer; }
+    .pay-footer-stats { margin-top: 10px; border-top: 2px dashed #f1f5f9; padding-top: 10px; }
+    .pay-method-select { width: 100% !important; font-size: 0.8rem; border-radius: 6px; }
+    .pay-amount-input { width: 100%; font-weight: 700; font-size: 1rem; color: #0d9488; }
+    .justify-between { justify-content: space-between; }
+    .items-center { align-items: center; }
+    .font-black { font-weight: 900; }
+    .text-xl { font-size: 1.25rem; }
+    .text-red-500 { color: #ef4444; }
+    .text-slate-500 { color: #64748b; }
+    .text-teal { color: #0d9488; }
+    .text-right { text-align: right; }
+
+    /* Dialog Mask/Overlay Fix (Matches Purchase) */
+    ::ng-deep .p-dialog-mask { 
+      background-color: rgba(15, 23, 42, 0.6) !important; 
+      backdrop-filter: blur(4px); 
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    /* Action Buttons (Matches Purchase) */
+    .btn-cancel {
+      display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+      background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;
+      border-radius: 10px; font-weight: 600; font-size: .8rem; cursor: pointer; transition: all .2s;
+    }
+    .btn-cancel:hover { background: #e2e8f0; color: #0f172a; }
+    
+    .btn-save {
+      display: flex; align-items: center; gap: 8px; padding: 8px 20px;
+      background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;
+      border: none; border-radius: 10px; font-weight: 700; font-size: .8rem;
+      cursor: pointer; transition: all .2s; box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+    }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25); opacity: 0.95; }
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* History Table Styles */
+    .history-section { margin-top: 20px; border-top: 1px dashed #e2e8f0; padding-top: 15px; }
+    .history-title { font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    .history-table th { text-align: left; padding: 8px; background: #f8fafc; color: #64748b; border-bottom: 2px solid #f1f5f9; }
+    .history-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    .remarks-text { font-style: italic; color: #94a3b8; font-size: 0.7rem; margin-top: 2px; }
+    .pay-badge { background: #eff6ff; color: #3b82f6; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.65rem; }
+`]
 })
 export class SalesListComponent implements OnInit {
   sales = signal<SaleMaster[]>([]);
@@ -219,22 +377,86 @@ export class SalesListComponent implements OnInit {
 
   statusOpts = [
     { label: 'Completed', value: 'Completed' },
+    { label: 'Due', value: 'Due' },
     { label: 'Hold', value: 'Hold' }
   ];
 
   showDetail = false;
   detailSale: SaleMaster | null = null;
 
+  // Payment Dialog State
+  showPayDialog = false;
+  selectedSale: SaleMaster | null = null;
+  paymentRows = signal<any[]>([]);
+  saving = false;
+  paymentMethods = ['Cash', 'MobileBanking', 'Bank', 'Card'];
+
   private searchTimer: any;
 
   constructor(
     private salesService: SalesService,
     private printService: SalesInvoicePrintService,
+    private paymentService: PaymentService,
+    private moneyReceiptService: MoneyReceiptService,
     private confirmationService: ConfirmationService,
     private messageService: MessageService,
     private router: Router,
     private datePipe: DatePipe
   ) {}
+
+  // ─── Payment Methods ───────────────────────────────────────────────
+  openPayDialog(s: SaleMaster) {
+    this.selectedSale = s;
+    this.paymentRows.set([
+      { paymentMethod: 'Cash', amount: s.dueAmount, accountNumber: '', transactionId: '', remarks: '' }
+    ]);
+    this.showPayDialog = true;
+  }
+
+  addPaymentRow() {
+    this.paymentRows.update(rows => [...rows, { paymentMethod: 'Cash', amount: 0, accountNumber: '', transactionId: '', remarks: '' }]);
+  }
+
+  removePaymentRow(index: number) {
+    if (this.paymentRows().length > 1) {
+      this.paymentRows.update(rows => rows.filter((_, i) => i !== index));
+    }
+  }
+
+  getTotalPaymentAmount(): number {
+    return this.paymentRows().reduce((sum, row) => sum + (row.amount || 0), 0);
+  }
+
+  savePayment() {
+    if (!this.selectedSale) return;
+    const total = this.getTotalPaymentAmount();
+    if (total <= 0 || total > this.selectedSale.dueAmount + 0.01) return;
+
+    this.saving = true;
+    const validPayments = this.paymentRows().filter(r => r.amount > 0);
+    const bulkData = { saleId: this.selectedSale.saleId!, payments: validPayments };
+
+    this.paymentService.bulkCollectSalesDue(bulkData).subscribe({
+      next: () => this.handleSuccess(),
+      error: (err) => this.handleError(err)
+    });
+  }
+
+  private handleSuccess() {
+    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Payment recorded successfully' });
+    if (this.selectedSale) {
+        this.moneyReceiptService.generateReceipt(this.selectedSale, this.paymentRows().filter(r => r.amount > 0), 'Sales');
+    }
+    this.saving = false;
+    this.showPayDialog = false;
+    this.loadSales();
+  }
+
+  private handleError(err: any) {
+    this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.message || err.error || 'Failed to record payment' });
+    this.saving = false;
+    this.loadSales();
+  }
 
   ngOnInit() { this.loadSales(); }
 
