@@ -1,0 +1,7 @@
+{
+  "case_study": "এই প্রোজেক্টে আমি ক্লিন আর্কিটেকচার এবং রিপোজিটরি প্যাটার্ন ব্যবহার করেছি যাতে কোড মেইনটেইনেবল হয়। সবচেয়ে বড় চ্যালেঞ্জ ছিল...",
+  "showcase_files": [
+    "src/Services/PharmacyService.cs",
+    "src/Controllers/InventoryController.cs"
+  ]
+}
