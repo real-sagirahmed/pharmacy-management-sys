@@ -52,6 +52,9 @@ import { AuthService } from '../../services/auth.service';
                 <input type="text" formControlName="fullName" 
                        placeholder="e.g. John Doe" class="field-input">
               </div>
+              <div *ngIf="registerForm.get('fullName')?.touched && registerForm.get('fullName')?.errors?.['required']" class="field-error animate-fadein">
+                Full name is required.
+              </div>
             </div>
 
             <!-- Email -->
@@ -62,19 +65,27 @@ import { AuthService } from '../../services/auth.service';
                 <input type="email" formControlName="email" 
                        placeholder="john@example.com" class="field-input">
               </div>
+              <div *ngIf="registerForm.get('email')?.touched && registerForm.get('email')?.errors" class="field-error animate-fadein">
+                <span *ngIf="registerForm.get('email')?.errors?.['required']">Email is required.</span>
+                <span *ngIf="registerForm.get('email')?.errors?.['email']">Invalid email format.</span>
+              </div>
+            </div>
+
+            <!-- Username -->
+            <div class="form-field">
+              <label class="field-label">Username</label>
+              <div class="field-input-wrap">
+                <i class="pi pi-user field-icon"></i>
+                <input type="text" formControlName="username" 
+                       placeholder="johndoe" class="field-input">
+              </div>
+              <div *ngIf="registerForm.get('username')?.touched && registerForm.get('username')?.errors" class="field-error animate-fadein">
+                <span *ngIf="registerForm.get('username')?.errors?.['required']">Username is required.</span>
+                <span *ngIf="registerForm.get('username')?.errors?.['minlength']">Minimum 3 characters.</span>
+              </div>
             </div>
 
             <div class="form-grid-2">
-              <!-- Username -->
-              <div class="form-field">
-                <label class="field-label">Username</label>
-                <div class="field-input-wrap">
-                  <i class="pi pi-user field-icon"></i>
-                  <input type="text" formControlName="username" 
-                         placeholder="johndoe" class="field-input">
-                </div>
-              </div>
-
               <!-- Password -->
               <div class="form-field">
                 <label class="field-label">Password</label>
@@ -82,6 +93,24 @@ import { AuthService } from '../../services/auth.service';
                   <i class="pi pi-lock field-icon"></i>
                   <input type="password" formControlName="password" 
                          placeholder="••••••••" class="field-input">
+                </div>
+                <div *ngIf="registerForm.get('password')?.touched && registerForm.get('password')?.errors" class="field-error animate-fadein">
+                  <span *ngIf="registerForm.get('password')?.errors?.['required']">Password is required.</span>
+                  <span *ngIf="registerForm.get('password')?.errors?.['minlength']">Minimum 6 characters required.</span>
+                </div>
+              </div>
+
+              <!-- Confirm Password -->
+              <div class="form-field">
+                <label class="field-label">Confirm Password</label>
+                <div class="field-input-wrap">
+                  <i class="pi pi-shield field-icon"></i>
+                  <input type="password" formControlName="confirmPassword" 
+                         placeholder="••••••••" class="field-input">
+                </div>
+                <div *ngIf="registerForm.get('confirmPassword')?.touched && registerForm.get('confirmPassword')?.errors" class="field-error animate-fadein">
+                  <span *ngIf="registerForm.get('confirmPassword')?.errors?.['required']">Please confirm your password.</span>
+                  <span *ngIf="registerForm.get('confirmPassword')?.errors?.['mismatch']">Passwords do not match.</span>
                 </div>
               </div>
             </div>
@@ -182,6 +211,9 @@ import { AuthService } from '../../services/auth.service';
     .error-pill { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
     .success-pill { background: #f0fdf4; color: #166534; border-left: 4px solid #22c55e; }
 
+    .field-error { font-size: 0.75rem; color: #ef4444; font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .field-error::before { content: '●'; font-size: 8px; }
+
     .submit-btn {
       width: 100%; padding: 14px; margin-top: 8px;
       background: #4f46e5; color: #fff; border: none; border-radius: 12px;
@@ -219,15 +251,23 @@ export class RegisterComponent {
   ) {
     this.registerForm = this.fb.group({
       fullName: ['', Validators.required],
-      username: ['', Validators.required],
+      username: ['', [Validators.required, Validators.minLength(3)]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
-    });
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      confirmPassword: ['', Validators.required]
+    }, { validators: this.passwordMatchValidator });
+  }
+
+  private passwordMatchValidator(group: FormGroup) {
+    const password = group.get('password')?.value;
+    const confirmPassword = group.get('confirmPassword')?.value;
+    return password === confirmPassword ? null : { mismatch: true };
   }
 
   onSubmit() {
     if (this.registerForm.invalid) {
-      this.error = 'Please fill out all fields correctly.';
+      this.registerForm.markAllAsTouched();
+      this.error = 'Please correct the errors in the form.';
       return;
     }
     this.loading = true;

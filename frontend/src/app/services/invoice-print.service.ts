@@ -13,6 +13,22 @@ export class SalesInvoicePrintService {
     return d.toLocaleDateString('en-GB'); // dd/MM/yyyy
   }
 
+  private formatTime(time: string | undefined): string {
+    if (!time) return '—';
+    try {
+      // If ISO string, extract time. If raw time (HH:mm:ss), parse it.
+      let d: Date;
+      if (time.includes('T')) {
+        d = new Date(time);
+      } else {
+        d = new Date(`2000-01-01T${time}`);
+      }
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch {
+      return time;
+    }
+  }
+
   generatePDF(sale: SaleMaster): void {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -34,11 +50,11 @@ export class SalesInvoicePrintService {
     doc.setTextColor(50);
     doc.text(`Invoice No : ${sale.invoiceCode || '—'}`, 18, 35);
     doc.text(`Date       : ${this.formatDate(sale.saleDate)}`, 18, 41);
-    doc.text(`Time       : ${sale.saleTime || '—'}`, 18, 47);
+    doc.text(`Time       : ${this.formatTime(sale.saleTime)}`, 18, 47);
 
     doc.text(`Customer : ${sale.customerName}`, 110, 35);
     doc.text(`Mobile   : ${sale.customerPhone || '—'}`, 110, 41);
-    doc.text(`Status   : ${sale.paymentStatus}`, 110, 47);
+    doc.text(`Status   : ${sale.paymentStatus || 'Paid'}`, 110, 47);
     doc.text(`Sales By : ${sale.createdBy || '—'}`, 110, 53);
 
     // Items Table
@@ -111,6 +127,8 @@ export class SalesInvoicePrintService {
     doc.text('Thank you for your purchase!', 105, pmY + 10, { align: 'center' });
     doc.text('Printed by Pharmacy Management System', 105, pmY + 15, { align: 'center' });
 
-    doc.save(`Invoice-${sale.invoiceCode || 'sale'}.pdf`);
+    // Use bloburl for preview/new tab instead of immediate download
+    const blob = doc.output('bloburl');
+    window.open(blob, '_blank');
   }
 }

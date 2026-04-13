@@ -296,11 +296,11 @@
             <!-- Single Payment Amount -->
             <div class="pay-amount-row mt-3" *ngIf="!splitEnabled">
               <div class="field-label-row">
-                <span class="field-label">Amount Paid</span>
+                <span class="field-label">Amount Paid <small class="f2-hint">(F2 to focus)</small></span>
                 <span class="pay-ref-total">(Payable: ৳{{ grandTotal() | number:'1.2-2' }})</span>
               </div>
               <p-inputNumber [(ngModel)]="payments()[0].amount" mode="decimal" [minFractionDigits]="2" prefix="৳"
-                styleClass="w-full" inputStyleClass="pay-amount-num" (ngModelChange)="triggerPaymentsUpdate()" />
+                styleClass="w-full" [inputStyleClass]="'pay-amount-num ' + (isPaymentSufficient() ? 'payment-sufficient' : '')" (ngModelChange)="triggerPaymentsUpdate()" />
             </div>
 
             <!-- Single Payment References -->

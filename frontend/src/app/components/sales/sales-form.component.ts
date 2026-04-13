@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, signal, computed, effect, untracked, inject
+  Component, OnInit, signal, computed, effect, untracked, inject, HostListener
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -180,6 +180,28 @@ export class SalesFormComponent implements OnInit {
         setTimeout(() => this.grandTotalPulse.set(false), 600);
       });
     });
+  }
+
+  // ── Keyboard Shortcuts ──────────────────────────────────────────────────────
+  @HostListener('window:keydown', ['$event'])
+  handleGlobalShortcuts(event: KeyboardEvent) {
+    // F2 to focus Amount Paid
+    if (event.key === 'F2') {
+      event.preventDefault();
+      this.focusAmountPaid();
+    }
+  }
+
+  focusAmountPaid() {
+    const input = document.querySelector('.pay-amount-num input') as HTMLInputElement;
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
+
+  isPaymentSufficient() {
+    return this.totalPaid() >= this.grandTotal() && this.grandTotal() > 0;
   }
 
   ngOnInit() {
@@ -593,6 +615,7 @@ export class SalesFormComponent implements OnInit {
       paymentMethod: this.payments()[0]?.method || 'Cash',
       salesDetails: this.rows().map(r => ({
         medicineId: r.medicineId,
+        medicineName: r.medicineName,
         batchNumber: r.batchNumber,
         expiryDate: r.expiryDate ? this.datePipe.transform(r.expiryDate, 'yyyy-MM-dd') : null,
         quantity: r.quantity,
@@ -648,13 +671,33 @@ export class SalesFormComponent implements OnInit {
   // ── Actions ───────────────────────────────────────────────────────────────
   completeSale(shouldPrint = false) {
     if (!this.validate()) return;
+
     this.saving = true;
     this.salesService.createSale(this.buildPayload()).subscribe({
       next: (res) => {
         this.saving = false;
         this.messageService.add({ severity: 'success', summary: 'Sale Completed!', detail: `Invoice ${res.invoiceCode} saved.` });
-        if (shouldPrint) this.printService.generatePDF(res);
-        setTimeout(() => this.router.navigate(['/dashboard/sales']), 1200);
+        
+        const payloadWithUser = { ...res, createdBy: this.salesBy };
+
+        if (shouldPrint) {
+          this.confirmationService.confirm({
+            message: 'Sale saved successfully! Would you like to view the Invoice Preview?',
+            header: 'Print Confirmation',
+            icon: 'pi pi-print',
+            acceptLabel: 'View & Print',
+            rejectLabel: 'Skip',
+            accept: () => {
+              this.printService.generatePDF(payloadWithUser);
+              setTimeout(() => this.router.navigate(['/dashboard/sales']), 1000);
+            },
+            reject: () => {
+              this.router.navigate(['/dashboard/sales']);
+            }
+          });
+        } else {
+          setTimeout(() => this.router.navigate(['/dashboard/sales']), 1200);
+        }
       },
       error: (err) => {
         this.saving = false;

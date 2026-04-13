@@ -29,7 +29,9 @@ export class AuthService {
   }
   
   hasPermission(moduleName: string, action: 'view' | 'create' | 'edit' | 'delete' = 'view'): boolean {
-    if (this.getRoles().includes('Admin')) return true;
+    // ONLY SystemAdmin has full global access (Owner Bypass)
+    if (this.isSystemAdmin()) return true;
+
     const permissions = this.currentUserValue.permissions || [];
     const perm = permissions.find((p: any) => p.moduleName === moduleName);
     if (!perm) return false;
@@ -54,6 +56,19 @@ export class AuthService {
 
   getRoles(): string[] {
     return this.currentUserValue.roles || [];
+  }
+
+  // ─── SystemAdmin Helpers ───────────────────────────────────────────────────
+
+  /** Returns true if the current logged-in user has the SystemAdmin role */
+  isSystemAdmin(): boolean {
+    return this.getRoles().includes('SystemAdmin');
+  }
+
+  /** Returns true if the current user is SystemAdmin or Admin (Role check only) */
+  isAdminOrAbove(): boolean {
+    const roles = this.getRoles();
+    return roles.includes('SystemAdmin') || roles.includes('Admin');
   }
 
   register(data: any): Observable<any> {

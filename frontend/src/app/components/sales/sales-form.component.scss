@@ -241,17 +241,24 @@
 .type-switcher {
   display: flex; padding: 4px; background: #0f172a; gap: 4px; cursor: pointer; min-width: 75px; height: 100%; align-items: stretch;
   .sw-pill {
-    flex: 1; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 900; color: #475569; border-radius: 6px; transition: all 0.2s;
-    &.active { background: #fff; color: #0f172a; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: scale(1.05); }
+    flex: 1; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 900; 
+    color: rgba(255,255,255,0.4); border-radius: 6px; transition: all 0.2s;
+    &.active { background: #fff; color: #0d9488; box-shadow: 0 2px 8px rgba(0,0,0,0.4); transform: scale(1.08); }
+    &:hover:not(.active) { color: rgba(255,255,255,0.8); }
   }
 }
 
-.disc-input-v2 {
-  flex: 1; border: none !important;
-  .p-inputtext {
+.disc-input-v2 { flex: 1; border: none !important; background: transparent !important; }
+
+::ng-deep .disc-num-v2 {
+  &.p-inputtext, .p-inputtext { 
     height: 38px !important; border: none !important; border-radius: 0; background: transparent !important;
-    font-size: .95rem !important; text-align: center; padding: 0 8px !important; font-weight: 800; color: #0f172a !important;
-    &:focus { box-shadow: none !important; }
+    font-size: .95rem !important; text-align: center !important; padding: 0 8px !important; 
+    font-weight: 800 !important; color: #0f172a !important; box-shadow: none !important; width: 100% !important;
+  }
+  .p-inputnumber-prefix, .p-inputnumber-suffix {
+    color: #0f172a !important; font-weight: 900 !important; font-size: 1rem !important;
+    background: transparent !important; padding: 0 4px !important;
   }
 }
 
@@ -294,14 +301,11 @@
 }
 
 .qty-input { flex: 1; border: none !important; height: 100% !important; }
-.qty-num { 
+::ng-deep .qty-num.p-inputtext { 
   font-size: .85rem !important; text-align: center !important; height: 38px !important;
-  padding: 0 !important; background: transparent !important;
-  .p-inputtext { 
-    background: transparent !important; border: none !important; text-align: center !important; 
-    padding: 0 !important; height: 38px !important; width: 100% !important;
-    &:focus { box-shadow: none !important; }
-  }
+  color: #1e293b !important; font-weight: 800 !important;
+  padding: 0 !important; background: transparent !important; border: none !important;
+  box-shadow: none !important; outline: none !important; width: 100% !important;
 }
 
 .btn-del-row {
@@ -378,7 +382,26 @@
   display: flex; flex-direction: column; gap: 6px;
   .field-label-row { display: flex; justify-content: space-between; align-items: baseline; }
   .pay-ref-total { font-size: 0.7rem; color: #94a3b8; font-weight: 500; }
-  .pay-amount-num { font-size: 1.1rem !important; font-weight: 800 !important; color: #0d9488 !important; height: 44px !important; }
+  .pay-ref-total { font-size: 0.7rem; color: #94a3b8; font-weight: 500; }
+  .pay-amount-num { 
+    font-size: 1.4rem !important; font-weight: 900 !important; color: #0d9488 !important; height: 52px !important; 
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #fff !important;
+    &:focus { 
+      background: #f0fdfa !important; border-color: #0d9488 !important; outline: none;
+      box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15) !important;
+    }
+  }
+
+  .payment-sufficient {
+    background: #ecfdf5 !important; color: #059669 !important; border-color: #10b981 !important;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1) !important;
+  }
+
+  .f2-hint {
+    background: #f1f5f9; color: #64748b; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;
+    font-size: 0.6rem; vertical-align: middle; margin-left: 6px;
+  }
 }
 
 .split-rows { display: flex; flex-direction: column; gap: 8px; }

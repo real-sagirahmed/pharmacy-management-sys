@@ -20,6 +20,8 @@ namespace PharmacyApi.Services
         Task<IEnumerable<PermissionDto>> GetPermissionsByRoleAsync(string roleId);
         Task UpdatePermissionsAsync(string roleId, IEnumerable<PermissionDto> permissions);
         Task<IEnumerable<PermissionDto>> GetEffectivePermissionsAsync(string userId);
+        Task<IdentityResult> AssignUserRoleAsync(string userId, string newRole);
+        Task<bool> IsUserSystemAdminAsync(string userId);
     }
 
     public class UserManagementService : IUserManagementService
@@ -82,6 +84,11 @@ namespace PharmacyApi.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return false;
 
+            // Protect SystemAdmin from being deactivated
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
+                return false;
+
             user.IsActive = !user.IsActive;
             var result = await _userManager.UpdateAsync(user);
             return result.Succeeded;
@@ -108,10 +115,12 @@ namespace PharmacyApi.Services
 
         public async Task<IdentityResult> CreateRoleAsync(string roleName)
         {
+            if (roleName.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase))
+                return IdentityResult.Failed(new IdentityError { Description = "SystemAdmin is a reserved role and cannot be created manually." });
+
             if (await _roleManager.RoleExistsAsync(roleName))
-            {
                 return IdentityResult.Failed(new IdentityError { Description = "Role already exists" });
-            }
+
             return await _roleManager.CreateAsync(new IdentityRole(roleName));
         }
 
@@ -120,7 +129,10 @@ namespace PharmacyApi.Services
             var role = await _roleManager.FindByIdAsync(roleId);
             if (role == null) return IdentityResult.Failed(new IdentityError { Description = "Role not found" });
 
+            if (role.Name!.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)) return IdentityResult.Failed(new IdentityError { Description = "SystemAdmin role cannot be renamed. It is a protected system role." });
             if (role.Name == "Admin") return IdentityResult.Failed(new IdentityError { Description = "Cannot rename Admin role" });
+            if (newName.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase))
+                return IdentityResult.Failed(new IdentityError { Description = "'SystemAdmin' is a reserved name and cannot be used." });
 
             role.Name = newName;
             return await _roleManager.UpdateAsync(role);
@@ -131,14 +143,12 @@ namespace PharmacyApi.Services
             var role = await _roleManager.FindByIdAsync(roleId);
             if (role == null) return IdentityResult.Failed(new IdentityError { Description = "Role not found" });
 
+            if (role.Name!.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)) return IdentityResult.Failed(new IdentityError { Description = "SystemAdmin role cannot be deleted. It is a protected system role." });
             if (role.Name == "Admin") return IdentityResult.Failed(new IdentityError { Description = "Cannot delete Admin role" });
 
-            // Optional: Check if any users are in this role
             var usersInRole = await _userManager.GetUsersInRoleAsync(role.Name!);
             if (usersInRole.Any())
-            {
                 return IdentityResult.Failed(new IdentityError { Description = "Cannot delete role while it has users assigned" });
-            }
 
             return await _roleManager.DeleteAsync(role);
         }
@@ -148,6 +158,11 @@ namespace PharmacyApi.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
 
+            // Protect SystemAdmin user from deletion
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
+                return IdentityResult.Failed(new IdentityError { Description = "SystemAdmin user cannot be deleted." });
+
             return await _userManager.DeleteAsync(user);
         }
 
@@ -155,6 +170,14 @@ namespace PharmacyApi.Services
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
+
+            // Protect SystemAdmin user from accidental modification
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
+            {
+                // Note: We'll allow SystemAdmin to edit themselves, but block others in the controller.
+                // This service method remains permissive but the controller will act as the gatekeeper.
+            }
 
             user.FullName = model.FullName;
             user.Email = model.Email;
@@ -204,12 +227,37 @@ namespace PharmacyApi.Services
             await _context.SaveChangesAsync();
         }
 
+        // All system modules — used for SystemAdmin full-access grant
+        private static readonly string[] AllModules =
+        {
+            "Dashboard", "Medicines", "Purchases", "Sales", "Parties",
+            "Due Collection", "Inventory", "Reports", "Sales Reports",
+            "Purchase Reports", "Inventory Reports", "Financial Reports",
+            "Expiry Reports", "Top Selling Reports", "Low Stock Reports",
+            "Ledger Reports", "User Performance Reports", "VAT Reports",
+            "Users", "Roles", "Settings", "Master Data"
+        };
+
         public async Task<IEnumerable<PermissionDto>> GetEffectivePermissionsAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return Enumerable.Empty<PermissionDto>();
 
             var roles = await _userManager.GetRolesAsync(user);
+
+            // SystemAdmin gets full access to all modules automatically
+            if (roles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
+            {
+                return AllModules.Select(m => new PermissionDto
+                {
+                    ModuleName = m,
+                    CanView = true,
+                    CanCreate = true,
+                    CanEdit = true,
+                    CanDelete = true
+                }).ToList();
+            }
+
             var roleIds = await _roleManager.Roles
                 .Where(r => roles.Contains(r.Name!))
                 .Select(r => r.Id)
@@ -230,6 +278,35 @@ namespace PharmacyApi.Services
                     CanEdit = g.Any(p => p.CanEdit),
                     CanDelete = g.Any(p => p.CanDelete)
                 }).ToList();
+        }
+
+        public async Task<IdentityResult> AssignUserRoleAsync(string userId, string newRole)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
+
+            if (!await _roleManager.RoleExistsAsync(newRole))
+                return IdentityResult.Failed(new IdentityError { Description = "Role does not exist" });
+
+            // Protect SystemAdmin user — cannot be moved out of SystemAdmin role via this method
+            var currentRoles = await _userManager.GetRolesAsync(user);
+            if (currentRoles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
+                return IdentityResult.Failed(new IdentityError { Description = "SystemAdmin user's role cannot be changed from this endpoint." });
+
+            // Block assigning SystemAdmin role via general endpoint
+            if (newRole.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase))
+                return IdentityResult.Failed(new IdentityError { Description = "SystemAdmin role can only be assigned by a SystemAdmin." });
+
+            await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            return await _userManager.AddToRoleAsync(user, newRole);
+        }
+
+        public async Task<bool> IsUserSystemAdminAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return false;
+            var roles = await _userManager.GetRolesAsync(user);
+            return roles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase));
         }
     }
 }

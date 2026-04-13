@@ -88,14 +88,17 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                 </tr>
               </ng-template>
               <ng-template pTemplate="body" let-u>
-                <tr>
+                <tr [class.sysadmin-row]="isUserSystemAdmin(u)">
                   <td>
                     <div class="user-card-inline">
                       <div class="avatar" [style.background]="getAvatarColor(u.fullName)">
                         {{ u.fullName?.charAt(0)?.toUpperCase() || '?' }}
                       </div>
                       <div class="user-info">
-                        <div class="user-name med-name">{{ u.fullName }}</div>
+                        <div class="user-name med-name flex items-center gap-2">
+                          {{ u.fullName }}
+                          <span *ngIf="isUserSystemAdmin(u)" class="sysadmin-badge-inline">👑 System Owner</span>
+                        </div>
                         <div class="user-username text-xs">&#64;{{ u.userName }} • <span class="text-muted">{{ u.email }}</span></div>
                       </div>
                     </div>
@@ -114,35 +117,48 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                   </td>
                   <td>
                     <div class="flex gap-2">
-                       <select class="role-select" (change)="onRoleChange(u.id, $any($event.target).value)">
-                        <option value="" disabled selected>Role…</option>
-                        <option value="Admin">Admin</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Pharmacist">Pharmacist</option>
-                        <option value="Cashier">Cashier</option>
-                      </select>
-                      <button class="act-btn" [class.act-lock]="u.isActive" [class.act-unlock]="!u.isActive"
-                              [title]="u.isActive ? 'Deactivate' : 'Activate'"
-                              (click)="onToggleStatus(u.id)"
-                              [disabled]="isCurrentUser(u.userName)">
-                        <i class="pi" [class.pi-lock]="u.isActive" [class.pi-lock-open]="!u.isActive"></i>
-                      </button>
+                      <!-- Role change & toggle blocked for SystemAdmin -->
+                      <ng-container *ngIf="!isUserSystemAdmin(u); else sysAdminLock">
+                        <select class="role-select" (change)="onRoleChange(u.id, $any($event.target).value)">
+                          <option value="" disabled selected>Role…</option>
+                          <option value="Admin">Admin</option>
+                          <option value="Manager">Manager</option>
+                          <option value="Pharmacist">Pharmacist</option>
+                          <option value="Cashier">Cashier</option>
+                        </select>
+                        <button class="act-btn" [class.act-lock]="u.isActive" [class.act-unlock]="!u.isActive"
+                                [title]="u.isActive ? 'Deactivate' : 'Activate'"
+                                (click)="onToggleStatus(u.id)"
+                                [disabled]="isCurrentUser(u.userName)">
+                          <i class="pi" [class.pi-lock]="u.isActive" [class.pi-lock-open]="!u.isActive"></i>
+                        </button>
+                      </ng-container>
+                      <ng-template #sysAdminLock>
+                        <span class="sysadmin-lock-msg"><i class="pi pi-shield mr-1"></i>Protected</span>
+                      </ng-template>
                     </div>
                   </td>
                   <td alignFrozen="right" pFrozenColumn>
                     <div class="action-btns">
-                      <button class="act-btn act-edit" title="Edit user" (click)="showEditDialog(u)">
-                        <i class="pi pi-pencil"></i>
-                      </button>
-                      <button class="act-btn act-del" title="Delete user" 
-                              (click)="onDelete(u.id)"
-                              [disabled]="isCurrentUser(u.userName)">
-                        <i class="pi pi-trash"></i>
-                      </button>
+                      <!-- Edit & Delete blocked for SystemAdmin -->
+                      <ng-container *ngIf="!isUserSystemAdmin(u)">
+                        <button class="act-btn act-edit" title="Edit user" (click)="showEditDialog(u)">
+                          <i class="pi pi-pencil"></i>
+                        </button>
+                        <button class="act-btn act-del" title="Delete user" 
+                                (click)="onDelete(u.id)"
+                                [disabled]="isCurrentUser(u.userName)">
+                          <i class="pi pi-trash"></i>
+                        </button>
+                      </ng-container>
+                      <ng-container *ngIf="isUserSystemAdmin(u)">
+                        <i class="pi pi-lock text-amber-500" title="SystemAdmin — protected"></i>
+                      </ng-container>
                     </div>
                   </td>
                 </tr>
               </ng-template>
+
               <ng-template pTemplate="emptymessage">
                 <tr><td colspan="5"><div class="empty-state"><i class="pi pi-users empty-icon"></i><p class="empty-text">No users found</p></div></td></tr>
               </ng-template>
@@ -275,6 +291,20 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     .role-pharmacist{ background: #ccfbf1; color: #0f766e; border: 1px solid #99f6e4; }
     .role-cashier   { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
     .role-default   { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .role-sysadmin  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+
+    /* SystemAdmin UI Protection */
+    .sysadmin-row { background: #fffbeb !important; }
+    .sysadmin-badge-inline {
+      font-size: 0.6rem; font-weight: 900; padding: 1px 7px; border-radius: 4px;
+      background: #fef3c7; color: #b45309; border: 1px solid #fde68a; letter-spacing: 0.05em;
+    }
+    .sysadmin-lock-msg {
+      display: flex; align-items: center; font-size: 0.7rem; font-weight: 700;
+      color: #b45309; background: #fef3c7; border: 1px solid #fde68a;
+      padding: 3px 8px; border-radius: 6px;
+    }
+
 
     /* Role Select */
     .role-select {
@@ -350,12 +380,17 @@ export class UserManagementComponent implements OnInit {
 
   getRoleBadgeClass(role: string): string {
     switch (role?.toLowerCase()) {
-      case 'admin':      return 'role-badge role-admin';
-      case 'manager':    return 'role-badge role-manager';
-      case 'pharmacist': return 'role-badge role-pharmacist';
-      case 'cashier':    return 'role-badge role-cashier';
-      default:           return 'role-badge role-default';
+      case 'systemadmin': return 'role-badge role-sysadmin';
+      case 'admin':       return 'role-badge role-admin';
+      case 'manager':     return 'role-badge role-manager';
+      case 'pharmacist':  return 'role-badge role-pharmacist';
+      case 'cashier':     return 'role-badge role-cashier';
+      default:            return 'role-badge role-default';
     }
+  }
+
+  isUserSystemAdmin(user: any): boolean {
+    return user?.roles?.includes('SystemAdmin') ?? false;
   }
 
   countRole(role: string): number {

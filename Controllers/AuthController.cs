@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using PharmacyApi.Models;
 using PharmacyApi.Services;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -46,7 +48,7 @@ namespace PharmacyApi.Controllers
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
-            if (!result.Succeeded) return BadRequest(result.Errors);
+            if (!result.Succeeded) return BadRequest(string.Join(", ", result.Errors.Select(e => e.Description)));
 
             // Add default role if not exists
             if (!await _roleManager.RoleExistsAsync("Admin")) await _roleManager.CreateAsync(new IdentityRole("Admin"));
@@ -142,34 +144,56 @@ namespace PharmacyApi.Controllers
                 return Ok(new { Message = "Password has been reset successfully." });
             }
 
-            return BadRequest(result.Errors);
+            return BadRequest(string.Join(", ", result.Errors.Select(e => e.Description)));
         }
     }
 
     public class RegisterModel
     {
+        [Required(ErrorMessage = "Username is required")]
         public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
         public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password is required")]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
         public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Full Name is required")]
         public string FullName { get; set; } = string.Empty;
+
         public string Role { get; set; } = "Cashier";
     }
 
     public class LoginModel
     {
+        [Required(ErrorMessage = "Username is required")]
         public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password is required")]
         public string Password { get; set; } = string.Empty;
     }
 
     public class ForgotPasswordModel
     {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
         public string Email { get; set; } = string.Empty;
     }
 
     public class ResetPasswordModel
     {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
         public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Token is required")]
         public string Token { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "New Password is required")]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
         public string NewPassword { get; set; } = string.Empty;
     }
 }

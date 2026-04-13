@@ -31,7 +31,7 @@ builder.Services.AddScoped<IPurchaseRepository, PurchaseRepository>();
 builder.Services.AddScoped<ISalesRepository, SalesRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
-builder.Services.AddScoped<IEmailService, FileEmailService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 
 // Configure CORS
@@ -81,7 +81,8 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+        RoleClaimType = System.Security.Claims.ClaimTypes.Role
     };
 });
 
@@ -119,15 +120,51 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-        // Ensure roles exist
-        string[] roles = { "Admin", "Manager", "Cashier" };
+        // Ensure roles exist — SystemAdmin is protected and cannot be deleted/renamed by anyone
+        string[] roles = { "SystemAdmin", "Admin", "Manager", "Cashier" };
         foreach (var role in roles)
         {
+            // Normalization: If role exists in DB but with wrong casing (e.g., systemAdmin), rename it to SystemAdmin
+            var existingRole = await roleManager.FindByNameAsync(role);
+            if (existingRole != null && existingRole.Name != role)
+            {
+                existingRole.Name = role;
+                await roleManager.UpdateAsync(existingRole);
+            }
+
             if (!await roleManager.RoleExistsAsync(role))
             {
                 await roleManager.CreateAsync(new IdentityRole(role));
             }
         }
+
+        // ─── Seed SystemAdmin user (only on first startup) ───────────────────
+        var sysAdminConfig = builder.Configuration.GetSection("SystemAdminSeed");
+        var sysAdminUserName = sysAdminConfig["UserName"] ?? "sysadmin";
+
+        var existingSysAdmin = await userManager.FindByNameAsync(sysAdminUserName);
+        if (existingSysAdmin == null)
+        {
+            var sysAdminUser = new ApplicationUser
+            {
+                UserName    = sysAdminUserName,
+                Email       = sysAdminConfig["Email"]    ?? "sysadmin@s7pharmacy.com",
+                FullName    = sysAdminConfig["FullName"] ?? "System Administrator",
+                IsActive    = true,
+                EmailConfirmed = true
+            };
+
+            var sysAdminPassword = sysAdminConfig["Password"] ?? "SysAdmin@2026!";
+            var createResult = await userManager.CreateAsync(sysAdminUser, sysAdminPassword);
+
+            if (createResult.Succeeded)
+            {
+                await userManager.AddToRoleAsync(sysAdminUser, "SystemAdmin");
+                var logger = services.GetRequiredService<ILogger<Program>>();
+                logger.LogInformation("✅ SystemAdmin user seeded successfully. Please change the password after first login.");
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         // Promote first user to Admin if no Admin exists
         var admins = await userManager.GetUsersInRoleAsync("Admin");

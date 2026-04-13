@@ -55,4 +55,12 @@ namespace PharmacyApi.DTOs
         public bool CanEdit { get; set; }
         public bool CanDelete { get; set; }
     }
+
+    public class UpdateUserRoleDto
+    {
+        [Required]
+        public string UserId { get; set; } = string.Empty;
+        [Required]
+        public string NewRole { get; set; } = string.Empty;
+    }
 }

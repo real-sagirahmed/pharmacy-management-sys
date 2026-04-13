@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService, RoleDto, PermissionDto } from '../../../services/user.service';
+import { AuthService } from '../../../services/auth.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DropdownModule } from 'primeng/dropdown';
@@ -26,28 +27,48 @@ import { TagModule } from 'primeng/tag';
   template: `
     <div class="page-wrap animate-fadein-up">
       <p-toast></p-toast>
+
+      <!-- Security Guidance Banner for non-SystemAdmin -->
+      <div class="sysadmin-banner" *ngIf="!isSystemAdmin">
+        <i class="pi pi-shield mr-2 text-amber-600"></i>
+        <span><strong>Viewing Mode:</strong> Only the <strong class="text-amber-800">SystemAdmin</strong> can modify roles and permissions. Changes are restricted for your current role.</span>
+      </div>
       
       <div class="sticky-header">
-        <div class="compact-header px-4">
-          <!-- Title Section -->
-          <div class="flex items-center gap-3">
-            <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm back-btn" (click)="goBack()"></button>
-            <div style="margin-left: 30px;">
-              <h1 class="page-title text-sm">Roles & Permissions</h1>
-              <p class="page-sub text-xs">Define system roles and module permissions.</p>
-            </div>
+        <div class="compact-header px-3 flex items-center gap-3">
+          <button pButton icon="pi pi-arrow-left" (click)="navigateBack()" 
+                  class="p-button-text p-button-secondary p-button-sm p-0 h-8 w-8"></button>
+          
+          <div class="flex flex-col mr-auto">
+            <h1 class="text-base font-bold text-slate-800 m-0 leading-tight">Roles & Permissions</h1>
+            <p class="text-[9px] text-slate-400 m-0 leading-none">Define system roles and module permissions.</p>
           </div>
 
           <!-- Create Role Section (Merged) -->
-          <div class="flex items-center gap-2 flex-1 justify-center mx-4 max-w-md">
-            <input type="text" pInputText [(ngModel)]="newRoleName" placeholder="New role name..." class="p-inputtext-sm w-48">
-            <button pButton label="Create" icon="pi pi-plus" class="p-button-sm p-button-outlined" (click)="addRole()" [loading]="creatingRole"></button>
+          <div class="flex items-center gap-2 max-w-xs" *ngIf="isSystemAdmin">
+            <input type="text" pInputText [(ngModel)]="newRoleName" 
+                   placeholder="New role name..." class="p-inputtext-sm text-xs w-32"
+                   (input)="blockReservedRoleName()">
+            <button pButton icon="pi pi-plus" label="Create" 
+                    (click)="addRole()" [loading]="creatingRole"
+                    class="p-button-sm p-button-outlined"></button>
           </div>
 
           <!-- Actions & Feedback -->
           <div class="flex items-center gap-3">
             <div *ngIf="hasUnsavedChanges()" class="unsaved-badge animate-pulse">
                <i class="pi pi-exclamation-triangle mr-1"></i> Unsaved
+            </div>
+
+            <div class="flex items-center gap-2" *ngIf="isSystemAdmin">
+              <button pButton label="Save Changes" icon="pi pi-check" 
+                      class="p-button-sm p-button-success" 
+                      [disabled]="!hasUnsavedChanges()" [loading]="savingPermissions"
+                      (click)="savePermissions()"></button>
+              <button pButton label="Discard" icon="pi pi-times" 
+                      class="p-button-sm p-button-outlined p-button-secondary" 
+                      [disabled]="!hasUnsavedChanges()" 
+                      (click)="discardChanges()"></button>
             </div>
           </div>
         </div>
@@ -63,93 +84,114 @@ import { TagModule } from 'primeng/tag';
             <div *ngFor="let role of roles" 
                  class="role-row" 
                  [class.selected-role]="selectedRole?.id === role.id"
+                 [class.sysadmin-role-row]="role.name === 'SystemAdmin'"
                  (click)="onRoleSelect(role)">
-              <div class="flex-1">
-                <div class="role-name">{{ role.name }}</div>
+              <div class="flex items-center gap-3">
+                <i [class]="'role-icon ' + (role.name === 'SystemAdmin' ? 'pi pi-crown text-amber-500' : 'pi pi-users text-slate-400')"></i>
+                <div class="flex flex-col">
+                  <span class="role-name">{{ role.name }}</span>
+                  <div class="flex gap-2">
+                    <span class="text-[10px] font-medium text-slate-400">ID: {{ role.id | slice:0:8 }}...</span>
+                    <span *ngIf="role.name === 'SystemAdmin'" class="sysadmin-role-badge">PROTECTED</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-1" *ngIf="role.name !== 'SystemAdmin' && role.name !== 'Admin'">
                 <div class="role-stats text-xs">
                    <i class="pi pi-users mr-1"></i> {{ role.userCount || 0 }} users
                 </div>
               </div>
               <div class="role-actions">
-                <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-sm" 
-                        (click)="editRole(role); $event.stopPropagation()"></button>
-                <button pButton icon="pi pi-trash" class="p-button-rounded p-button-text p-button-sm p-button-danger" 
-                        (click)="confirmDelete(role); $event.stopPropagation()"
-                        *ngIf="role.name !== 'Admin'"></button>
+                <!-- Edit & Delete hidden for SystemAdmin or non-SystemAdmin users -->
+                <ng-container *ngIf="role.name !== 'SystemAdmin' && isSystemAdmin">
+                  <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-sm" 
+                          (click)="editRole(role); $event.stopPropagation()"></button>
+                  <button pButton icon="pi pi-trash" class="p-button-rounded p-button-text p-button-sm p-button-danger" 
+                          (click)="confirmDelete(role); $event.stopPropagation()"
+                          *ngIf="role.name !== 'Admin'"></button>
+                </ng-container>
+                <ng-container *ngIf="role.name === 'SystemAdmin' || !isSystemAdmin">
+                  <i class="pi pi-lock text-amber-500 text-sm" [title]="!isSystemAdmin ? 'Permission required to edit' : 'SystemAdmin is fully protected'"></i>
+                </ng-container>
               </div>
             </div>
           </div>
+
 
         </div>
 
         <!-- Permission Matrix -->
         <div class="main-card" *ngIf="selectedRole; else noRole">
-          <!-- Compact Matrix Header -->
-          <div class="matrix-sticky-header">
-            <div class="flex items-center gap-4">
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Permissions:</span>
-                <span class="text-xs font-black text-teal-600 uppercase">{{ selectedRole.name }}</span>
-              </div>
-              <div class="search-wrap compact-search">
-                <i class="pi pi-search search-icon"></i>
-                <input type="text" pInputText [(ngModel)]="permSearch" placeholder="Filter modules..." class="p-inputtext-sm search-field">
-              </div>
-            </div>
-            
-            <div class="flex items-center gap-2">
-              <button pButton icon="pi pi-save" label="Save" 
-                      class="p-button-success p-button-sm shadow-sm px-4" (click)="savePermissions()"
-                      [loading]="savingPermissions"></button>
-            </div>
+          <!-- SystemAdmin full-access banner -->
+          <div *ngIf="selectedRole.name === 'SystemAdmin'" class="sysadmin-banner">
+            <i class="pi pi-shield mr-2"></i>
+            <strong>&#x1F451; SystemAdmin</strong> has <strong>full access</strong> to all modules — permissions are managed automatically and cannot be changed.
           </div>
 
-          <p-table [value]="filteredPermissions()" styleClass="p-datatable-sm matrix-table" [rowHover]="true">
+          <!-- Compact Matrix Header -->
+          <p-table [value]="filteredPermissions()" [scrollable]="true" scrollHeight="calc(100vh - 180px)" 
+                   styleClass="p-datatable-sm matrix-table" [rowHover]="true">
             <ng-template pTemplate="header">
-              <tr>
-                <th style="min-width: 150px;">Module</th>
-                <th class="text-center">
-                  <div class="flex flex-col items-center gap-1">
-                    <span class="text-[10px]">VIEW</span>
+              <tr class="unified-header-row">
+                <th style="min-width: 280px; background: white !important;">
+                  <div class="flex items-center gap-3 w-full">
+                    <div class="flex items-center gap-2">
+                       <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest whitespace-nowrap">Permissions:</span>
+                       <span class="text-xs font-black text-teal-600 uppercase whitespace-nowrap">{{ selectedRole.name }}</span>
+                    </div>
+                    <div class="search-wrap compact-search-inline">
+                      <i class="pi pi-search search-icon-sm"></i>
+                      <input type="text" pInputText placeholder="Filter..." 
+                             [(ngModel)]="permSearch" class="search-field-sm">
+                    </div>
+                  </div>
+                </th>
+                <th class="text-center" style="background: white !important;">
+                  <div class="flex flex-col items-center gap-3">
+                    <span class="text-[10px] font-bold text-slate-400">VIEW</span>
                     <button class="bulk-set-btn" (click)="toggleAllColumn('canView')" title="Toggle View All">
-                      <i class="pi pi-check"></i>
+                      <i class="pi pi-check text-[10px]"></i>
                     </button>
                   </div>
                 </th>
-                <th class="text-center">
-                  <div class="flex flex-col items-center gap-1">
-                    <span class="text-[10px]">CREATE</span>
+                <th class="text-center" style="background: white !important;">
+                  <div class="flex flex-col items-center gap-3">
+                    <span class="text-[10px] font-bold text-slate-400">CREATE</span>
                     <button class="bulk-set-btn" (click)="toggleAllColumn('canCreate')" title="Toggle Create All">
-                      <i class="pi pi-check"></i>
+                      <i class="pi pi-check text-[10px]"></i>
                     </button>
                   </div>
                 </th>
-                <th class="text-center">
-                  <div class="flex flex-col items-center gap-1">
-                    <span class="text-[10px]">EDIT</span>
+                <th class="text-center" style="background: white !important;">
+                  <div class="flex flex-col items-center gap-3">
+                    <span class="text-[10px] font-bold text-slate-400">EDIT</span>
                     <button class="bulk-set-btn" (click)="toggleAllColumn('canEdit')" title="Toggle Edit All">
-                      <i class="pi pi-check"></i>
+                      <i class="pi pi-check text-[10px]"></i>
                     </button>
                   </div>
                 </th>
-                <th class="text-center">
-                  <div class="flex flex-col items-center gap-1">
-                    <span class="text-[10px]">DELETE</span>
+                <th class="text-center" style="background: white !important;">
+                  <div class="flex flex-col items-center gap-3">
+                    <span class="text-[10px] font-bold text-slate-400">DELETE</span>
                     <button class="bulk-set-btn" (click)="toggleAllColumn('canDelete')" title="Toggle Delete All">
-                      <i class="pi pi-check"></i>
+                      <i class="pi pi-check text-[10px]"></i>
                     </button>
                   </div>
                 </th>
-                <th class="text-center" style="width: 60px;">
-                   <div class="flex flex-col items-center gap-1">
-                    <span class="text-[10px]">ALL</span>
-                    <i class="pi pi-th-large text-slate-300"></i>
+                <th class="text-center" style="width: 120px; background: white !important;">
+                   <div class="flex items-center justify-between gap-3 px-1">
+                    <div class="flex flex-col items-center gap-1">
+                      <span class="text-[9px] font-bold text-slate-400">ALL</span>
+                      <i class="pi pi-th-large text-slate-300 text-[10px]"></i>
+                    </div>
+                    <button pButton icon="pi pi-save" (click)="savePermissions()" 
+                            [disabled]="saving" class="p-button-success p-button-sm h-8 w-8"></button>
                   </div>
                 </th>
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-p>
-              <tr>
+              <tr [class.opacity-50]="selectedRole.name === 'SystemAdmin'">
                 <td>
                    <div class="flex items-center gap-2">
                      <i [class]="'pi ' + getModuleIcon(p.moduleName) + ' module-icon'"></i>
@@ -157,19 +199,19 @@ import { TagModule } from 'primeng/tag';
                    </div>
                 </td>
                 <td class="text-center">
-                  <p-checkbox [(ngModel)]="p.canView" [binary]="true"></p-checkbox>
+                  <p-checkbox [(ngModel)]="p.canView" [binary]="true" [disabled]="selectedRole.name === 'SystemAdmin' || !isSystemAdmin"></p-checkbox>
                 </td>
                 <td class="text-center">
-                  <p-checkbox [(ngModel)]="p.canCreate" [binary]="true"></p-checkbox>
+                  <p-checkbox [(ngModel)]="p.canCreate" [binary]="true" [disabled]="selectedRole.name === 'SystemAdmin' || !isSystemAdmin"></p-checkbox>
                 </td>
                 <td class="text-center">
-                  <p-checkbox [(ngModel)]="p.canEdit" [binary]="true"></p-checkbox>
+                  <p-checkbox [(ngModel)]="p.canEdit" [binary]="true" [disabled]="selectedRole.name === 'SystemAdmin' || !isSystemAdmin"></p-checkbox>
                 </td>
                 <td class="text-center">
-                  <p-checkbox [(ngModel)]="p.canDelete" [binary]="true"></p-checkbox>
+                  <p-checkbox [(ngModel)]="p.canDelete" [binary]="true" [disabled]="selectedRole.name === 'SystemAdmin' || !isSystemAdmin"></p-checkbox>
                 </td>
                 <td class="text-center">
-                  <button class="row-set-btn" [class.all-set]="isRowAllSet(p)" (click)="toggleRow(p)">
+                  <button class="row-set-btn" [class.all-set]="isRowAllSet(p)" (click)="toggleRow(p)" [disabled]="selectedRole.name === 'SystemAdmin' || !isSystemAdmin">
                     <i class="pi" [class.pi-check-square]="isRowAllSet(p)" [class.pi-stop]="!isRowAllSet(p)"></i>
                   </button>
                 </td>
@@ -212,16 +254,16 @@ import { TagModule } from 'primeng/tag';
     .back-btn { color: #94a3b8 !important; }
     .back-btn:hover { color: #0d9488 !important; background: #f0fdfa !important; }
     
-    .page-title { font-size: 0.95rem !important; margin: 0; font-weight: 800; color: #0d9488; line-height: 1; transform: translateY(-19px); }
-    .page-sub { margin: 0; color: #94a3b8; font-weight: 500; margin-top: -19px; }
+    .page-title { font-size: 1.05rem !important; margin: 0; font-weight: 800; color: #1e293b; line-height: 1.2; }
+    .page-sub { margin: 0; color: #94a3b8; font-weight: 500; font-size: 0.75rem; }
 
     .sidebar-card::-webkit-scrollbar, .main-card::-webkit-scrollbar { width: 6px; }
     .sidebar-card::-webkit-scrollbar-track, .main-card::-webkit-scrollbar-track { background: transparent; }
     .sidebar-card::-webkit-scrollbar-thumb, .main-card::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .sidebar-card::-webkit-scrollbar-thumb:hover, .main-card::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    .sidebar-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; overflow-y: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-    .main-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; overflow-y: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .sidebar-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; overflow-y: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    .main-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 0 !important; overflow-y: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); position: relative; }
     
     .content-grid { display: grid; grid-template-columns: 1fr 3fr; gap: 1.25rem; flex: 1; overflow: hidden; padding: 1rem 1.25rem; }
     
@@ -248,14 +290,15 @@ import { TagModule } from 'primeng/tag';
     /* Matrix Table UI */
     .matrix-header { display: flex; justify-content: space-between; align-items: flex-end; }
     .matrix-table { border-radius: 12px; overflow: hidden; }
+    ::ng-deep .matrix-table .p-datatable-tbody > tr > td { padding: 14px 12px !important; border-bottom: 1px solid #f1f5f9; }
+    ::ng-deep .matrix-table .p-datatable-tbody > tr:hover { background: #fcfcfc !important; }
+    
     ::ng-deep .matrix-table .p-datatable-thead > tr > th { 
       background: #f8fafc !important; color: #475569 !important; font-size: 0.7rem !important; 
       border-bottom: 2px solid #e2e8f0 !important; padding: 16px 12px !important; 
       text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;
       position: sticky; top: 0; z-index: 5;
     }
-    ::ng-deep .matrix-table .p-datatable-tbody > tr > td { padding: 14px 12px !important; border-bottom: 1px solid #f1f5f9; }
-    ::ng-deep .matrix-table .p-datatable-tbody > tr:hover { background: #fcfcfc !important; }
     
     .module-icon { color: #94a3b8; font-size: 1rem; width: 24px; opacity: 0.7; }
     .text-muted { color: #94a3b8; font-weight: 500; }
@@ -275,23 +318,17 @@ import { TagModule } from 'primeng/tag';
 
     .matrix-header { display: flex; justify-content: space-between; align-items: flex-end; }
     
-    .matrix-sticky-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 0 1.5rem; border-bottom: 1px solid #f1f5f9;
-      position: sticky; top: 0; background: #fff; z-index: 20;
-      border-radius: 16px 16px 0 0;
-    }
-    .compact-search { width: 180px; }
-    .compact-search .search-field { padding-top: 6px !important; padding-bottom: 6px !important; font-size: 0.8rem; }
+    .compact-search-inline { width: 100px; position: relative; display: flex; align-items: center; }
+    .search-icon-sm { position: absolute; left: 8px; color: #94a3b8; font-size: 0.7rem; pointer-events: none; }
+    .search-field-sm { width: 100%; padding: 4px 8px 4px 26px !important; border-radius: 6px !important; border: 1px solid #e2e8f0 !important; background: #f8fafc !important; font-size: 0.75rem !important; height: 26px !important; }
+    .search-field-sm:focus { background: #fff !important; border-color: #0d9488 !important; }
     
-    .search-wrap { position: relative; display: flex; align-items: center; }
-    .search-icon { position: absolute; left: 12px; color: #94a3b8; pointer-events: none; font-size: 0.8rem; }
-    .search-field { width: 100%; padding-left: 34px !important; border-radius: 8px !important; border: 1.5px solid #e2e8f0 !important; background: #f8fafc !important; transition: all 0.2s; }
-    .search-field:focus { background: #fff !important; border-color: #0d9488 !important; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1) !important; }
-    
-    .unsaved-badge {
-      background: #fffbeb; color: #92400e; padding: 6px 14px; border-radius: 99px; font-size: 0.72rem; font-weight: 700; border: 1px solid #fde68a;
-      box-shadow: 0 2px 4px rgba(146, 64, 14, 0.05); display: flex; align-items: center; gap: 6px;
+    .unified-header-row th { 
+      background: #ffffff !important; 
+      position: sticky !important; top: 0 !important; z-index: 1000 !important;
+      border-bottom: 2px solid #0d948830 !important;
+      padding: 6px 10px !important;
+      box-shadow: 0 4px 12px -4px rgba(0,0,0,0.1);
     }
 
     ::ng-deep .p-checkbox .p-checkbox-box { border-radius: 6px; border-width: 2px; transition: all 0.2s; }
@@ -300,14 +337,28 @@ import { TagModule } from 'primeng/tag';
 
     /* Matrix Table UI - Sticky Header Fix */
     .matrix-table { border-radius: 0; }
-    ::ng-deep .matrix-table .p-datatable-wrapper { padding: 0 1.5rem 1.5rem 1.5rem; }
+    ::ng-deep .matrix-table .p-datatable-wrapper { padding: 0 1.5rem 1rem 1.5rem; background: #fff; border-radius: 0 0 16px 16px; min-height: 100%; border-top: 1px solid #f1f5f9; }
     ::ng-deep .matrix-table .p-datatable-thead > tr > th { 
-      background: #f8fafc !important; color: #475569 !important; font-size: 0.7rem !important; 
-      border-bottom: 2px solid #e2e8f0 !important; padding: 4px 12px !important; 
+      background: #ffffff !important; color: #475569 !important; font-size: 0.68rem !important; 
+      border-bottom: 2px solid #e2e8f0 !important; padding: 6px 10px !important; 
       text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;
-      position: sticky !important; top: 32px !important; z-index: 15 !important;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      position: sticky !important; top: 40px !important; z-index: 100 !important;
+      box-shadow: 0 4px 6px -4px rgba(0,0,0,0.1);
+      opacity: 1 !important;
     }
+    /* SystemAdmin UI Protection Styles */
+    .sysadmin-banner {
+      background: linear-gradient(135deg, #fef3c7, #fffbeb); border: 1.5px solid #fde68a;
+      border-radius: 10px; padding: 10px 16px; margin: 12px 16px 0;
+      font-size: 0.8rem; color: #92400e; display: flex; align-items: center;
+    }
+    .sysadmin-role-row { background: #fffbeb !important; border-color: #fde68a !important; }
+    .sysadmin-role-badge {
+      font-size: 0.55rem; font-weight: 900; padding: 1px 6px; border-radius: 4px;
+      background: #fef3c7; color: #b45309; border: 1px solid #fde68a; letter-spacing: 0.05em;
+    }
+    .crown-icon { font-size: 0.85rem; }
+
     ::ng-deep .p-dialog { border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; border: none; }
     ::ng-deep .p-dialog .p-dialog-header { background: #fff; padding: 1.5rem; border-bottom: 1px solid #f1f5f9; }
     ::ng-deep .p-dialog .p-dialog-content { padding: 1.5rem !important; }
@@ -359,10 +410,15 @@ export class RoleManagementComponent implements OnInit {
 
   constructor(
     private userService: UserService,
+    private authService: AuthService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
     private router: Router
   ) {}
+
+  get isSystemAdmin(): boolean {
+    return this.authService.isSystemAdmin();
+  }
 
   ngOnInit() {
     this.loadRoles();
@@ -446,6 +502,12 @@ export class RoleManagementComponent implements OnInit {
 
   addRole() {
     if (!this.newRoleName.trim()) return;
+    // Block reserved name at UI level too
+    if (this.newRoleName.trim().toLowerCase() === 'systemadmin') {
+      this.messageService.add({ severity: 'error', summary: 'Reserved Name', detail: '"SystemAdmin" is a protected role name and cannot be used.' });
+      this.newRoleName = '';
+      return;
+    }
     this.creatingRole = true;
     this.userService.createRole(this.newRoleName).subscribe({
       next: () => {
@@ -528,7 +590,15 @@ export class RoleManagementComponent implements OnInit {
     });
   }
 
-  goBack() {
+  navigateBack() {
     this.router.navigate(['/dashboard/users']);
+  }
+
+  /** Block typing 'SystemAdmin' in the create role input */
+  blockReservedRoleName() {
+    if (this.newRoleName.trim().toLowerCase() === 'systemadmin') {
+      this.newRoleName = '';
+      this.messageService.add({ severity: 'warn', summary: 'Reserved', detail: '"SystemAdmin" is a reserved role name.' });
+    }
   }
 }

@@ -12,6 +12,20 @@ import { SalesService } from '../../services/sales.service';
   imports: [CommonModule, RouterModule],
   template: `
     <div class="app-shell">
+      <!-- Welcome Overlay for users with NO permissions -->
+      <div class="no-permissions-overlay" *ngIf="!isSystemAdmin() && !hasAnyModuleAccess()">
+        <div class="no-perm-card animate-fade-in">
+          <i class="pi pi-lock-open text-5xl text-amber-500 mb-4"></i>
+          <h2 class="text-2xl font-bold text-slate-800">Account Initialized</h2>
+          <p class="text-slate-500 max-w-sm mt-2">
+            Your account is active, but your role permissions haven't been configured yet. 
+            Please contact the <span class="font-bold text-teal-600">SystemAdmin</span> to grant you access.
+          </p>
+          <button class="logout-btn mt-6 w-auto px-8" (click)="logout()">
+            <i class="pi pi-sign-out"></i> Log Out
+          </button>
+        </div>
+      </div>
 
       <!-- ═══ TOP HEADER ═══ -->
       <header class="app-header">
@@ -57,18 +71,18 @@ import { SalesService } from '../../services/sales.service';
             </a>
 
             <!-- ─── Inventory & Stock ─── -->
-            <div class="nav-group" [class.group-open]="inventoryOpen()" [class.group-active]="isGroupActive('inventory')" *ngIf="isPharmacist() || isAdmin() || isManager()">
+            <div class="nav-group" [class.group-open]="inventoryOpen()" [class.group-active]="isGroupActive('inventory')" *ngIf="isSystemAdmin() || hasPermission('Medicines') || hasPermission('Purchases')">
               <div class="nav-item group-header" (click)="toggleGroup('inventory')">
                 <i class="pi pi-box nav-icon"></i>
                 <span class="nav-label">Inventory & Stock</span>
-                <i class="pi pi-chevron-down group-arrow"></i>
+                <i class="pi pi-chevron-up group-arrow"></i>
               </div>
               <div class="sub-nav">
-                <a class="nav-item sub-item" routerLink="/dashboard/medicines" routerLinkActive="nav-active">
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Medicines')" routerLink="/dashboard/medicines" routerLinkActive="nav-active">
                   <i class="pi pi-circle nav-icon-dot"></i>
                   <span class="nav-label">Medicines</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="isAdmin() || isManager()" routerLink="/dashboard/purchases" routerLinkActive="nav-active">
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Purchases')" routerLink="/dashboard/purchases" routerLinkActive="nav-active">
                   <i class="pi pi-circle nav-icon-dot"></i>
                   <span class="nav-label">Procurement</span>
                 </a>
@@ -76,22 +90,22 @@ import { SalesService } from '../../services/sales.service';
             </div>
 
             <!-- ─── Sales & CRM ─── -->
-            <div class="nav-group" [class.group-open]="salesOpen()" [class.group-active]="isGroupActive('sales')" *ngIf="isCashier() || isAdmin() || isManager()">
+            <div class="nav-group" [class.group-open]="salesOpen()" [class.group-active]="isGroupActive('sales')" *ngIf="isSystemAdmin() || hasPermission('Sales') || hasPermission('Due Collection') || hasPermission('Parties')">
               <div class="nav-item group-header" (click)="toggleGroup('sales')">
                 <i class="pi pi-receipt nav-icon"></i>
                 <span class="nav-label">Sales & CRM</span>
-                <i class="pi pi-chevron-down group-arrow"></i>
+                <i class="pi pi-chevron-up group-arrow"></i>
               </div>
               <div class="sub-nav">
-                <a class="nav-item sub-item" routerLink="/dashboard/sales" routerLinkActive="nav-active">
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Sales')" routerLink="/dashboard/sales" routerLinkActive="nav-active">
                   <i class="pi pi-circle nav-icon-dot"></i>
                   <span class="nav-label">Sales POS</span>
                 </a>
-                <a class="nav-item sub-item" routerLink="/dashboard/due-collection" routerLinkActive="nav-active">
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Due Collection')" routerLink="/dashboard/due-collection" routerLinkActive="nav-active">
                   <i class="pi pi-circle nav-icon-dot"></i>
                   <span class="nav-label">Due Collection</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="isAdmin() || isManager()" routerLink="/dashboard/parties" routerLinkActive="nav-active">
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Parties')" routerLink="/dashboard/parties" routerLinkActive="nav-active">
                   <i class="pi pi-circle nav-icon-dot"></i>
                   <span class="nav-label">Customers & Parties</span>
                 </a>
@@ -154,18 +168,18 @@ import { SalesService } from '../../services/sales.service';
             </div>
 
             <!-- ─── Administration ─── -->
-            <div class="nav-group" [class.group-open]="adminOpen()" [class.group-active]="isGroupActive('admin')" *ngIf="isAdmin()">
+            <div class="nav-group" [class.group-open]="adminOpen()" [class.group-active]="isGroupActive('admin')" *ngIf="isSystemAdmin() || hasPermission('Users') || hasPermission('Roles')">
               <div class="nav-item group-header" (click)="toggleGroup('admin')">
                 <i class="pi pi-shield nav-icon"></i>
                 <span class="nav-label">Administration</span>
-                <i class="pi pi-chevron-down group-arrow"></i>
+                <i class="pi pi-chevron-up group-arrow"></i>
               </div>
               <div class="sub-nav">
-                <a class="nav-item sub-item" routerLink="/dashboard/users" routerLinkActive="nav-active">
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Users')" routerLink="/dashboard/users" routerLinkActive="nav-active">
                   <i class="pi pi-circle nav-icon-dot"></i>
                   <span class="nav-label">Manage Users</span>
                 </a>
-                <a class="nav-item sub-item" routerLink="/dashboard/roles" routerLinkActive="nav-active">
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin()" routerLink="/dashboard/roles" routerLinkActive="nav-active">
                   <i class="pi pi-circle nav-icon-dot"></i>
                   <span class="nav-label">Roles & Permissions</span>
                 </a>
@@ -173,11 +187,11 @@ import { SalesService } from '../../services/sales.service';
             </div>
 
             <!-- ─── Configurations (Master Data) ─── -->
-            <div class="nav-group" [class.group-open]="configOpen()" [class.group-active]="isGroupActive('config')" *ngIf="isAdmin() || isManager()">
+            <div class="nav-group" [class.group-open]="configOpen()" [class.group-active]="isGroupActive('config')" *ngIf="isSystemAdmin() || hasPermission('Master Data')">
               <div class="nav-item group-header" (click)="toggleGroup('config')">
                 <i class="pi pi-cog nav-icon"></i>
                 <span class="nav-label">Configurations</span>
-                <i class="pi pi-chevron-down group-arrow"></i>
+                <i class="pi pi-chevron-up group-arrow"></i>
               </div>
               <div class="sub-nav">
                 <a class="nav-item sub-item" routerLink="/dashboard/taxes" routerLinkActive="nav-active">
@@ -217,7 +231,7 @@ import { SalesService } from '../../services/sales.service';
           </nav>
 
           <div class="sidebar-footer">
-            <button class="logout-btn" (click)="onLogout()">
+            <button class="logout-btn" (click)="logout()">
               <i class="pi pi-sign-out"></i>
               <span>Logout</span>
             </button>
@@ -239,7 +253,7 @@ import { SalesService } from '../../services/sales.service';
 
             <!-- KPI Cards -->
             <div class="kpi-grid">
-              <div class="kpi-card kpi-teal" *ngIf="isPharmacist() || isAdmin()" (click)="navigate('/dashboard/medicines')">
+              <div class="kpi-card kpi-teal" *ngIf="isSystemAdmin() || hasPermission('Medicines')" (click)="navigate('/dashboard/medicines')">
                 <div class="kpi-icon-wrap kpi-teal-icon">
                   <i class="pi pi-box"></i>
                 </div>
@@ -251,7 +265,7 @@ import { SalesService } from '../../services/sales.service';
                 <i class="pi pi-arrow-right kpi-arrow"></i>
               </div>
 
-              <div class="kpi-card kpi-amber" *ngIf="isPharmacist() || isAdmin()" (click)="navigate('/dashboard/medicines')">
+              <div class="kpi-card kpi-amber" *ngIf="isSystemAdmin() || hasPermission('Medicines')" (click)="navigate('/dashboard/medicines')">
                 <div class="kpi-icon-wrap kpi-amber-icon">
                   <i class="pi pi-exclamation-triangle"></i>
                 </div>
@@ -263,7 +277,7 @@ import { SalesService } from '../../services/sales.service';
                 <i class="pi pi-arrow-right kpi-arrow"></i>
               </div>
 
-              <div class="kpi-card kpi-emerald" *ngIf="isCashier() || isAdmin()" (click)="navigate('/dashboard/sales')">
+              <div class="kpi-card kpi-emerald" *ngIf="isSystemAdmin() || hasPermission('Sales')" (click)="navigate('/dashboard/sales')">
                 <div class="kpi-icon-wrap kpi-emerald-icon">
                   <i class="pi pi-receipt"></i>
                 </div>
@@ -275,7 +289,7 @@ import { SalesService } from '../../services/sales.service';
                 <i class="pi pi-arrow-right kpi-arrow"></i>
               </div>
 
-              <div class="kpi-card kpi-indigo" *ngIf="isManager() || isAdmin()" (click)="navigate('/dashboard/purchases/new')">
+              <div class="kpi-card kpi-indigo" *ngIf="isSystemAdmin() || hasPermission('Purchases')" (click)="navigate('/dashboard/purchases/new')">
                 <div class="kpi-icon-wrap kpi-indigo-icon">
                   <i class="pi pi-shopping-bag"></i>
                 </div>
@@ -291,23 +305,23 @@ import { SalesService } from '../../services/sales.service';
             <!-- Quick Action Tiles -->
             <div class="section-title">Quick Actions</div>
             <div class="action-grid">
-              <div class="action-tile" *ngIf="isPharmacist() || isAdmin()" (click)="navigate('/dashboard/medicines')">
+              <div class="action-tile" *ngIf="isSystemAdmin() || hasPermission('Medicines')" (click)="navigate('/dashboard/medicines')">
                 <div class="action-icon teal-bg"><i class="pi pi-box"></i></div>
                 <span>Medicine Inventory</span>
               </div>
-              <div class="action-tile" *ngIf="isManager() || isAdmin()" (click)="navigate('/dashboard/purchases/new')">
+              <div class="action-tile" *ngIf="isSystemAdmin() || hasPermission('Purchases')" (click)="navigate('/dashboard/purchases/new')">
                 <div class="action-icon indigo-bg"><i class="pi pi-shopping-bag"></i></div>
                 <span>New Purchase</span>
               </div>
-              <div class="action-tile" *ngIf="isCashier() || isAdmin()" (click)="navigate('/dashboard/sales')">
+              <div class="action-tile" *ngIf="isSystemAdmin() || hasPermission('Sales')" (click)="navigate('/dashboard/sales')">
                 <div class="action-icon emerald-bg"><i class="pi pi-desktop"></i></div>
                 <span>Point of Sale</span>
               </div>
-              <div class="action-tile" *ngIf="isAdmin() || isManager() || isCashier()" (click)="navigate('/dashboard/due-collection')">
+              <div class="action-tile" *ngIf="isSystemAdmin() || hasPermission('Due Collection')" (click)="navigate('/dashboard/due-collection')">
                 <div class="action-icon amber-bg" style="background: linear-gradient(135deg, #f59e0b, #d97706);"><i class="pi pi-wallet"></i></div>
                 <span>Due Collection</span>
               </div>
-              <div class="action-tile" *ngIf="isAdmin()" (click)="navigate('/dashboard/users')">
+              <div class="action-tile" *ngIf="isSystemAdmin() || hasPermission('Users')" (click)="navigate('/dashboard/users')">
                 <div class="action-icon purple-bg"><i class="pi pi-users"></i></div>
                 <span>User Management</span>
               </div>
@@ -426,7 +440,7 @@ import { SalesService } from '../../services/sales.service';
     .sidebar-nav::-webkit-scrollbar { width: 4px; }
     .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
     .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-    .sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    .sidebar-nav::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
 
     .nav-section-label {
       font-size: .64rem;
@@ -533,7 +547,7 @@ import { SalesService } from '../../services/sales.service';
     .app-main {
       flex: 1;
       overflow-y: auto;
-      overflow-x: hidden;
+      overflow-x: auto;
       padding: 0; /* Removed global padding to allow sticky headers to touch the top */
       display: flex;
       flex-direction: column;
@@ -598,6 +612,36 @@ import { SalesService } from '../../services/sales.service';
     .kpi-label { font-size: .72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
     .kpi-value { font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
     .kpi-meta  { font-size: .72rem; color: #94a3b8; }
+
+    /* Empty state overlay */
+    .no-permissions-overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+    .no-perm-card {
+      background: white;
+      padding: 3rem;
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+      border: 1px solid #e2e8f0;
+      max-width: 450px;
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
     .kpi-arrow { color: #cbd5e1; font-size: .85rem; transition: color .2s; }
     .kpi-card:hover .kpi-arrow { color: #94a3b8; }
 
@@ -682,14 +726,10 @@ export class DashboardComponent implements OnInit {
         this.autoOpenGroups();
       });
 
-    if (this.isPharmacist() || this.isAdmin()) {
+    if (this.isSystemAdmin() || this.hasPermission('Medicines')) {
       this.medicineService.getMedicines({ pageNumber: 1, pageSize: 1 }).subscribe(res => {
         this.medicineCount = res.totalCount;
       });
-      // For low stock, we might need a dedicated API or a large page size, but for now let's just use a reasonable number or a filtered query if the API supports it
-      // Actually, I'll just set it to 0 or hide it if it's too expensive, or just fetch a large chunk.
-      // Given the client wants a wow effect, let's just fetch a reasonable amount for now.
-      // Given the client wants a wow effect, let's just fetch a reasonable amount for now.
     }
 
     // Auto-open group based on current URL
@@ -755,32 +795,35 @@ export class DashboardComponent implements OnInit {
   }
 
   isRoot() { return this.currentUrl() === '/dashboard'; }
-  isAdmin() { return this.authService.getRoles().includes('Admin'); }
-  isPharmacist() { return this.authService.getRoles().includes('Pharmacist'); }
-  isManager() { return this.authService.getRoles().includes('Manager'); }
-  isCashier() { return this.authService.getRoles().includes('Cashier'); }
+  isSystemAdmin() { return this.authService.isSystemAdmin(); }
+  isAdminOrAbove() { return this.authService.isAdminOrAbove(); }
+
+  hasPermission(module: string, action: any = 'view') {
+    return this.authService.hasPermission(module, action);
+  }
+
+  hasAnyModuleAccess(): boolean {
+    const modules = ['Medicines', 'Purchases', 'Sales', 'Due Collection', 'Parties', 'Users', 'Roles', 'Master Data'];
+    return modules.some(m => this.hasPermission(m));
+  }
 
   canViewReport(reportModule: string) {
     return this.authService.hasPermission(reportModule, 'view');
   }
 
   hasAnyReportPermission() {
-    return this.canViewReport('Sales Reports') ||
-      this.canViewReport('Purchase Reports') ||
-      this.canViewReport('Inventory Reports') ||
-      this.canViewReport('Financial Reports') ||
-      this.canViewReport('Expiry Reports') ||
-      this.canViewReport('Top Selling Reports') ||
-      this.canViewReport('Low Stock Reports') ||
-      this.canViewReport('Ledger Reports') ||
-      this.canViewReport('User Performance Reports') ||
-      this.canViewReport('VAT Reports');
+    const reportModules = [
+      'Sales Reports', 'Purchase Reports', 'Inventory Reports', 'Financial Reports',
+      'Expiry Reports', 'Top Selling Reports', 'Low Stock Reports', 'Ledger Reports', 
+      'User Performance Reports', 'VAT Reports'
+    ];
+    return reportModules.some(m => this.canViewReport(m));
   }
 
   navigate(path: string) { this.router.navigate([path]); }
 
-  onLogout() {
+  logout() {
     this.authService.logout();
-    this.router.navigate(['/login']);
+    this.router.navigate(['/auth/login']);
   }
 }

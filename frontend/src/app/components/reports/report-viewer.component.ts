@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ReportService } from '../../services/report.service';
+import { AuthService } from '../../services/auth.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
@@ -530,7 +531,12 @@ export class ReportViewerComponent implements OnInit {
     { label: 'Export to Excel/CSV', icon: 'pi pi-file-excel', command: () => this.exportExcel() }
   ];
 
-  constructor(private route: ActivatedRoute, private reportService: ReportService, private partyService: PartyService) {}
+  constructor(
+    private route: ActivatedRoute, 
+    private reportService: ReportService, 
+    private partyService: PartyService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit() {
     this.route.url.subscribe(url => {
@@ -615,8 +621,7 @@ export class ReportViewerComponent implements OnInit {
   }
 
   isAdmin() {
-     const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-     return user.roles?.includes('Admin');
+     return this.authService.isSystemAdmin();
   }
 
   printReport() {

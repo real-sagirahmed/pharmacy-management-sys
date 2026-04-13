@@ -44,6 +44,10 @@ import { AuthService } from '../../services/auth.service';
                 <input type="email" formControlName="email" 
                        placeholder="Enter your registered email" class="field-input">
               </div>
+              <div *ngIf="forgotForm.get('email')?.touched && forgotForm.get('email')?.errors" class="field-error animate-fadein">
+                <span *ngIf="forgotForm.get('email')?.errors?.['required']">Email is required.</span>
+                <span *ngIf="forgotForm.get('email')?.errors?.['email']">Please enter a valid email address.</span>
+              </div>
             </div>
 
             <!-- Messages -->
@@ -134,6 +138,9 @@ import { AuthService } from '../../services/auth.service';
     .error-pill { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
     .success-pill { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
 
+    .field-error { font-size: 0.75rem; color: #ef4444; font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .field-error::before { content: '●'; font-size: 8px; }
+
     .submit-btn {
       width: 100%; padding: 14px; margin-top: 10px;
       background: #f59e0b; color: #fff; border: none; border-radius: 12px;
@@ -174,6 +181,7 @@ export class ForgotPasswordComponent {
 
   onSubmit() {
     if (this.forgotForm.invalid) {
+      this.forgotForm.markAllAsTouched();
       this.error = 'Please enter a valid email address.';
       return;
     }

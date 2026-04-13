@@ -7,7 +7,7 @@ namespace PharmacyApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SystemAdmin")]
     public class UsersController : ControllerBase
     {
         private readonly IUserManagementService _userService;
@@ -39,12 +39,19 @@ namespace PharmacyApi.Controllers
             var success = await _userService.ToggleUserStatusAsync(id);
             if (success) return Ok(new { Message = "User status toggled successfully" });
 
-            return NotFound("User not found or failed to update");
+            return NotFound("User not found, is SystemAdmin, or failed to update");
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserDto model)
         {
+            // Security Hardening: Only SystemAdmin can edit a SystemAdmin user
+            var isTargetSystemAdmin = await _userService.IsUserSystemAdminAsync(id);
+            if (isTargetSystemAdmin && !User.IsInRole("SystemAdmin"))
+            {
+                return Forbid(); // Non-SystemAdmins cannot edit a SystemAdmin
+            }
+
             var result = await _userService.UpdateUserAsync(id, model);
             if (result.Succeeded) return Ok(new { Message = "User updated successfully" });
 
@@ -60,6 +67,36 @@ namespace PharmacyApi.Controllers
             return BadRequest(result.Errors);
         }
 
+        // ─── Role Assignment ───
+
+        [HttpPost("update-role")]
+        public async Task<IActionResult> UpdateRole([FromBody] UpdateUserRoleDto model)
+        {
+            // Security Hardening: Only SystemAdmin can assign the SystemAdmin role
+            if (model.NewRole.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)
+                && !User.IsInRole("SystemAdmin"))
+            {
+                return Forbid(); // 403
+            }
+
+            var result = await _userService.AssignUserRoleAsync(model.UserId, model.NewRole);
+            if (result.Succeeded) return Ok(new { Message = "User role updated successfully" });
+
+            return BadRequest(result.Errors);
+        }
+
+        // Only SystemAdmin can grant the SystemAdmin role to another user
+        [HttpPost("assign-system-admin")]
+        [Authorize(Roles = "SystemAdmin")]
+        public async Task<IActionResult> AssignSystemAdmin([FromBody] string targetUserId)
+        {
+            var callerName = User.Identity?.Name ?? "Unknown";
+            var result = await _userService.AssignUserRoleAsync(targetUserId, "SystemAdmin");
+            if (result.Succeeded) return Ok(new { Message = $"User assigned as SystemAdmin by {callerName}." });
+
+            return BadRequest(result.Errors);
+        }
+
         // ─── Role Management ───
 
         [HttpGet("roles")]
@@ -70,6 +107,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost("roles")]
+        [Authorize(Roles = "SystemAdmin")]
         public async Task<IActionResult> CreateRole([FromBody] string roleName)
         {
             var result = await _userService.CreateRoleAsync(roleName);
@@ -79,7 +117,8 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPut("roles/{roleId}")]
-        public async Task<IActionResult> UpdateRole(string roleId, [FromBody] string newName)
+        [Authorize(Roles = "SystemAdmin")]
+        public async Task<IActionResult> UpdateRoleName(string roleId, [FromBody] string newName)
         {
             var result = await _userService.UpdateRoleAsync(roleId, newName);
             if (result.Succeeded) return Ok(new { Message = "Role updated successfully" });
@@ -88,6 +127,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpDelete("roles/{roleId}")]
+        [Authorize(Roles = "SystemAdmin")]
         public async Task<IActionResult> DeleteRole(string roleId)
         {
             var result = await _userService.DeleteRoleAsync(roleId);
@@ -106,6 +146,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost("permissions/{roleId}")]
+        [Authorize(Roles = "SystemAdmin")]
         public async Task<IActionResult> UpdatePermissions(string roleId, [FromBody] List<PermissionDto> permissions)
         {
             await _userService.UpdatePermissionsAsync(roleId, permissions);

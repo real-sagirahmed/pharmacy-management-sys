@@ -4,6 +4,20 @@
 
 ---
 
+- [2026-04-14 12:05 AM] - Dynamic UI Rendering & Security Hardening
+- **Task:** Transitioning to 100% Permission-Based UI & Protecting Elevated Privileges
+- **Details:** 
+  - **Singular SystemAdmin Bypass:** Removed all hardcoded role bypasses (Admin, Manager, etc.) from `AuthService`. Enforced a strict policy where only the **SystemAdmin** role retains automatic bypass power.
+  - **Permission-Driven UI:** Updated the Sidebar, Dashboard KPIs, and Quick Action tiles to dynamically show/hide based on the database-level Permission Matrix.
+  - **Privilege Escalation Protection:** All Role/Permission modification API endpoints in `UsersController` are now strictly restricted to `SystemAdmin`. 
+  - **UI Lockdown:** Standard Admin users can no longer see or access the "Roles & Permissions" module, preventing them from escalating their own privileges.
+  - **Profit Visibility Guard:** Updated `ReportViewerComponent` to restrict highly sensitive information (Profit margins) exclusively to the **SystemAdmin**.
+  - **No-Permission Landing:** Implemented a professional "Account Initialized" overlay for users with no assigned permissions to prevent broken UI states.
+- **Technology:** Angular 19 (Signals-based rendering), ASP.NET Core 8 (Role-based API Guards), TypeScript.
+- **Status:** COMPLETED & VERIFIED
+
+---
+
 - [2026-03-16 07:15 AM] - Stock Accuracy & UI Clarity Overhaul
 - **Task:** Fixing Stock Discrepancy & Enhancing Sales Entry UX
 - **Details:**

@@ -52,6 +52,9 @@ import { CommonModule } from '@angular/common';
                 <input type="text" formControlName="username" 
                        placeholder="Enter your username" class="field-input">
               </div>
+              <div *ngIf="loginForm.get('username')?.touched && loginForm.get('username')?.errors?.['required']" class="field-error animate-fadein">
+                Username is required.
+              </div>
             </div>
 
             <!-- Password -->
@@ -64,6 +67,9 @@ import { CommonModule } from '@angular/common';
                 <i class="pi pi-lock field-icon"></i>
                 <input type="password" formControlName="password" 
                        placeholder="••••••••" class="field-input">
+              </div>
+              <div *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.errors?.['required']" class="field-error animate-fadein">
+                Password is required.
               </div>
             </div>
 
@@ -162,6 +168,9 @@ import { CommonModule } from '@angular/common';
       background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; font-size: .875rem; font-weight: 600;
     }
 
+    .field-error { font-size: 0.75rem; color: #ef4444; font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .field-error::before { content: '●'; font-size: 8px; }
+
     .submit-btn {
       width: 100%; padding: 14px; margin-top: 10px;
       background: #0f172a; color: #fff; border: none; border-radius: 12px;
@@ -203,7 +212,10 @@ export class LoginComponent {
   }
 
   onLogin() {
-    if (this.loginForm.invalid) return;
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
+    }
     this.loading = true;
     this.error = '';
     const { username, password } = this.loginForm.value;
