@@ -4,6 +4,18 @@
 
 ---
 
+- [2026-04-14 12:40 AM] - SystemAdmin Self-Profile Management
+- **Task:** Enabling Self-Editing for SystemAdmin (Username, Email, Password)
+- **Details:** 
+  - **Security Fix:** Granted SystemAdmin the ability to edit their own profile while maintaining protection against other roles.
+  - **Username Updates:** Added support for updating `UserName` in the backend service and frontend UI.
+  - **Identity Normalization:** Integrated `SetUserNameAsync` and `SetEmailAsync` to ensure database consistency.
+  - **UI Unlock:** Re-enabled the Edit button for SystemAdmin records and made the Username field editable in the management dialog.
+- **Technology:** ASP.NET Core Identity, Angular 19, DTOs.
+- **Status:** COMPLETED & VERIFIED
+
+---
+
 - [2026-04-14 12:05 AM] - Dynamic UI Rendering & Security Hardening
 - **Task:** Transitioning to 100% Permission-Based UI & Protecting Elevated Privileges
 - **Details:** 

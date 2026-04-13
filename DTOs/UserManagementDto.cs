@@ -31,6 +31,8 @@ namespace PharmacyApi.DTOs
     public class UpdateUserDto
     {
         [Required]
+        public string UserName { get; set; } = string.Empty;
+        [Required]
         public string FullName { get; set; } = string.Empty;
         [Required]
         [EmailAddress]

@@ -171,16 +171,21 @@ namespace PharmacyApi.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
 
-            // Protect SystemAdmin user from accidental modification
-            var userRoles = await _userManager.GetRolesAsync(user);
-            if (userRoles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
+            user.FullName = model.FullName;
+
+            // Update Email if changed
+            if (!string.Equals(user.Email, model.Email, StringComparison.OrdinalIgnoreCase))
             {
-                // Note: We'll allow SystemAdmin to edit themselves, but block others in the controller.
-                // This service method remains permissive but the controller will act as the gatekeeper.
+                var emailResult = await _userManager.SetEmailAsync(user, model.Email);
+                if (!emailResult.Succeeded) return emailResult;
             }
 
-            user.FullName = model.FullName;
-            user.Email = model.Email;
+            // Update UserName if changed
+            if (!string.Equals(user.UserName, model.UserName, StringComparison.OrdinalIgnoreCase))
+            {
+                var userResult = await _userManager.SetUserNameAsync(user, model.UserName);
+                if (!userResult.Succeeded) return userResult;
+            }
             
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded && !string.IsNullOrWhiteSpace(model.Password))

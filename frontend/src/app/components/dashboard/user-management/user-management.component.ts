@@ -140,18 +140,23 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                   </td>
                   <td alignFrozen="right" pFrozenColumn>
                     <div class="action-btns">
-                      <!-- Edit & Delete blocked for SystemAdmin -->
-                      <ng-container *ngIf="!isUserSystemAdmin(u)">
+                      <!-- Edit blocked for SystemAdmin UNLESS the caller is also a SystemAdmin -->
+                      <ng-container *ngIf="!isUserSystemAdmin(u) || authService.isSystemAdmin()">
                         <button class="act-btn act-edit" title="Edit user" (click)="showEditDialog(u)">
                           <i class="pi pi-pencil"></i>
                         </button>
+                      </ng-container>
+                      
+                      <!-- Delete still blocked for SystemAdmin -->
+                      <ng-container *ngIf="!isUserSystemAdmin(u)">
                         <button class="act-btn act-del" title="Delete user" 
                                 (click)="onDelete(u.id)"
                                 [disabled]="isCurrentUser(u.userName)">
                           <i class="pi pi-trash"></i>
                         </button>
                       </ng-container>
-                      <ng-container *ngIf="isUserSystemAdmin(u)">
+
+                      <ng-container *ngIf="isUserSystemAdmin(u) && !authService.isSystemAdmin()">
                         <i class="pi pi-lock text-amber-500" title="SystemAdmin — protected"></i>
                       </ng-container>
                     </div>
@@ -206,9 +211,9 @@ import { ConfirmationService, MessageService } from 'primeng/api';
             <input type="text" pInputText id="efullName" [(ngModel)]="editUser.fullName" required />
           </div>
           <div class="field mb-3">
-            <label class="block font-bold mb-1">Username</label>
-            <input type="text" pInputText [value]="editUser.userName" disabled class="p-disabled" />
-            <small class="text-muted">Username cannot be changed.</small>
+            <label for="euserName" class="block font-bold mb-1">Username</label>
+            <input type="text" pInputText id="euserName" [(ngModel)]="editUser.userName" required />
+            <small class="text-muted">Unique identifier for the user.</small>
           </div>
           <div class="field mb-3">
             <label for="eemail" class="block font-bold mb-1">Email</label>
@@ -469,8 +474,8 @@ export class UserManagementComponent implements OnInit {
   }
 
   updateUser() {
-    if (!this.editUser.fullName || !this.editUser.email) {
-      this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Name and Email are required.' });
+    if (!this.editUser.fullName || !this.editUser.email || !this.editUser.userName) {
+      this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Name, Username and Email are required.' });
       return;
     }
 
