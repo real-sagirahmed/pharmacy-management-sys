@@ -17,8 +17,10 @@ import { CommonModule } from '@angular/common';
             <div class="brand-icon">
               <i class="pi pi-th-large"></i>
             </div>
-            <h1 class="brand-name">Pharmacy System</h1>
+            <h1 class="brand-name">s7 Drug House</h1>
+            <p class="brand-sub-login" style="font-size: 1rem; color: #94a3b8; opacity: 0.8;">Pharmacy Management System</p>
           </div>
+
           <div class="visual-text">
             <h2>Modern. Fast. Reliable.</h2>
             <p>The total solution for your pharmaceutical business management.</p>
@@ -65,13 +67,17 @@ import { CommonModule } from '@angular/common';
               </div>
               <div class="field-input-wrap">
                 <i class="pi pi-lock field-icon"></i>
-                <input type="password" formControlName="password" 
+                <input [type]="showPassword ? 'text' : 'password'" formControlName="password" 
                        placeholder="••••••••" class="field-input">
+                <button type="button" class="password-toggle" (click)="showPassword = !showPassword" [title]="showPassword ? 'Hide Password' : 'Show Password'">
+                  <i class="pi" [class.pi-eye]="!showPassword" [class.pi-eye-slash]="showPassword"></i>
+                </button>
               </div>
               <div *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.errors?.['required']" class="field-error animate-fadein">
                 Password is required.
               </div>
             </div>
+
 
             <!-- Error Message -->
             <div *ngIf="error" class="error-pill animate-fadein">
@@ -91,10 +97,11 @@ import { CommonModule } from '@angular/common';
             </div>
           </form>
 
-          <p class="copyright text-center py-8">© 2024 Pharmacy Management System</p>
+          <p class="copyright text-center py-8">© {{ currentYear }} Pharmacy Management System</p>
         </div>
       </div>
     </div>
+
   `,
   styles: [`
     :host { display: block; height: 100vh; width: 100vw; overflow: hidden; }
@@ -162,6 +169,16 @@ import { CommonModule } from '@angular/common';
       transition: all .2s; outline: none; color: #0f172a;
     }
     .field-input:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1); }
+    
+    .password-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: #94a3b8; cursor: pointer;
+      padding: 6px; display: flex; align-items: center; justify-content: center;
+      transition: color 0.2s;
+    }
+    .password-toggle:hover { color: #0d9488; }
+    .password-toggle i { font-size: 1.1rem; }
+
 
     .error-pill {
       display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px;
@@ -199,6 +216,9 @@ export class LoginComponent {
   loginForm: FormGroup;
   loading = false;
   error = '';
+  showPassword = false;
+  currentYear = new Date().getFullYear();
+
 
   constructor(
     private fb: FormBuilder,

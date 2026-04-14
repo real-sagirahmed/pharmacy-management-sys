@@ -11,14 +11,15 @@
       <div class="header-icon"><i class="pi pi-desktop"></i></div>
       <div>
         <h1 class="page-title">New Sale</h1>
-        <p class="page-sub">Point of Sale — Enter items and complete the transaction</p>
+        <p class="page-sub">Point of Sale — Enter items</p>
       </div>
     </div>
-    <div class="invoice-badge">
+    <div class="invoice-badge hidden md:flex">
       <span class="inv-label">Invoice</span>
       <span class="inv-code">{{ invoiceCode || '—' }}</span>
     </div>
   </div>
+
 
   <div class="pos-body">
 
@@ -296,12 +297,13 @@
             <!-- Single Payment Amount -->
             <div class="pay-amount-row mt-3" *ngIf="!splitEnabled">
               <div class="field-label-row">
-                <span class="field-label">Amount Paid <small class="f2-hint">(F2 to focus)</small></span>
+                <span class="field-label">Amount Paid <small class="f2-hint hidden md:inline-block">(F2 to focus)</small></span>
                 <span class="pay-ref-total">(Payable: ৳{{ grandTotal() | number:'1.2-2' }})</span>
               </div>
               <p-inputNumber [(ngModel)]="payments()[0].amount" mode="decimal" [minFractionDigits]="2" prefix="৳"
                 styleClass="w-full" [inputStyleClass]="'pay-amount-num ' + (isPaymentSufficient() ? 'payment-sufficient' : '')" (ngModelChange)="triggerPaymentsUpdate()" />
             </div>
+
 
             <!-- Single Payment References -->
             <div class="pay-ref-grid mt-3" *ngIf="!splitEnabled && payments()[0]?.showRef">

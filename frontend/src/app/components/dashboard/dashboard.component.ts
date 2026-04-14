@@ -1,17 +1,23 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { MedicineService } from '../../services/medicine.service';
 import { SalesService } from '../../services/sales.service';
+import { ReportService } from '../../services/report.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, RouterModule],
+  providers: [CurrencyPipe, DatePipe],
   template: `
-    <div class="app-shell">
+
+    <div class="app-shell" [class.is-mobile]="isMobile()">
+      <!-- Mobile Backdrop -->
+      <div class="sidebar-backdrop" *ngIf="isMobile() && sidebarOpen()" (click)="sidebarOpen.set(false)"></div>
+
       <!-- Welcome Overlay for users with NO permissions -->
       <div class="no-permissions-overlay" *ngIf="!isSystemAdmin() && !hasAnyModuleAccess()">
         <div class="no-perm-card animate-fade-in">
@@ -36,11 +42,13 @@ import { SalesService } from '../../services/sales.service';
           <div class="brand-icon">
             <i class="pi pi-heart-fill" style="color:#0d9488;font-size:1.4rem"></i>
           </div>
-          <div class="brand-text">
+          <div class="brand-text" *ngIf="sidebarOpen() || isMobile()">
             <span class="brand-name">s7 Drug House</span>
-            <span class="brand-sub">Pharmacy System</span>
+            <span class="brand-sub" *ngIf="!isMobile()">Pharmacy System</span>
           </div>
+
         </div>
+
 
         <div class="header-right" *ngIf="user">
           <div class="header-time">
@@ -265,7 +273,7 @@ import { SalesService } from '../../services/sales.service';
                 <i class="pi pi-arrow-right kpi-arrow"></i>
               </div>
 
-              <div class="kpi-card kpi-amber" *ngIf="isSystemAdmin() || hasPermission('Medicines')" (click)="navigate('/dashboard/medicines')">
+              <div class="kpi-card kpi-amber" (click)="navigate('/dashboard/reports/low-stock')">
                 <div class="kpi-icon-wrap kpi-amber-icon">
                   <i class="pi pi-exclamation-triangle"></i>
                 </div>
@@ -277,28 +285,28 @@ import { SalesService } from '../../services/sales.service';
                 <i class="pi pi-arrow-right kpi-arrow"></i>
               </div>
 
-              <div class="kpi-card kpi-emerald" *ngIf="isSystemAdmin() || hasPermission('Sales')" (click)="navigate('/dashboard/sales')">
+
+              <div class="kpi-card kpi-emerald" *ngIf="isSystemAdmin() || hasPermission('Sales')" (click)="navigate('/dashboard/reports/sales-summary')">
                 <div class="kpi-icon-wrap kpi-emerald-icon">
                   <i class="pi pi-receipt"></i>
                 </div>
                 <div class="kpi-info">
-                  <span class="kpi-label">Sales POS</span>
-                  <span class="kpi-value">Active</span>
-                  <span class="kpi-meta">quick sale entry</span>
+                  <span class="kpi-label">Today's Sales</span>
+                  <span class="kpi-value">{{ todaySalesAmount | currency:'Tk ' }}</span>
+                  <span class="kpi-meta">revenue collected today</span>
                 </div>
                 <i class="pi pi-arrow-right kpi-arrow"></i>
               </div>
 
-              <div class="kpi-card kpi-indigo" *ngIf="isSystemAdmin() || hasPermission('Purchases')" (click)="navigate('/dashboard/purchases/new')">
+              <div class="kpi-card kpi-indigo" *ngIf="isSystemAdmin() || hasPermission('Sales')" (click)="navigate('/dashboard/sales')">
                 <div class="kpi-icon-wrap kpi-indigo-icon">
-                  <i class="pi pi-shopping-bag"></i>
+                  <i class="pi pi-shopping-cart"></i>
                 </div>
                 <div class="kpi-info">
-                  <span class="kpi-label">Procurement</span>
-                  <span class="stat-value" style="font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1.1;">New Order</span>
-                  <span class="kpi-meta">purchase from supplier</span>
+                  <span class="kpi-label">Today's Orders</span>
+                  <span class="kpi-value">{{ todayOrderCount }}</span>
+                  <span class="kpi-meta">completed transactions</span>
                 </div>
-                <i class="pi pi-arrow-right kpi-arrow"></i>
               </div>
             </div>
 
@@ -386,7 +394,11 @@ import { SalesService } from '../../services/sales.service';
     .brand-name { font-size: .95rem; font-weight: 700; color: #f8fafc; letter-spacing: -.01em; }
     .brand-sub  { font-size: .7rem;  color: #64748b; }
 
-    .header-time { font-size: .75rem; color: #64748b; display: flex; align-items: center; gap: 4px; }
+    .header-time { 
+      font-size: .75rem; color: #64748b; display: flex; align-items: center; gap: 4px;
+      @media (max-width: 768px) { display: none; }
+    }
+
 
     .user-chip {
       display: flex; align-items: center; gap: 10px;
@@ -423,10 +435,31 @@ import { SalesService } from '../../services/sales.service';
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      transition: width .25s cubic-bezier(.4,0,.2,1), min-width .25s cubic-bezier(.4,0,.2,1);
+      transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1);
       z-index: 40;
     }
-    .sidebar-collapsed { width: 0; min-width: 0; }
+    .sidebar-collapsed:not(.is-mobile) .app-sidebar { width: 70px; min-width: 70px; }
+    .sidebar-collapsed.is-mobile .app-sidebar { width: 0; min-width: 0; }
+
+
+    /* ─── Mobile Sidebar Overlay ─── */
+    .app-shell.is-mobile .app-sidebar {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      height: calc(100vh - 64px);
+      z-index: 1000;
+      box-shadow: 20px 0 50px rgba(0,0,0,0.2);
+    }
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(2px);
+      z-index: 900;
+      animation: fadeIn 0.2s ease-out;
+    }
+
 
     .sidebar-nav {
       flex: 1;
@@ -476,7 +509,12 @@ import { SalesService } from '../../services/sales.service';
     }
     .nav-active .nav-icon { color: #0d9488 !important; transform: scale(1.1); }
     .nav-icon { font-size: 1.05rem; flex-shrink: 0; transition: transform 0.2s; color: #64748b; }
-    .nav-label { flex: 1; transition: color 0.2s; }
+    .nav-label { flex: 1; transition: color 0.2s, opacity 0.2s; white-space: nowrap; }
+    .sidebar-collapsed:not(.is-mobile) .nav-label { opacity: 0; pointer-events: none; }
+    .sidebar-collapsed:not(.is-mobile) .nav-item { padding: 12px 0; justify-content: center; border-left: none; }
+    .sidebar-collapsed:not(.is-mobile) .nav-section-label { display: none; }
+    .sidebar-collapsed:not(.is-mobile) .group-arrow { display: none; }
+
 
     /* ─── Grouped Nav ─── */
     .nav-group { display: flex; flex-direction: column; margin-bottom: 2px; }
@@ -694,7 +732,9 @@ export class DashboardComponent implements OnInit {
   medicineCount = 0;
   lowStockCount = 0;
   sidebarOpen = signal(true);
+  isMobile = signal(false);
   currentUrl = signal('/dashboard');
+
 
   // Group visibility signals
   inventoryOpen = signal(false);
@@ -703,14 +743,25 @@ export class DashboardComponent implements OnInit {
   configOpen = signal(false);
   reportsOpen = signal(false);
 
+  todaySalesAmount = 0;
+  todayOrderCount = 0;
+
   constructor(
     private router: Router,
     private authService: AuthService,
-    private medicineService: MedicineService
+    private medicineService: MedicineService,
+    private salesService: SalesService,
+    private reportService: ReportService,
+    private datePipe: DatePipe
   ) { }
 
+
   ngOnInit() {
+    this.checkMobile();
+    window.addEventListener('resize', () => this.checkMobile());
+    
     this.user = this.authService.currentUserValue;
+
     this.updateTime();
     setInterval(() => this.updateTime(), 60000);
 
@@ -730,7 +781,15 @@ export class DashboardComponent implements OnInit {
       this.medicineService.getMedicines({ pageNumber: 1, pageSize: 1 }).subscribe(res => {
         this.medicineCount = res.totalCount;
       });
+      this.reportService.getLowStockReport().subscribe(res => {
+        this.lowStockCount = res.length;
+      });
     }
+
+    if (this.isSystemAdmin() || this.hasPermission('Sales')) {
+      this.fetchTodayStats();
+    }
+
 
     // Auto-open group based on current URL
     this.autoOpenGroups();
@@ -807,6 +866,22 @@ export class DashboardComponent implements OnInit {
     return modules.some(m => this.hasPermission(m));
   }
 
+  fetchTodayStats() {
+    const today = this.datePipe.transform(new Date(), 'yyyy-MM-dd') || '';
+    this.salesService.getSalesPaged({ fromDate: today, toDate: today, pageNumber: 1, pageSize: 1000 }).subscribe({
+      next: (res) => {
+        this.todayOrderCount = res.totalCount;
+        this.todaySalesAmount = res.items.reduce((sum, sale) => sum + (sale.grandTotal || 0), 0);
+      },
+      error: (err) => console.error('Error fetching today stats', err)
+    });
+  }
+
+  navigate(url: string) {
+    this.router.navigate([url]);
+  }
+
+
   canViewReport(reportModule: string) {
     return this.authService.hasPermission(reportModule, 'view');
   }
@@ -820,10 +895,15 @@ export class DashboardComponent implements OnInit {
     return reportModules.some(m => this.canViewReport(m));
   }
 
-  navigate(path: string) { this.router.navigate([path]); }
 
   logout() {
     this.authService.logout();
-    this.router.navigate(['/auth/login']);
+    this.router.navigate(['/login']);
   }
-}
+
+  private checkMobile() {
+    const mobile = window.innerWidth < 1024;
+    this.isMobile.set(mobile);
+    if (mobile) this.sidebarOpen.set(false);
+  }
+}

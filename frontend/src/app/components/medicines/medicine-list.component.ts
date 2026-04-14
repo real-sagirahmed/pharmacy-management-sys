@@ -67,10 +67,8 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
               <div class="chip chip-teal"><i class="pi pi-box"></i> {{ totalCount() }} Total</div>
             </div>
           </div>
-          <p-paginator [rows]="pageSize" [totalRecords]="totalCount()"
-                       (onPageChange)="onPageChange($event)"
-                       [rowsPerPageOptions]="[10, 20, 50, 100]"></p-paginator>
         </div>
+
       </div>
 
         <div class="table-card">
@@ -85,46 +83,46 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                    emptyMessage="No medicines found.">
             <ng-template pTemplate="header">
               <tr>
-                <th style="min-width: 100px;">Code</th>
+                <th class="hidden lg:table-cell" style="min-width: 100px;">Code</th>
                 <th pSortableColumn="name" style="min-width: 150px;">Name <p-sortIcon field="name"></p-sortIcon></th>
-                <th style="min-width: 140px;">Category</th>
-                <th style="min-width: 150px;">Manufacturer</th>
-                <th style="min-width: 120px;">Dosage Form</th>
-                <th style="min-width: 100px;">Strength</th>
-                <th style="min-width: 130px;">Generic</th>
-                <th style="min-width: 80px;">UOM</th>
-                <th style="min-width: 150px;">Use For</th>
-                <th class="text-right" style="min-width: 100px;">Purchase</th>
+                <th class="hidden md:table-cell" style="min-width: 140px;">Category</th>
+                <th class="hidden xl:table-cell" style="min-width: 150px;">Manufacturer</th>
+                <th class="hidden xl:table-cell" style="min-width: 120px;">Dosage Form</th>
+                <th class="hidden xl:table-cell" style="min-width: 100px;">Strength</th>
+                <th class="hidden lg:table-cell" style="min-width: 130px;">Generic</th>
+                <th class="hidden lg:table-cell" style="min-width: 80px;">UOM</th>
+                <th class="hidden xl:table-cell" style="min-width: 150px;">Use For</th>
+                <th class="text-right hidden lg:table-cell" style="min-width: 100px;">Purchase</th>
                 <th class="text-right" style="min-width: 100px;">Sale</th>
-                <th style="min-width: 120px;">Batch</th>
-                <th style="min-width: 100px;">Expiry</th>
+                <th class="hidden md:table-cell" style="min-width: 120px;">Batch</th>
+                <th class="hidden md:table-cell" style="min-width: 100px;">Expiry</th>
                 <th class="text-center" style="min-width: 80px;">Stock</th>
-                <th style="min-width: 110px;">Status</th>
+                <th class="hidden lg:table-cell" style="min-width: 100px;">Status</th>
                 <th style="min-width: 130px;" alignFrozen="right" pFrozenColumn>Actions</th>
               </tr>
             </ng-template>
              <ng-template pTemplate="body" let-medicine>
               <tr>
-                <td><span class="med-code-badge">{{ medicine.code }}</span></td>
+                <td class="hidden lg:table-cell"><span class="med-code-badge">{{ medicine.code }}</span></td>
                 <td>
                   <div class="flex items-center gap-2" style="white-space: nowrap;">
                     <span class="med-name text-sm">{{ medicine.name }}</span>
                     <i *ngIf="isIncomplete(medicine)" class="pi pi-exclamation-circle incomplete-icon" title="Incomplete Information"></i>
                   </div>
                 </td>
-                <td><span class="category-badge">{{ medicine.category }}</span></td>
-                <td class="text-muted text-xs" style="white-space: nowrap;">{{ medicine.manufacturer || '-' }}</td>
-                <td class="text-muted text-xs" style="white-space: nowrap;">{{ medicine.dosageForm || '-' }}</td>
-                <td class="text-muted text-xs" style="white-space: nowrap;">{{ medicine.strength || '-' }}</td>
-                <td class="text-muted text-xs" style="white-space: nowrap;">{{ medicine.genericName || '-' }}</td>
-                <td><span class="uom-badge">{{ medicine.uom }}</span></td>
-                <td class="text-muted text-xs" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="medicine.useFor">
+                <td class="hidden md:table-cell"><span class="category-badge">{{ medicine.category }}</span></td>
+                <td class="text-muted text-xs hidden xl:table-cell" style="white-space: nowrap;">{{ medicine.manufacturer || '-' }}</td>
+                <td class="text-muted text-xs hidden xl:table-cell" style="white-space: nowrap;">{{ medicine.dosageForm || '-' }}</td>
+                <td class="text-muted text-xs hidden xl:table-cell" style="white-space: nowrap;">{{ medicine.strength || '-' }}</td>
+                <td class="text-muted text-xs hidden lg:table-cell" style="white-space: nowrap;">{{ medicine.genericName || '-' }}</td>
+                <td class="hidden lg:table-cell"><span class="uom-badge">{{ medicine.uom }}</span></td>
+                <td class="text-muted text-xs hidden xl:table-cell" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="medicine.useFor">
                   {{ medicine.useFor || '-' }}
                 </td>
-                <td class="text-right text-xs" style="white-space: nowrap;">{{ medicine.purchasePrice | currency:'Tk ' }}</td>
+                <td class="text-right text-xs hidden lg:table-cell" style="white-space: nowrap;">{{ medicine.purchasePrice | currency:'Tk ' }}</td>
                 <td class="text-right font-semibold text-sm" style="white-space: nowrap;">{{ medicine.salePrice | currency:'Tk ' }}</td>
-                <td><span class="batch-badge">{{ medicine.batch || '-' }}</span></td>
-                <td><span class="text-xs text-muted" [class.text-danger]="isExpired(medicine.expiryDate)" style="white-space: nowrap;">{{ (medicine.expiryDate | date:'dd/MM/yyyy') || '-' }}</span></td>
+                <td class="hidden md:table-cell"><span class="batch-badge">{{ medicine.batch || '-' }}</span></td>
+                <td class="hidden md:table-cell"><span class="text-xs text-muted" [class.text-danger]="isExpired(medicine.expiryDate)" style="white-space: nowrap;">{{ (medicine.expiryDate | date:'dd/MM/yyyy') || '-' }}</span></td>
                 <td class="text-center">
                   <span class="stock-badge"
                         [class.stock-low]="medicine.stockQuantity < 10"
@@ -132,7 +130,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                     {{ medicine.stockQuantity }}
                   </span>
                 </td>
-                <td>
+                <td class="hidden lg:table-cell">
                   <button class="status-toggle-btn"
                           [class.active]="medicine.isActive"
                           (click)="toggleStatus(medicine)"
@@ -157,6 +155,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                   </div>
                 </td>
               </tr>
+
             </ng-template>
           </p-table>
         </div>
