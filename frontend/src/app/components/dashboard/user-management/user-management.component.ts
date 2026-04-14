@@ -117,8 +117,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                   </td>
                   <td>
                     <div class="flex gap-2">
-                      <!-- Role change & toggle blocked for SystemAdmin -->
-                      <ng-container *ngIf="!isUserSystemAdmin(u); else sysAdminLock">
+                      <!-- Role change & toggle blocked for SystemAdmin UNLESS caller is also a SystemAdmin -->
+                      <ng-container *ngIf="!isUserSystemAdmin(u) || authService.isSystemAdmin(); else sysAdminLock">
                         <select class="role-select" (change)="onRoleChange(u.id, $any($event.target).value)">
                           <option value="" disabled selected>Role…</option>
                           <option value="Admin">Admin</option>
@@ -147,8 +147,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                         </button>
                       </ng-container>
                       
-                      <!-- Delete still blocked for SystemAdmin -->
-                      <ng-container *ngIf="!isUserSystemAdmin(u)">
+                      <!-- Delete blocked for SystemAdmin UNLESS the caller is also a SystemAdmin -->
+                      <ng-container *ngIf="!isUserSystemAdmin(u) || authService.isSystemAdmin()">
                         <button class="act-btn act-del" title="Delete user" 
                                 (click)="onDelete(u.id)"
                                 [disabled]="isCurrentUser(u.userName)">

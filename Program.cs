@@ -138,30 +138,40 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
-        // ─── Seed SystemAdmin user (only on first startup) ───────────────────
-        var sysAdminConfig = builder.Configuration.GetSection("SystemAdminSeed");
-        var sysAdminUserName = sysAdminConfig["UserName"] ?? "sysadmin";
-
-        var existingSysAdmin = await userManager.FindByNameAsync(sysAdminUserName);
-        if (existingSysAdmin == null)
+        // ─── Seed SystemAdmin user (only on first startup/setup) ───────────────────
+        var systemAdmins = await userManager.GetUsersInRoleAsync("SystemAdmin");
+        if (!systemAdmins.Any())
         {
-            var sysAdminUser = new ApplicationUser
+            var sysAdminConfig = builder.Configuration.GetSection("SystemAdminSeed");
+            var sysAdminUserName = sysAdminConfig["UserName"] ?? "sysadmin";
+            
+            // Safety: Also check if username exists even if no one has the role yet
+            var existingUser = await userManager.FindByNameAsync(sysAdminUserName);
+            if (existingUser == null)
             {
-                UserName    = sysAdminUserName,
-                Email       = sysAdminConfig["Email"]    ?? "sysadmin@s7pharmacy.com",
-                FullName    = sysAdminConfig["FullName"] ?? "System Administrator",
-                IsActive    = true,
-                EmailConfirmed = true
-            };
+                var sysAdminUser = new ApplicationUser
+                {
+                    UserName    = sysAdminUserName,
+                    Email       = sysAdminConfig["Email"]    ?? "sysadmin@s7pharmacy.com",
+                    FullName    = sysAdminConfig["FullName"] ?? "System Administrator",
+                    IsActive    = true,
+                    EmailConfirmed = true
+                };
 
-            var sysAdminPassword = sysAdminConfig["Password"] ?? "SysAdmin@2026!";
-            var createResult = await userManager.CreateAsync(sysAdminUser, sysAdminPassword);
+                var sysAdminPassword = sysAdminConfig["Password"] ?? "SysAdmin@2026!";
+                var createResult = await userManager.CreateAsync(sysAdminUser, sysAdminPassword);
 
-            if (createResult.Succeeded)
+                if (createResult.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(sysAdminUser, "SystemAdmin");
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogInformation("✅ SystemAdmin user seeded successfully. Use configured credentials to login.");
+                }
+            }
+            else
             {
-                await userManager.AddToRoleAsync(sysAdminUser, "SystemAdmin");
-                var logger = services.GetRequiredService<ILogger<Program>>();
-                logger.LogInformation("✅ SystemAdmin user seeded successfully. Please change the password after first login.");
+                // If user exists but lacks role, assign it
+                await userManager.AddToRoleAsync(existingUser, "SystemAdmin");
             }
         }
         // ─────────────────────────────────────────────────────────────────────

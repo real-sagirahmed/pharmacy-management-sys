@@ -71,6 +71,9 @@ namespace PharmacyApi.Services
                 IsActive = true
             };
 
+            if (model.Role.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase))
+                return IdentityResult.Failed(new IdentityError { Description = "The 'SystemAdmin' role is protected and cannot be assigned during manual creation." });
+
             var result = await _userManager.CreateAsync(user, model.Password);
             if (result.Succeeded)
             {
@@ -84,10 +87,14 @@ namespace PharmacyApi.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return false;
 
-            // Protect SystemAdmin from being deactivated
+            // Protect SystemAdmin from being deactivated if they are the only one
             var userRoles = await _userManager.GetRolesAsync(user);
             if (userRoles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
-                return false;
+            {
+                var systemAdmins = await _userManager.GetUsersInRoleAsync("SystemAdmin");
+                if (systemAdmins.Count <= 1)
+                    return false;
+            }
 
             user.IsActive = !user.IsActive;
             var result = await _userManager.UpdateAsync(user);
@@ -158,10 +165,14 @@ namespace PharmacyApi.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
 
-            // Protect SystemAdmin user from deletion
+            // Protect SystemAdmin user from deletion if they are the last one
             var userRoles = await _userManager.GetRolesAsync(user);
             if (userRoles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
-                return IdentityResult.Failed(new IdentityError { Description = "SystemAdmin user cannot be deleted." });
+            {
+                var systemAdmins = await _userManager.GetUsersInRoleAsync("SystemAdmin");
+                if (systemAdmins.Count <= 1)
+                    return IdentityResult.Failed(new IdentityError { Description = "The last SystemAdmin user cannot be deleted." });
+            }
 
             return await _userManager.DeleteAsync(user);
         }
