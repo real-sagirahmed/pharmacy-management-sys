@@ -173,61 +173,85 @@ import { ConfirmationService, MessageService } from 'primeng/api';
       </div>
 
       <!-- Add User Dialog -->
-      <p-dialog [(visible)]="displayAddDialog" [modal]="true" header="Add New User" [style]="{width: '450px'}" styleClass="p-fluid">
+      <p-dialog [(visible)]="displayAddDialog" [modal]="true" header="Add New User" 
+                [style]="{width: '450px'}" styleClass="user-dialog" [draggable]="false" [resizable]="false">
         <ng-template pTemplate="content">
-          <div class="field mb-3">
-            <label for="fullName" class="block font-bold mb-1">Full Name</label>
-            <input type="text" pInputText id="fullName" [(ngModel)]="newUser.fullName" required autofocus />
-          </div>
-          <div class="field mb-3">
-            <label for="userName" class="block font-bold mb-1">Username</label>
-            <input type="text" pInputText id="userName" [(ngModel)]="newUser.userName" required />
-          </div>
-          <div class="field mb-3">
-            <label for="email" class="block font-bold mb-1">Email</label>
-            <input type="email" pInputText id="email" [(ngModel)]="newUser.email" required />
-          </div>
-          <div class="field mb-3">
-            <label for="password" class="block font-bold mb-1">Password</label>
-            <p-password [(ngModel)]="newUser.password" [feedback]="false" [toggleMask]="true" styleClass="w-full"></p-password>
-          </div>
-          <div class="field mb-3">
-            <label for="role" class="block font-bold mb-1">Initial Role</label>
-            <p-dropdown [options]="availableRoles" [(ngModel)]="newUser.role" placeholder="Select a Role"></p-dropdown>
+          <div class="dialog-form pt-4">
+            <div class="field">
+              <label for="fullName">Full Name</label>
+              <input type="text" pInputText id="fullName" [(ngModel)]="newUser.fullName" placeholder="Enter full name" autofocus />
+            </div>
+            <div class="field">
+              <label for="userName">Username</label>
+              <div class="p-input-icon-left">
+                <i class="pi pi-at"></i>
+                <input type="text" pInputText id="userName" [(ngModel)]="newUser.userName" placeholder="unique_username" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="email">Email Address</label>
+              <div class="p-input-icon-left">
+                <i class="pi pi-envelope"></i>
+                <input type="email" pInputText id="email" [(ngModel)]="newUser.email" placeholder="example@mail.com" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="password">Password</label>
+              <p-password [(ngModel)]="newUser.password" [feedback]="false" [toggleMask]="true" 
+                          placeholder="••••••••" styleClass="w-full" [inputStyle]="{width: '100%'}"></p-password>
+            </div>
+            <div class="field">
+              <label for="role">Initial Role</label>
+              <p-dropdown [options]="availableRoles" [(ngModel)]="newUser.role" 
+                          placeholder="Select a Role" [style]="{width: '100%'}"></p-dropdown>
+            </div>
           </div>
         </ng-template>
 
         <ng-template pTemplate="footer">
-          <button pButton label="Cancel" icon="pi pi-times" class="p-button-text" (click)="displayAddDialog = false"></button>
-          <button pButton label="Create User" icon="pi pi-check" class="p-button-success" (click)="saveUser()" [loading]="saving"></button>
+          <div class="dialog-footer">
+            <button pButton label="Cancel" icon="pi pi-times" class="p-button-text p-button-secondary" (click)="displayAddDialog = false"></button>
+            <button pButton label="Create User" icon="pi pi-check" class="p-button-success" (click)="saveUser()" [loading]="saving"></button>
+          </div>
         </ng-template>
       </p-dialog>
 
       <!-- Edit User Dialog -->
-      <p-dialog [(visible)]="displayEditDialog" [modal]="true" header="Edit User Details" [style]="{width: '450px'}" styleClass="p-fluid">
+      <p-dialog [(visible)]="displayEditDialog" [modal]="true" header="Edit User Details" 
+                [style]="{width: '450px'}" styleClass="user-dialog" [draggable]="false" [resizable]="false">
         <ng-template pTemplate="content">
-          <div class="field mb-3">
-            <label for="efullName" class="block font-bold mb-1">Full Name</label>
-            <input type="text" pInputText id="efullName" [(ngModel)]="editUser.fullName" required />
-          </div>
-          <div class="field mb-3">
-            <label for="euserName" class="block font-bold mb-1">Username</label>
-            <input type="text" pInputText id="euserName" [(ngModel)]="editUser.userName" required />
-            <small class="text-muted">Unique identifier for the user.</small>
-          </div>
-          <div class="field mb-3">
-            <label for="eemail" class="block font-bold mb-1">Email</label>
-            <input type="email" pInputText id="eemail" [(ngModel)]="editUser.email" required />
-          </div>
-          <div class="field mb-3">
-            <label for="epassword" class="block font-bold mb-1">New Password (leave blank to keep current)</label>
-            <p-password [(ngModel)]="editUser.password" [feedback]="false" [toggleMask]="true" styleClass="w-full" placeholder="Optional"></p-password>
+          <div class="dialog-form pt-4">
+            <div class="field">
+              <label for="efullName">Full Name</label>
+              <input type="text" pInputText id="efullName" [(ngModel)]="editUser.fullName" />
+            </div>
+            <div class="field">
+              <label for="euserName">Username</label>
+              <div class="p-input-icon-left">
+                <i class="pi pi-at"></i>
+                <input type="text" pInputText id="euserName" [(ngModel)]="editUser.userName" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="eemail">Email Address</label>
+              <div class="p-input-icon-left">
+                <i class="pi pi-envelope"></i>
+                <input type="email" pInputText id="eemail" [(ngModel)]="editUser.email" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="epassword">New Password (optional)</label>
+              <p-password [(ngModel)]="editUser.password" [feedback]="false" [toggleMask]="true" 
+                          placeholder="Leave blank to keep current" styleClass="w-full" [inputStyle]="{width: '100%'}"></p-password>
+            </div>
           </div>
         </ng-template>
 
         <ng-template pTemplate="footer">
-          <button pButton label="Cancel" icon="pi pi-times" class="p-button-text" (click)="displayEditDialog = false"></button>
-          <button pButton label="Update User" icon="pi pi-check" class="p-button-info" (click)="updateUser()" [loading]="saving"></button>
+          <div class="dialog-footer">
+            <button pButton label="Cancel" icon="pi pi-times" class="p-button-text p-button-secondary" (click)="displayEditDialog = false"></button>
+            <button pButton label="Update User" icon="pi pi-check" class="p-button-info" (click)="updateUser()" [loading]="saving"></button>
+          </div>
         </ng-template>
       </p-dialog>
     </div>
@@ -330,6 +354,34 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     
     .empty-state { display: flex; flex-direction: column; align-items: center; padding: 48px 20px; gap: 8px; }
     .empty-icon { font-size: 3rem; color: #cbd5e1; } .empty-text { font-size: 1rem; font-weight: 600; color: #334155; margin: 0; }
+
+    /* ─── Premium Dialog Component ─── */
+    ::ng-deep .user-dialog .p-dialog-header {
+      background: #f8fafc; border-bottom: 3px solid #0d9488; padding: 1.25rem 1.5rem;
+    }
+    ::ng-deep .user-dialog .p-dialog-title { font-weight: 800; color: #1e293b; font-size: 1.2rem; }
+    ::ng-deep .user-dialog .p-dialog-content { padding: 0 1.5rem 1.5rem 1.5rem !important; background: #ffffff; }
+    ::ng-deep .user-dialog .p-dialog-footer { background: #f8fafc; padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; }
+
+    .dialog-form { display: flex; flex-direction: column; gap: 1.25rem; }
+    .field { display: flex; flex-direction: column; gap: 0.5rem; }
+    .field label { font-size: 0.85rem; font-weight: 700; color: #475569; letter-spacing: 0.025em; }
+
+    ::ng-deep .user-dialog .p-inputtext, 
+    ::ng-deep .user-dialog .p-dropdown,
+    ::ng-deep .user-dialog .p-password input {
+      padding: 0.75rem 1rem !important; border-radius: 10px !important; border: 1.5px solid #e2e8f0 !important;
+      font-size: 0.9rem !important; transition: all 0.2s; background: #fcfdfe;
+    }
+    ::ng-deep .user-dialog .p-inputtext:focus,
+    ::ng-deep .user-dialog .p-dropdown:focus-within {
+      border-color: #0d9488 !important; box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1) !important; background: #fff;
+    }
+    ::ng-deep .p-input-icon-left i { color: #94a3b8; }
+    ::ng-deep .p-input-icon-left .p-inputtext { padding-left: 2.5rem !important; }
+    
+    .dialog-footer { display: flex; justify-content: flex-end; gap: 0.75rem; width: 100%; }
+    ::ng-deep .p-button { border-radius: 10px !important; font-weight: 700 !important; }
   `]
 })
 export class UserManagementComponent implements OnInit {
