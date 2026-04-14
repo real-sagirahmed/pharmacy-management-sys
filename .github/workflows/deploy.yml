@@ -71,10 +71,10 @@ jobs:
       - name: Cleanup app_offline.htm (Bring Site Online)
         if: always()
         run: |
-          # Using lftp for a more robust cleanup
-          # It handles path navigation (cd) much better than curl
-          echo "Attempting to delete app_offline.htm using lftp..."
+          # Install lftp as it is not pre-installed on the runner
+          sudo apt-get update && sudo apt-get install -y lftp
           
+          echo "Attempting to delete app_offline.htm using lftp..."
           lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" -e "
             set ftp:ssl-allow no;
             set ftp:passive-mode true;
