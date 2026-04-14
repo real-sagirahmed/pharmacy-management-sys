@@ -71,21 +71,14 @@ jobs:
       - name: Cleanup app_offline.htm (Bring Site Online)
         if: always()
         run: |
-          # Wait a few seconds for the previous FTP session to clear
-          sleep 3
+          # Using lftp for a more robust cleanup
+          # It handles path navigation (cd) much better than curl
+          echo "Attempting to delete app_offline.htm using lftp..."
           
-          # Use curl with explicit FTPS and quote command to delete the file
-          # We try with SSL first, then fall back to plain if SSL fails
-          # -Q "DELE ..." executes the command on the server
-          # The URL ends in /wwwroot/ to ensure we are in the correct directory
-          
-          echo "Attempting to delete app_offline.htm..."
-          
-          curl -v -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
-            --ftp-ssl --ftp-pasv \
-            "ftp://${{ secrets.FTP_SERVER }}/wwwroot/" \
-            -Q "DELE app_offline.htm" || \
-          curl -v -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
-            "ftp://${{ secrets.FTP_SERVER }}/wwwroot/" \
-            -Q "DELE app_offline.htm" || \
-          echo "app_offline.htm might already be removed or requires manual deletion."
+          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" -e "
+            set ftp:ssl-allow no;
+            set ftp:passive-mode true;
+            cd /wwwroot || cd wwwroot || true;
+            rm -f app_offline.htm;
+            quit
+          " ${{ secrets.FTP_SERVER }}
