@@ -65,6 +65,11 @@ export class AuthService {
     return this.getRoles().includes('SystemAdmin');
   }
 
+  /** Returns the current logged-in user's username */
+  getUsername(): string | undefined {
+    return this.currentUserValue?.username;
+  }
+
   /** Returns true if the current user is SystemAdmin or Admin (Role check only) */
   isAdminOrAbove(): boolean {
     const roles = this.getRoles();

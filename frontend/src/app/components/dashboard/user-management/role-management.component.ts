@@ -25,7 +25,7 @@ import { TagModule } from 'primeng/tag';
   ],
   providers: [MessageService, ConfirmationService],
   template: `
-    <div class="page-wrap animate-fadein-up">
+    <div class="page-wrap animate-fadein-up" *ngIf="isSystemAdmin || hasPermission('Roles')">
       <p-toast></p-toast>
 
       <!-- Security Guidance Banner for non-SystemAdmin -->
@@ -40,12 +40,12 @@ import { TagModule } from 'primeng/tag';
                   class="p-button-text p-button-secondary p-button-sm p-0 h-8 w-8"></button>
           
           <div class="flex flex-col mr-auto">
-            <h1 class="text-base font-bold text-slate-800 m-0 leading-tight">Roles & Permissions</h1>
-            <p class="text-[9px] text-slate-400 m-0 leading-none">Define system roles and module permissions.</p>
+            <h1 class="text-base font-extrabold text-slate-900 m-0 leading-tight">Roles & Permissions</h1>
+            <p class="text-[11px] text-slate-700 m-0 leading-none mt-1 font-semibold">Define system roles and module permissions.</p>
           </div>
 
           <!-- Create Role Section (Merged) -->
-          <div class="flex items-center gap-2 max-w-xs" *ngIf="isSystemAdmin">
+          <div class="flex items-center gap-2 max-w-xs" *ngIf="isSystemAdmin || hasPermission('Roles', 'create')">
             <input type="text" pInputText [(ngModel)]="newRoleName" 
                    placeholder="New role name..." class="p-inputtext-sm text-xs w-32"
                    (input)="blockReservedRoleName()">
@@ -60,7 +60,7 @@ import { TagModule } from 'primeng/tag';
                <i class="pi pi-exclamation-triangle mr-1"></i> Unsaved
             </div>
 
-            <div class="flex items-center gap-2" *ngIf="isSystemAdmin">
+            <div class="flex items-center gap-2" *ngIf="isSystemAdmin || hasPermission('Roles', 'edit')">
               <button pButton label="Save Changes" icon="pi pi-check" 
                       class="p-button-sm p-button-success" 
                       [disabled]="!hasUnsavedChanges()" [loading]="savingPermissions"
@@ -87,12 +87,12 @@ import { TagModule } from 'primeng/tag';
                  [class.sysadmin-role-row]="role.name === 'SystemAdmin'"
                  (click)="onRoleSelect(role)">
               <div class="flex items-center gap-3">
-                <i [class]="'role-icon ' + (role.name === 'SystemAdmin' ? 'pi pi-crown text-amber-500' : 'pi pi-users text-slate-400')"></i>
+                <i [class]="'role-icon ' + (role.name === 'SystemAdmin' ? 'pi pi-crown text-amber-500' : 'pi pi-users text-slate-500')"></i>
                 <div class="flex flex-col">
                   <span class="role-name">{{ role.name }}</span>
                   <div class="flex gap-2">
-                    <span class="text-[10px] font-medium text-slate-400">ID: {{ role.id | slice:0:8 }}...</span>
-                    <span *ngIf="role.name === 'SystemAdmin'" class="sysadmin-role-badge">PROTECTED</span>
+                    <span class="text-[10px] font-bold text-slate-600">ID: {{ role.id | slice:0:8 }}...</span>
+                    <span *ngIf="role.name === 'SystemAdmin'" class="sysadmin-role-badge uppercase">Protected</span>
                   </div>
                 </div>
               </div>
@@ -102,16 +102,17 @@ import { TagModule } from 'primeng/tag';
                 </div>
               </div>
               <div class="role-actions">
-                <!-- Edit & Delete hidden for SystemAdmin or non-SystemAdmin users -->
-                <ng-container *ngIf="role.name !== 'SystemAdmin' && isSystemAdmin">
+                <!-- Edit & Delete hidden for SystemAdmin role itself -->
+                <ng-container *ngIf="role.name !== 'SystemAdmin' && role.name !== 'Admin' && (isSystemAdmin || hasPermission('Roles', 'edit'))">
                   <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-sm" 
                           (click)="editRole(role); $event.stopPropagation()"></button>
-                  <button pButton icon="pi pi-trash" class="p-button-rounded p-button-text p-button-sm p-button-danger" 
-                          (click)="confirmDelete(role); $event.stopPropagation()"
-                          *ngIf="role.name !== 'Admin'"></button>
                 </ng-container>
-                <ng-container *ngIf="role.name === 'SystemAdmin' || !isSystemAdmin">
-                  <i class="pi pi-lock text-amber-500 text-sm" [title]="!isSystemAdmin ? 'Permission required to edit' : 'SystemAdmin is fully protected'"></i>
+                <ng-container *ngIf="role.name !== 'SystemAdmin' && role.name !== 'Admin' && (isSystemAdmin || hasPermission('Roles', 'delete'))">
+                  <button pButton icon="pi pi-trash" class="p-button-rounded p-button-text p-button-sm p-button-danger" 
+                          (click)="confirmDelete(role); $event.stopPropagation()"></button>
+                </ng-container>
+                <ng-container *ngIf="role.name === 'SystemAdmin' || role.name === 'Admin' || (!isSystemAdmin && !hasPermission('Roles', 'edit'))">
+                  <i class="pi pi-lock text-amber-500 text-sm" [title]="!isSystemAdmin ? 'Permission required to edit' : 'System role is protected'"></i>
                 </ng-container>
               </div>
             </div>
@@ -135,10 +136,10 @@ import { TagModule } from 'primeng/tag';
               <tr class="unified-header-row">
                 <th style="min-width: 280px; background: white !important;">
                   <div class="flex items-center gap-3 w-full">
-                    <div class="flex items-center gap-2">
-                       <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest whitespace-nowrap">Permissions:</span>
-                       <span class="text-xs font-black text-teal-600 uppercase whitespace-nowrap">{{ selectedRole.name }}</span>
-                    </div>
+                      <div class="flex items-center gap-2">
+                         <span class="text-[10px] font-extrabold text-slate-700 uppercase tracking-widest whitespace-nowrap">Permissions:</span>
+                         <span class="text-xs font-black text-teal-700 uppercase whitespace-nowrap">{{ selectedRole.name }}</span>
+                      </div>
                     <div class="search-wrap compact-search-inline">
                       <i class="pi pi-search search-icon-sm"></i>
                       <input type="text" pInputText placeholder="Filter..." 
@@ -148,7 +149,7 @@ import { TagModule } from 'primeng/tag';
                 </th>
                 <th class="text-center" style="background: white !important;">
                   <div class="flex flex-col items-center gap-3">
-                    <span class="text-[10px] font-bold text-slate-400">VIEW</span>
+                    <span class="text-[10px] font-bold text-slate-600">VIEW</span>
                     <button class="bulk-set-btn" (click)="toggleAllColumn('canView')" title="Toggle View All">
                       <i class="pi pi-check text-[10px]"></i>
                     </button>
@@ -156,7 +157,7 @@ import { TagModule } from 'primeng/tag';
                 </th>
                 <th class="text-center" style="background: white !important;">
                   <div class="flex flex-col items-center gap-3">
-                    <span class="text-[10px] font-bold text-slate-400">CREATE</span>
+                    <span class="text-[10px] font-bold text-slate-600">CREATE</span>
                     <button class="bulk-set-btn" (click)="toggleAllColumn('canCreate')" title="Toggle Create All">
                       <i class="pi pi-check text-[10px]"></i>
                     </button>
@@ -164,7 +165,7 @@ import { TagModule } from 'primeng/tag';
                 </th>
                 <th class="text-center" style="background: white !important;">
                   <div class="flex flex-col items-center gap-3">
-                    <span class="text-[10px] font-bold text-slate-400">EDIT</span>
+                    <span class="text-[10px] font-bold text-slate-600">EDIT</span>
                     <button class="bulk-set-btn" (click)="toggleAllColumn('canEdit')" title="Toggle Edit All">
                       <i class="pi pi-check text-[10px]"></i>
                     </button>
@@ -172,7 +173,7 @@ import { TagModule } from 'primeng/tag';
                 </th>
                 <th class="text-center" style="background: white !important;">
                   <div class="flex flex-col items-center gap-3">
-                    <span class="text-[10px] font-bold text-slate-400">DELETE</span>
+                    <span class="text-[10px] font-bold text-slate-600">DELETE</span>
                     <button class="bulk-set-btn" (click)="toggleAllColumn('canDelete')" title="Toggle Delete All">
                       <i class="pi pi-check text-[10px]"></i>
                     </button>
@@ -181,8 +182,8 @@ import { TagModule } from 'primeng/tag';
                 <th class="text-center" style="width: 120px; background: white !important;">
                    <div class="flex items-center justify-between gap-3 px-1">
                     <div class="flex flex-col items-center gap-1">
-                      <span class="text-[9px] font-bold text-slate-400">ALL</span>
-                      <i class="pi pi-th-large text-slate-300 text-[10px]"></i>
+                      <span class="text-[9px] font-bold text-slate-700">ALL</span>
+                      <i class="pi pi-th-large text-slate-500 text-[10px]"></i>
                     </div>
                     <button pButton icon="pi pi-save" (click)="savePermissions()" 
                             [disabled]="saving" class="p-button-success p-button-sm h-8 w-8"></button>
@@ -266,8 +267,14 @@ import { TagModule } from 'primeng/tag';
     .main-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 0 !important; overflow-y: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); position: relative; }
     
     .content-grid { display: grid; grid-template-columns: 1fr 3fr; gap: 1.25rem; flex: 1; overflow: hidden; padding: 1rem 1.25rem; }
+    @media (max-width: 991px) {
+      .content-grid { grid-template-columns: 1fr; overflow-y: auto; height: auto; display: flex; flex-direction: column; }
+      .sidebar-card { max-height: 300px; min-height: 200px; }
+      .main-card { min-height: 500px; }
+      .page-wrap { height: auto; min-height: calc(100vh - 70px); }
+    }
     
-    .section-title { font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.25rem; }
+    .section-title { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.25rem; }
     .divider { height: 1px; background: #f1f5f9; }
     .empty-matrix { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; height: 100%; }
     .empty-matrix h3 { color: #64748b; margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 700; }
@@ -282,7 +289,7 @@ import { TagModule } from 'primeng/tag';
     }
     .role-row:hover { background: #fff; border-color: #0d948840; transform: translateX(4px); box-shadow: 0 4px 12px -2px rgba(13, 148, 136, 0.08); }
     .selected-role { background: #f0fdfa !important; border-color: #0d9488 !important; box-shadow: 0 4px 12px -2px rgba(13, 148, 136, 0.15) !important; }
-    .role-name { font-weight: 700; font-size: 0.95rem; color: #1e293b; }
+    .role-name { font-weight: 800; font-size: 0.95rem; color: #1e293b; }
     .selected-role .role-name { color: #0d9488; }
     .role-stats { color: #64748b; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
     .selected-role .role-stats { color: #0d9488aa; }
@@ -294,9 +301,9 @@ import { TagModule } from 'primeng/tag';
     ::ng-deep .matrix-table .p-datatable-tbody > tr:hover { background: #fcfcfc !important; }
     
     ::ng-deep .matrix-table .p-datatable-thead > tr > th { 
-      background: #f8fafc !important; color: #475569 !important; font-size: 0.7rem !important; 
-      border-bottom: 2px solid #e2e8f0 !important; padding: 16px 12px !important; 
-      text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;
+      background: #f1f5f9 !important; color: #0d9488 !important; font-size: 0.75rem !important; 
+      border-bottom: 2.5px solid #0d9488 !important; padding: 12px 12px !important; 
+      text-transform: uppercase; letter-spacing: 0.8px !important; font-weight: 900;
       position: sticky; top: 0; z-index: 5;
     }
     
@@ -339,9 +346,9 @@ import { TagModule } from 'primeng/tag';
     .matrix-table { border-radius: 0; }
     ::ng-deep .matrix-table .p-datatable-wrapper { padding: 0 1.5rem 1rem 1.5rem; background: #fff; border-radius: 0 0 16px 16px; min-height: 100%; border-top: 1px solid #f1f5f9; }
     ::ng-deep .matrix-table .p-datatable-thead > tr > th { 
-      background: #ffffff !important; color: #475569 !important; font-size: 0.68rem !important; 
-      border-bottom: 2px solid #e2e8f0 !important; padding: 6px 10px !important; 
-      text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;
+      background: #f1f5f9 !important; color: #0d9488 !important; font-size: 0.75rem !important; 
+      border-bottom: 2.5px solid #0d9488 !important; padding: 10px 10px !important; 
+      text-transform: uppercase; letter-spacing: 0.8px !important; font-weight: 900;
       position: sticky !important; top: 40px !important; z-index: 100 !important;
       box-shadow: 0 4px 6px -4px rgba(0,0,0,0.1);
       opacity: 1 !important;
@@ -600,5 +607,9 @@ export class RoleManagementComponent implements OnInit {
       this.newRoleName = '';
       this.messageService.add({ severity: 'warn', summary: 'Reserved', detail: '"SystemAdmin" is a reserved role name.' });
     }
+  }
+
+  hasPermission(mod: string, act: 'view' | 'create' | 'edit' | 'delete' = 'view') {
+    return this.authService.hasPermission(mod, act);
   }
 }

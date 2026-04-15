@@ -1,4 +1,5 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
+import { AuthService } from '../../services/auth.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaymentService, DueRecord } from '../../services/payment.service';
@@ -12,6 +13,7 @@ import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { TabsModule } from 'primeng/tabs';
 import { MoneyReceiptService } from './money-receipt.service';
+import { TooltipDirective } from '../../directives/tooltip.directive';
 
 @Component({
   selector: 'app-due-collection',
@@ -19,7 +21,7 @@ import { MoneyReceiptService } from './money-receipt.service';
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule, 
     InputTextModule, InputNumberModule, DialogModule, SelectModule, 
-    ToastModule, TabsModule
+    ToastModule, TabsModule, TooltipDirective
   ],
   templateUrl: './due-collection.component.html',
   styleUrl: './due-collection.component.css'
@@ -78,8 +80,10 @@ export class DueCollectionComponent implements OnInit {
   constructor(
     private paymentService: PaymentService,
     private moneyReceiptService: MoneyReceiptService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    public auth: AuthService
   ) { }
+
 
   ngOnInit() {
     this.loadDues();
@@ -254,5 +258,13 @@ export class DueCollectionComponent implements OnInit {
     this.saving = false;
     // CRITICAL FIX: refresh dues even on error to ensure frontend state is in sync with backend partially applied states (though bulk should prevent that)
     this.loadDues(); 
+  }
+
+  hasPermission(mod: string, act: 'view' | 'create' | 'edit' | 'delete' = 'view'): boolean {
+    return this.auth.hasPermission(mod, act);
+  }
+
+  isSystemAdmin(): boolean {
+    return this.auth.isSystemAdmin();
   }
 }

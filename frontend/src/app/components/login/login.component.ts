@@ -151,11 +151,11 @@ import { CommonModule } from '@angular/common';
 
     .form-header { margin-bottom: 32px; }
     .form-title { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; }
-    .form-sub   { font-size: 0.95rem; color: #64748b; margin: 0; }
+    .form-sub   { font-size: 0.95rem; color: #334155; font-weight: 500; margin: 0; }
 
     .auth-form { display: flex; flex-direction: column; gap: 20px; }
     .form-field { display: flex; flex-direction: column; gap: 8px; }
-    .field-label { font-size: .875rem; font-weight: 600; color: #334155; }
+    .field-label { font-size: .875rem; font-weight: 700; color: #1e293b; }
     .field-label-row { display: flex; justify-content: space-between; align-items: center; }
     .field-link { font-size: .8rem; font-weight: 700; color: #0d9488; text-decoration: none; }
     .field-link:hover { color: #0f766e; }
@@ -197,7 +197,7 @@ import { CommonModule } from '@angular/common';
     .submit-btn:hover:not(:disabled) { background: #1e293b; transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(0,0,0,.1); }
     .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-    .auth-footer { text-align: center; font-size: .9rem; color: #64748b; margin-top: 12px; }
+    .auth-footer { text-align: center; font-size: .9rem; color: #334155; font-weight: 500; margin-top: 12px; }
     .auth-footer a { color: #0d9488; font-weight: 700; text-decoration: none; margin-left: 4px; }
     .auth-footer a:hover { color: #0f766e; text-decoration: underline; }
 

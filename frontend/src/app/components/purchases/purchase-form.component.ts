@@ -174,7 +174,7 @@ interface PaymentRow {
 
           <!-- Table -->
           <div class="med-table-wrap">
-            <table class="med-table">
+            <table class="med-table adaptive-table">
               <thead>
                 <tr>
                   <th style="min-width:200px">Product</th>
@@ -193,7 +193,7 @@ interface PaymentRow {
               <tbody>
                 <tr *ngFor="let row of rows(); let i = index">
                   <!-- Product -->
-                  <td>
+                  <td data-label="Product">
                     <div class="med-search-cell">
                       <p-autoComplete
                         [(ngModel)]="row.medicineName"
@@ -216,10 +216,10 @@ interface PaymentRow {
                     </div>
                   </td>
                   <!-- Batch -->
-                  <td><input class="cell-input" [(ngModel)]="row.batchNumber" 
+                  <td data-label="Batch"><input class="cell-input" [(ngModel)]="row.batchNumber" 
                              (blur)="onBatchChange(row)" placeholder="Batch No"></td>
                   <!-- Expiry -->
-                  <td>
+                  <td data-label="Expiry">
                     <div class="expiry-cell">
                       <p-datepicker #expiryPicker [(ngModel)]="row.expiryDate" [showIcon]="false"
                         dateFormat="dd/mm/yy" appendTo="body"
@@ -230,13 +230,13 @@ interface PaymentRow {
                     </div>
                   </td>
                   <!-- Qty -->
-                  <td>
+                  <td data-label="Qty">
                     <p-inputNumber #qtyInput [(ngModel)]="row.quantity" [min]="1" [showButtons]="false"
                       (ngModelChange)="recalcRow(row)" (onFocus)="$event.target.select()"
                       styleClass="cell-num" inputStyleClass="cell-input-n"></p-inputNumber>
                   </td>
                    <!-- UOM -->
-                  <td>
+                  <td data-label="Unit (UOM)">
                     <div class="uom-cell">
                       <p-select class="cell-select-wrap" [(ngModel)]="row.uomId" (ngModelChange)="onUomChange(row)"
                         [options]="uoms" optionLabel="name" optionValue="uomId"
@@ -246,14 +246,14 @@ interface PaymentRow {
                     </div>
                   </td>
                   <!-- Unit Price -->
-                  <td>
+                  <td data-label="Unit Price">
                     <p-inputNumber [(ngModel)]="row.unitCost" [minFractionDigits]="2" [showButtons]="false"
                       (ngModelChange)="recalcRow(row)"
                       styleClass="cell-num" inputStyleClass="cell-input-n">
                     </p-inputNumber>
                   </td>
                   <!-- Discount -->
-                  <td>
+                  <td data-label="Discount">
                     <div class="disc-cell">
                       <button class="disc-toggle" [class.active]="row.discountType==='percent'"
                         (click)="toggleDiscountType(row)" title="Toggle Tk/%">
@@ -266,7 +266,7 @@ interface PaymentRow {
                     </div>
                   </td>
                   <!-- Tax -->
-                  <td>
+                  <td data-label="Tax %">
                     <div class="uom-cell">
                       <p-select class="cell-select-wrap" [(ngModel)]="row.taxId" (ngModelChange)="onTaxChange(row)"
                         [options]="taxes" optionLabel="name" optionValue="taxId"
@@ -276,14 +276,14 @@ interface PaymentRow {
                     </div>
                   </td>
                   <!-- Sale Price -->
-                  <td>
+                  <td data-label="Sale Price">
                     <p-inputNumber [(ngModel)]="row.salePrice" [minFractionDigits]="2" [showButtons]="false"
                       (onKeyDown)="$event.keyCode === 13 && handleSalePriceEnter(i)"
                       styleClass="cell-num" inputStyleClass="cell-input-n">
                     </p-inputNumber>
                   </td>
                   <!-- Total -->
-                  <td class="text-right total-cell">
+                  <td data-label="Total" class="text-right total-cell">
                     <span>{{ row.lineTotal | number:'1.2-2' }}</span>
                   </td>
                   <!-- Remove -->
@@ -539,7 +539,7 @@ interface PaymentRow {
     .sticky-header { position: sticky; top: 0; z-index: 1000; background: #fff; border-bottom: 2px solid #e2e8f0; }
     .page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .page-title { font-size: 1.15rem; font-weight: 800; color: #1e293b; margin: 0; }
-    .page-sub { font-size: .75rem; color: #64748b; margin: 0; }
+    .page-sub { font-size: .8rem; color: #334155; font-weight: 500; margin: 0; }
 
     .btn-primary {
       display: flex; align-items: center; gap: 8px;
@@ -562,9 +562,9 @@ interface PaymentRow {
     @media (max-width: 900px) { .top-cards-grid { grid-template-columns: 1fr; } }
 
     .info-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-    .card-label { font-size: .6rem; font-weight: 700; color: #94a3b8; letter-spacing: .1em; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .card-label { font-size: .65rem; font-weight: 800; color: #475569; letter-spacing: .1em; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
     .field-row { display: flex; align-items: center; gap: 8px; }
-    .fl { font-size: .75rem; color: #64748b; font-weight: 600; white-space: nowrap; width: 80px; flex-shrink: 0; }
+    .fl { font-size: .75rem; color: #1e293b; font-weight: 700; white-space: nowrap; width: 80px; flex-shrink: 0; }
     .fv { font-size: .8rem; color: #0f172a; font-weight: 600; }
 
     .fi { flex: 1; height: 34px; padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .8rem; font-family: 'Inter', sans-serif; outline: none; transition: border-color .15s; background: #fff; }
@@ -589,7 +589,7 @@ interface PaymentRow {
     /* ── Medicine Table ── */
     .med-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; }
     .med-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-    .med-table th { background: #f8fafc; color: #0d9488; font-weight: 700; padding: 8px 10px; text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid #0d9488; white-space: nowrap; }
+    .med-table th { background: #f1f5f9; color: #0d9488; font-weight: 800; padding: 10px 10px; text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .7px; border-bottom: 2.5px solid #0d9488; white-space: nowrap; }
     .med-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     .med-table tr:last-child td { border-bottom: none; }
     .med-table tr:hover td { background: #f8fafc; }
@@ -598,6 +598,33 @@ interface PaymentRow {
     .cell-input:focus { border-color: #0d9488; }
     ::ng-deep .cell-num { width: 100%; }
     ::ng-deep .cell-input-n { height: 30px !important; padding: 4px 8px !important; border: 1.5px solid #e2e8f0 !important; border-radius: 6px !important; font-size: .78rem !important; width: 100% !important; }
+
+    /* ── Adaptive Table (Mobile) ── */
+    @media (max-width: 768px) {
+      .page-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .top-cards-grid { grid-template-columns: 1fr !important; }
+      .bottom-grid { grid-template-columns: 1fr !important; }
+      
+      .adaptive-table thead { display: none; }
+      .adaptive-table tbody tr {
+        display: block; border: 1.5px solid #e2e8f0; border-radius: 12px;
+        margin-bottom: 1rem; padding: 8px; background: #fff;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      }
+      .adaptive-table tbody td {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px dashed #f1f5f9 !important; padding: 10px 8px !important;
+        text-align: right; width: 100% !important;
+      }
+      .adaptive-table tbody td:last-child { border-bottom: none !important; }
+      .adaptive-table tbody td:before {
+        content: attr(data-label); font-weight: 800; color: #475569;
+        text-transform: uppercase; font-size: 0.65rem; flex-shrink: 0;
+        margin-right: 1rem; text-align: left;
+      }
+      .cell-input, ::ng-deep .cell-input-n, ::ng-deep .cell-select-wrap { max-width: 200px; }
+      .total-cell { font-weight: 800; color: #0d9488; }
+    }
     ::ng-deep .cell-cal { width: 100%; }
     ::ng-deep .cell-cal .p-datepicker-input { height: 30px; padding: 4px 8px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: .78rem; width: 100%; }
     ::ng-deep .med-auto { width: 100%; }

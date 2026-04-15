@@ -84,10 +84,10 @@
               </div>
             </ng-template>
           </p-autoComplete>
-          <button class="btn-add-inline" (click)="openQuickCustomer()" title="Add New Customer">
+          <button class="btn-add-inline" (click)="openQuickCustomer()" [appTooltip]="'Add New Customer'">
             <i class="pi pi-plus"></i>
           </button>
-          <button class="btn-clear-inline" (click)="clearCustomer()" *ngIf="selectedCustomer" title="Clear">
+          <button class="btn-clear-inline" (click)="clearCustomer()" *ngIf="selectedCustomer" [appTooltip]="'Clear Selected Customer'">
             <i class="pi pi-times"></i>
           </button>
         </div>
@@ -133,7 +133,7 @@
         </div>
 
         <div class="med-table-wrapper">
-          <table class="med-table">
+          <table class="med-table adaptive-table">
             <thead>
               <tr>
                 <th class="col-prod">Product</th>
@@ -156,7 +156,7 @@
                 (focusout)="activeRowIndex.set(null)">
 
                 <!-- Product -->
-                <td class="col-prod">
+                <td class="col-prod" data-label="Product">
                   <p-autoComplete [(ngModel)]="row.medicine" [suggestions]="row.medicineSuggestions"
                     (completeMethod)="searchMedicine($event, row)" [dropdown]="true" field="name"
                     placeholder="Search medicine..." (onSelect)="onMedicineSelect($event, row)"
@@ -181,7 +181,7 @@
                 </td>
 
                 <!-- Batch -->
-                <td class="col-batch">
+                <td class="col-batch" data-label="Batch">
                   <p-select [options]="row.batchOptions" [(ngModel)]="row.batchNumber" optionLabel="batchNumber"
                     optionValue="batchNumber" placeholder="Select batch" [disabled]="!row.medicineId"
                     styleClass="w-full batch-select" appendTo="body"
@@ -190,29 +190,29 @@
                       <div class="batch-option">
                         <span>{{ b.batchNumber }}</span>
                         <span class="batch-qty">Qty: {{ b.availableQty }}</span>
-                        <span class="near-exp-dot" *ngIf="b.isNearExpiry" title="Near Expiry">⚠️</span>
+                        <span class="near-exp-dot" *ngIf="b.isNearExpiry" [appTooltip]="'Critical: Batch is near expiry!'">⚠️</span>
                       </div>
                     </ng-template>
                   </p-select>
                 </td>
 
                 <!-- Expiry -->
-                <td class="col-exp">
+                <td class="col-exp" data-label="Expiry">
                   <span [class.expiry-near]="row.isNearExpiry">
                     {{ expiryLabel(row.expiryDate) }}
-                    <span class="near-badge" *ngIf="row.isNearExpiry" title="Near Expiry">!</span>
+                    <span class="near-badge" *ngIf="row.isNearExpiry" [appTooltip]="'Batch expires soon (within 3 months)'">!</span>
                   </span>
                 </td>
 
                 <!-- Stock -->
-                <td class="col-stock">
+                <td class="col-stock" data-label="Stock">
                   <span class="stock-badge" [class.low]="row.availableQty <= 10" [class.no]="row.availableQty === 0">
                     {{ row.availableQty }}
                   </span>
                 </td>
 
                 <!-- Qty -->
-                <td class="col-qty">
+                <td class="col-qty" data-label="Quantity">
                   <div class="qty-adjuster">
                     <button class="btn-qty" (click)="adjustQty(row, -1)" [disabled]="row.quantity <= 1">
                       <i class="pi pi-minus"></i>
@@ -227,15 +227,15 @@
                 </td>
 
                 <!-- Price -->
-                <td class="col-price">
+                <td class="col-price" data-label="Price">
                   <p-inputNumber [(ngModel)]="row.unitPrice" mode="decimal" [minFractionDigits]="2"
                     (ngModelChange)="recalcRow(row)" styleClass="price-input" inputStyleClass="price-num" prefix="৳" />
                 </td>
 
                 <!-- Discount -->
-                <td class="col-disc">
+                <td class="col-disc" data-label="Discount">
                   <div class="disc-cell-v2">
-                    <div class="type-switcher" (click)="toggleDiscountType(row)" [title]="'Click to change to ' + (row.discountType === 'percent' ? 'Taka' : 'Percentage')">
+                    <div class="type-switcher" (click)="toggleDiscountType(row)" [appTooltip]="'Switch to ' + (row.discountType === 'percent' ? 'Fixed Amount' : 'Percentage Discount')">
                       <div class="sw-pill" [class.active]="row.discountType === 'percent'">%</div>
                       <div class="sw-pill" [class.active]="row.discountType === 'amount'">৳</div>
                     </div>
@@ -249,13 +249,13 @@
                 </td>
 
                 <!-- VAT -->
-                <td class="col-tax">
+                <td class="col-tax" data-label="VAT (%)">
                   <p-select [options]="taxes" [(ngModel)]="row.taxId" optionLabel="name" optionValue="taxId"
                     placeholder="None" [showClear]="true" styleClass="tax-select" appendTo="body" (onChange)="onTaxChange(row)" />
                 </td>
 
                 <!-- Line Total -->
-                <td class="col-total">
+                <td class="col-total" data-label="Subtotal">
                   <div class="total-result-box">
                     <span class="currency-label">৳</span>
                     <span class="line-total-val">{{ (row.lineTotal || 0) | number:'1.2-2' }}</span>
@@ -264,7 +264,7 @@
 
                 <!-- Delete -->
                 <td class="col-del">
-                  <button class="btn-del-row" (click)="removeRow(i)" title="Remove">
+                  <button class="btn-del-row" (click)="removeRow(i)" [appTooltip]="'Remove Medicine Row'">
                     <i class="pi pi-trash"></i>
                   </button>
                 </td>
@@ -412,21 +412,21 @@
 
           <!-- ── ACTION BUTTONS ──────────────────────────────────────── -->
           <div class="action-buttons mt-3">
-            <button class="btn-sale-print" (click)="completeSale(true)" [disabled]="saving" style="width: 100%;">
+            <button class="btn-sale-print" (click)="completeSale(true)" [disabled]="saving" style="width: 100%;" [appTooltip]="'Finalize Sale and Open Print Preview'">
               <i class="pi pi-print" *ngIf="!saving"></i>
               <i class="pi pi-spin pi-spinner" *ngIf="saving"></i>
               Sale &amp; Print Invoice
             </button>
             <div class="action-grid-mini mt-2">
-              <button class="btn-sale" (click)="completeSale(false)" [disabled]="saving">
+              <button class="btn-sale" (click)="completeSale(false)" [disabled]="saving" [appTooltip]="'Save Sale without printing'">
                 <i class="pi pi-check-circle"></i>
                 Sale
               </button>
-              <button class="btn-hold" (click)="holdSale()" [disabled]="saving">
+              <button class="btn-hold" (click)="holdSale()" [disabled]="saving" [appTooltip]="'Hold Sale (Quotation mode, no stock deduction)'">
                 <i class="pi pi-pause-circle"></i>
                 Hold
               </button>
-              <button class="btn-cancel" (click)="cancelSale()">
+              <button class="btn-cancel" (click)="cancelSale()" [appTooltip]="'Discard current sale data'">
                 <i class="pi pi-times-circle"></i>
                 Cancel
               </button>

@@ -15,13 +15,14 @@ import { DropdownModule } from 'primeng/dropdown';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SkeletonModule } from 'primeng/skeleton';
 import { PartyService } from '../../services/party.service';
+import { TooltipDirective } from '../../directives/tooltip.directive';
 
 @Component({
   selector: 'app-report-viewer',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, CalendarModule, CardModule, TagModule, DropdownModule, InputNumberModule, MenuModule, SkeletonModule],
+  imports: [CommonModule, FormsModule, TableModule, ButtonModule, CalendarModule, CardModule, TagModule, DropdownModule, InputNumberModule, MenuModule, SkeletonModule, TooltipDirective],
   template: `
-    <div class="report-container animate-fadein-up">
+    <div class="report-container animate-fadein-up" *ngIf="hasReportAccess(reportType)">
       <div class="report-header">
         <div class="header-main">
           <div class="title-wrap">
@@ -30,7 +31,7 @@ import { PartyService } from '../../services/party.service';
           </div>
           <div class="header-actions">
             <!-- Modern Export Dropdown -->
-            <button pButton label="Export" icon="pi pi-download" class="p-button-outlined p-button-sm" (click)="exportMenu.toggle($event)"></button>
+            <button pButton label="Export" icon="pi pi-download" class="p-button-outlined p-button-sm" (click)="exportMenu.toggle($event)" [appTooltip]="'Download this report as PDF or Excel'"></button>
             <p-menu #exportMenu [model]="exportItems" [popup]="true" appendTo="body"></p-menu>
           </div>
         </div>
@@ -39,9 +40,9 @@ import { PartyService } from '../../services/party.service';
           
           <!-- Quick Filters -->
           <div class="quick-filters flex gap-1 mr-4 border-r border-slate-200 pr-4">
-            <button pButton label="Today" class="p-button-text p-button-sm quick-btn" (click)="setQuickDate('today')"></button>
-            <button pButton label="Week" class="p-button-text p-button-sm quick-btn" (click)="setQuickDate('week')"></button>
-            <button pButton label="Month" class="p-button-text p-button-sm quick-btn" (click)="setQuickDate('month')"></button>
+            <button pButton label="Today" class="p-button-text p-button-sm quick-btn" (click)="setQuickDate('today')" [appTooltip]="'Filter for today only'"></button>
+            <button pButton label="Week" class="p-button-text p-button-sm quick-btn" (click)="setQuickDate('week')" [appTooltip]="'Filter for the current week'"></button>
+            <button pButton label="Month" class="p-button-text p-button-sm quick-btn" (click)="setQuickDate('month')" [appTooltip]="'Filter for the current month'"></button>
           </div>
 
           <div class="filter-item">
@@ -60,7 +61,7 @@ import { PartyService } from '../../services/party.service';
             <label>Count</label>
             <p-inputNumber [(ngModel)]="topSellingCount" [min]="5" [max]="100" class="p-inputtext-sm"></p-inputNumber>
           </div>
-          <button pButton label="Generate" icon="pi pi-refresh" class="p-button-sm mt-auto shadow-sm" (click)="loadData()" [loading]="loading()"></button>
+          <button pButton label="Generate" icon="pi pi-refresh" class="p-button-sm mt-auto shadow-sm" (click)="loadData()" [loading]="loading()" [appTooltip]="'Generate report with selected filters'"></button>
         </div>
         
         <div class="filter-bar" *ngIf="reportType === 'expiry'">
@@ -68,7 +69,7 @@ import { PartyService } from '../../services/party.service';
             <label>Months to Expiry</label>
             <p-inputNumber [(ngModel)]="expiryMonths" [min]="1" [max]="60" class="p-inputtext-sm"></p-inputNumber>
           </div>
-          <button pButton label="Generate" icon="pi pi-refresh" class="p-button-sm mt-auto shadow-sm" (click)="loadData()" [loading]="loading()"></button>
+          <button pButton label="Generate" icon="pi pi-refresh" class="p-button-sm mt-auto shadow-sm" (click)="loadData()" [loading]="loading()" [appTooltip]="'Generate report with selected filters'"></button>
         </div>
       </div>
 
@@ -92,8 +93,8 @@ import { PartyService } from '../../services/party.service';
               <th class="text-right" style="min-width: 120px">Subtotal</th>
               <th class="text-right" style="min-width: 100px">Discount</th>
               <th class="text-right" style="min-width: 100px">Tax</th>
-              <th class="text-right font-bold text-teal-700" style="min-width: 130px">Grand Total</th>
-              <th class="text-right" *ngIf="isAdmin()" style="min-width: 120px">Profit</th>
+              <th class="text-right font-bold text-teal-700" style="min-width: 130px" [appTooltip]="'Total amount including VAT and after discounts'">Grand Total</th>
+              <th class="text-right" *ngIf="isAdmin()" style="min-width: 120px" [appTooltip]="'Estimated profit: Sale Price - Purchase Cost'">Profit</th>
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-s>
@@ -139,13 +140,13 @@ import { PartyService } from '../../services/party.service';
               <th class="text-center" style="min-width: 100px">Stock</th>
               <th class="text-right" style="min-width: 150px">Purchase Price</th>
               <th class="text-right" style="min-width: 150px">Sale Price</th>
-              <th class="text-right" style="min-width: 180px">Stock Value (Pur.)</th>
+              <th class="text-right" style="min-width: 180px" [appTooltip]="'Total current inventory worth based on Purchase Price'">Stock Value (Pur.)</th>
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-m>
-            <tr class="smart-row">
-              <td class="text-xs uppercase font-bold text-slate-500" pFrozenColumn>{{ m.medicineCode }}</td>
-              <td class="font-bold text-indigo-700" pFrozenColumn>{{ m.medicineName }}</td>
+            <tr class="smart-row bg-white">
+              <td class="text-xs uppercase font-bold text-slate-700" pFrozenColumn>{{ m.medicineCode }}</td>
+              <td class="font-bold text-indigo-800" pFrozenColumn>{{ m.medicineName }}</td>
               <td><p-tag [value]="m.category" severity="info" class="text-[10px]"></p-tag></td>
               <td class="text-center">
                 <span [class.text-red-600]="m.currentStock < 10" [class.font-bold]="m.currentStock < 10">
@@ -188,9 +189,9 @@ import { PartyService } from '../../services/party.service';
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-m>
-            <tr class="smart-row">
-              <td class="text-xs uppercase font-bold text-slate-500" pFrozenColumn>{{ m.medicineCode }}</td>
-              <td class="font-bold text-indigo-700" pFrozenColumn>{{ m.medicineName }}</td>
+            <tr class="smart-row bg-white">
+              <td class="text-xs uppercase font-bold text-slate-700" pFrozenColumn>{{ m.medicineCode }}</td>
+              <td class="font-bold text-indigo-800" pFrozenColumn>{{ m.medicineName }}</td>
               <td><p-tag [value]="m.category" severity="info" class="text-[10px]"></p-tag></td>
               <td class="text-center text-red-600 font-black">{{ m.currentStock }}</td>
               <td class="text-right">{{ m.purchasePrice | number:'1.2-2' }}</td>
@@ -220,9 +221,9 @@ import { PartyService } from '../../services/party.service';
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-e>
-            <tr class="smart-row" [ngClass]="{'bg-red-50': e.status === 'Expired', 'opacity-70': e.remainingStock === 0}">
-              <td class="font-bold text-indigo-700" pFrozenColumn>{{ e.medicineName }}</td>
-              <td class="font-mono text-slate-500" pFrozenColumn>{{ e.batchNumber }}</td>
+            <tr class="smart-row bg-white" [ngClass]="{'bg-red-50': e.status === 'Expired', 'opacity-70': e.remainingStock === 0}">
+              <td class="font-bold text-indigo-800" pFrozenColumn>{{ e.medicineName }}</td>
+              <td class="font-mono text-slate-700" pFrozenColumn>{{ e.batchNumber }}</td>
               <td>{{ e.expiryDate | date:'yyyy-MM-dd' }}</td>
               <td class="text-center font-bold" [class.text-red-600]="e.daysUntilExpiry < 0">{{ e.daysUntilExpiry }}</td>
               <td class="text-center font-bold">{{ e.remainingStock }}</td>
@@ -250,7 +251,7 @@ import { PartyService } from '../../services/party.service';
               <th style="min-width: 250px" pFrozenColumn>Medicine</th>
               <th class="text-center" style="min-width: 150px">Total Quantity Sold</th>
               <th class="text-center" style="min-width: 120px">Transactions</th>
-              <th class="text-right" style="min-width: 180px">Total Revenue</th>
+               <th class="text-right" style="min-width: 180px" [appTooltip]="'Total amount generated from this medicine'">Total Revenue</th>
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-t let-i="rowIndex">
@@ -273,7 +274,7 @@ import { PartyService } from '../../services/party.service';
         </p-table>
 
         <!-- ── Ledger Report ── -->
-        <div *ngIf="reportType === 'ledger' && !selectedPartyId" class="p-8 text-center text-slate-500">
+        <div *ngIf="reportType === 'ledger' && !selectedPartyId" class="p-8 text-center text-slate-600 font-medium">
            <i class="pi pi-users text-4xl mb-4 text-slate-300"></i>
            <p class="text-lg">Please select a party and generate to view the ledger.</p>
         </div>
@@ -285,7 +286,7 @@ import { PartyService } from '../../services/party.service';
               <th style="min-width: 100px">Type</th>
               <th class="text-right" style="min-width: 130px">Debit</th>
               <th class="text-right" style="min-width: 130px">Credit</th>
-              <th class="text-right" style="min-width: 160px">Running Balance</th>
+              <th class="text-right" style="min-width: 160px" [appTooltip]="'Remaining balance: Total Due - Total Paid'">Running Balance</th>
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-l>
@@ -448,7 +449,7 @@ import { PartyService } from '../../services/party.service';
     .report-header { display: flex; flex-direction: column; gap: 1.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1.5rem; margin-bottom: 2rem; }
     .header-main { display: flex; justify-content: space-between; align-items: flex-start; }
     .report-title { font-size: 1.875rem; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -0.03em; font-family: 'Inter', system-ui, sans-serif; }
-    .report-subtitle { color: #64748b; font-size: 0.95rem; margin-top: 0.35rem; font-weight: 500; }
+    .report-subtitle { color: #334155; font-size: 0.95rem; margin-top: 0.35rem; font-weight: 500; }
     .header-actions { display: flex; gap: 1rem; align-items: center; }
     
     .filter-bar { 
@@ -456,11 +457,11 @@ import { PartyService } from '../../services/party.service';
       width: fit-content; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.01);
     }
     .filter-item { display: flex; flex-direction: column; gap: 0.5rem; }
-    .filter-item label { font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem;}
+    .filter-item label { font-size: 0.75rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem;}
     
     .quick-filters { align-items: center; display: flex; gap: 0.5rem; margin-left: 0.5rem; border-left: 1px solid #e2e8f0; padding-left: 1.5rem;}
-    .quick-btn { color: #64748b; font-weight: 600; font-size: 0.85rem; padding: 0.35rem 0.75rem; border-radius: 6px; transition: all 0.2s ease; border: 1px solid transparent; }
-    .quick-btn:hover { background: #ffffff; color: #0f172a; border-color: #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .quick-btn { color: #334155; font-weight: 700; font-size: 0.85rem; padding: 0.35rem 0.75rem; border-radius: 6px; transition: all 0.2s ease; border: 1px solid transparent; }
+    .quick-btn:hover { background: #ffffff; color: #0d9488; border-color: #0d9488; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
     ::ng-deep .p-calendar .p-inputtext, ::ng-deep .p-dropdown .p-dropdown-label { min-width: 140px; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 0.9rem;}
     ::ng-deep .p-calendar .p-inputtext { padding: 0.5rem 0.75rem; }
@@ -476,15 +477,15 @@ import { PartyService } from '../../services/party.service';
     ::ng-deep .smart-table .p-datatable-wrapper { max-height: 550px; }
     ::ng-deep .smart-table .p-datatable-thead > tr > th {
       position: sticky; top: 0; z-index: 10; background: #f1f5f9 !important; 
-      box-shadow: inset 0 -2px 0 #cbd5e1;
-      padding: 0.875rem 1rem; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; color: #334155;
-      letter-spacing: 0.02em; border: none; white-space: nowrap;
+      box-shadow: inset 0 -2.5px 0 #0d9488;
+      padding: 0.875rem 1rem; font-size: 0.8rem; text-transform: uppercase; font-weight: 800; color: #0d9488;
+      letter-spacing: 0.7px !important; border: none; white-space: nowrap;
     }
     ::ng-deep .smart-table .p-datatable-tbody > tr > td {
-        padding: 0.875rem 1rem; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 0.9rem;
+        padding: 0.875rem 1rem; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 0.9rem; font-weight: 500;
     }
     ::ng-deep .smart-table .p-datatable-tfoot > tr > td {
-        padding: 1rem; border-top: 2px solid #e2e8f0; font-size: 0.95rem;
+        padding: 1rem; border-top: 2.5px solid #0d9488; font-size: 0.95rem; font-weight: 900; color: #1e293b; background: #f8fafc !important;
     }
     ::ng-deep .smart-table .p-datatable-frozen-tbody > tr > td { background: #ffffff; }
     
@@ -644,5 +645,23 @@ export class ReportViewerComponent implements OnInit {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  hasReportAccess(type: string): boolean {
+    if (this.authService.isSystemAdmin()) return true;
+    
+    switch (type) {
+      case 'sales-summary': return this.authService.hasPermission('Sales Reports', 'view');
+      case 'purchase-summary': return this.authService.hasPermission('Purchase Reports', 'view');
+      case 'stock-status': return this.authService.hasPermission('Inventory Reports', 'view');
+      case 'profit-loss': return this.authService.hasPermission('Financial Reports', 'view');
+      case 'expiry': return this.authService.hasPermission('Expiry Reports', 'view');
+      case 'top-selling': return this.authService.hasPermission('Top Selling Reports', 'view');
+      case 'low-stock': return this.authService.hasPermission('Low Stock Reports', 'view');
+      case 'ledger': return this.authService.hasPermission('Ledger Reports', 'view');
+      case 'user-performance': return this.authService.hasPermission('User Performance Reports', 'view');
+      case 'vat': return this.authService.hasPermission('VAT Reports', 'view');
+      default: return this.authService.hasPermission('Reports', 'view');
+    }
   }
 }

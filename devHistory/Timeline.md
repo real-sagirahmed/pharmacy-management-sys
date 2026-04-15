@@ -4,6 +4,19 @@
 
 ---
 
+- [2026-04-15 06:25 PM] - Advanced Universal Global Search
+- **Task:** Implementation of a Premium Global Search Engine with Absolute RBAC Security
+- **Details:** 
+  - **Secure Backend API:** Engineered a highly secure centralized search controller that strictly adheres to the dynamic Permission Matrix (RBAC). Data from Medicines, Sales, Purchases, and Parties modules are only returned if the active user possesses explicit viewing rights.
+  - **Comprehensive Filtering:** Built complex server-side LINQ projections to gracefully search across strings, dynamically filter by 'Status', and accurately query date ranges across multiple interconnected tables.
+  - **Command Palette UI:** Designed an ultra-premium, Mac Spotlight-inspired floating Command Palette integrating Glassmorphism aesthetics and smooth staggered slide-down animations for ultra-fast UX.
+  - **Magic Tags & Advanced UX:** Shifted from generic filters to a Collapsible Filter Drawer strategy. Implemented a "Magic Tags" parser (e.g., `:due`, `:active`) allowing users to natively chain filter scopes directly within the search bar. 
+  - **Robust Shortcut Bindings:** Hooked a universal `Ctrl+K` keydown listener at the application level to instantly pop the Search interface regardless of active route, completely shielded from sidebar overflows using `appendTo="body"`.
+- **Technology:** C# 12, ASP.NET Core 8 Entity Framework, Angular 19 Signals, PrimeNG (Dialog, TreeSelect, Calendar), RxJS (`debounceTime`).
+- **Status:** COMPLETED & VERIFIED
+
+---
+
 - [2026-04-14 12:40 AM] - SystemAdmin Self-Profile Management
 - **Task:** Enabling Self-Editing for SystemAdmin (Username, Email, Password)
 - **Details:** 

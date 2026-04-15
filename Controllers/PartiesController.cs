@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PharmacyApi.DTOs;
 using PharmacyApi.Models;
 using PharmacyApi.Repositories;
+using PharmacyApi.Filters;
 
 namespace PharmacyApi.Controllers
 {
@@ -19,6 +20,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet]
+        [ModulePermission("Parties", "view")]
         public async Task<ActionResult<IEnumerable<PartyDto>>> GetAll()
         {
             try { return Ok(await _repo.GetAllAsync()); }
@@ -26,6 +28,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("search")]
+        [ModulePermission("Parties", "view")]
         public async Task<ActionResult<IEnumerable<PartyDto>>> Search([FromQuery] string q, [FromQuery] string? type)
         {
             try
@@ -36,6 +39,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("next-code/{prefix}")]
+        [ModulePermission("Parties", "view")]
         public async Task<IActionResult> GetNextCode(string prefix)
         {
             try { return Ok(new { code = await _repo.GetNextCodeAsync(prefix) }); }
@@ -43,6 +47,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [ModulePermission("Parties", "view")]
         public async Task<ActionResult<PartyDto>> GetById(int id)
         {
             try
@@ -55,6 +60,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost]
+        [ModulePermission("Parties", "create")]
         public async Task<ActionResult<PartyDto>> Create(PartyDto dto)
         {
             if (!ModelState.IsValid)
@@ -72,6 +78,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [ModulePermission("Parties", "edit")]
         public async Task<IActionResult> Update(int id, PartyDto dto)
         {
             if (!ModelState.IsValid)
@@ -91,6 +98,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [ModulePermission("Parties", "delete")]
         public async Task<IActionResult> Delete(int id)
         {
             try

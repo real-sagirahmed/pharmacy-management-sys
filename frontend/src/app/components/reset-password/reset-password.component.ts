@@ -157,11 +157,11 @@ import { AuthService } from '../../services/auth.service';
 
     .form-header { margin-bottom: 32px; }
     .form-title { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; }
-    .form-sub   { font-size: 0.95rem; color: #64748b; margin: 0; }
+    .form-sub   { font-size: 0.95rem; color: #334155; font-weight: 500; margin: 0; }
 
     .auth-form { display: flex; flex-direction: column; gap: 20px; }
     .form-field { display: flex; flex-direction: column; gap: 8px; }
-    .field-label { font-size: .875rem; font-weight: 600; color: #334155; }
+    .field-label { font-size: .875rem; font-weight: 700; color: #1e293b; }
 
     .field-input-wrap { position: relative; }
     .field-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1rem; }
@@ -192,7 +192,7 @@ import { AuthService } from '../../services/auth.service';
     .submit-btn:hover:not(:disabled) { background: #0f766e; transform: translateY(-1px); }
     .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-    .auth-footer { text-align: center; font-size: .9rem; color: #64748b; margin-top: 12px; }
+    .auth-footer { text-align: center; font-size: .9rem; color: #334155; font-weight: 500; margin-top: 12px; }
     .auth-footer a { color: #0d9488; font-weight: 700; text-decoration: none; margin-left: 4px; }
     .auth-footer a:hover { text-decoration: underline; }
 

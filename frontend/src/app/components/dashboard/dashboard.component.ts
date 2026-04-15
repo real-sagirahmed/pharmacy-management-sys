@@ -6,15 +6,17 @@ import { AuthService } from '../../services/auth.service';
 import { MedicineService } from '../../services/medicine.service';
 import { SalesService } from '../../services/sales.service';
 import { ReportService } from '../../services/report.service';
+import { TooltipDirective } from '../../directives/tooltip.directive';
+import { GlobalSearchComponent } from '../shared/global-search/global-search.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TooltipDirective, GlobalSearchComponent],
   providers: [CurrencyPipe, DatePipe],
   template: `
 
-    <div class="app-shell" [class.is-mobile]="isMobile()">
+    <div class="app-shell" [class.is-mobile]="isMobile()" [class.sidebar-collapsed]="!sidebarOpen()">
       <!-- Mobile Backdrop -->
       <div class="sidebar-backdrop" *ngIf="isMobile() && sidebarOpen()" (click)="sidebarOpen.set(false)"></div>
 
@@ -23,7 +25,7 @@ import { ReportService } from '../../services/report.service';
         <div class="no-perm-card animate-fade-in">
           <i class="pi pi-lock-open text-5xl text-amber-500 mb-4"></i>
           <h2 class="text-2xl font-bold text-slate-800">Account Initialized</h2>
-          <p class="text-slate-500 max-w-sm mt-2">
+          <p class="text-slate-600 max-w-sm mt-2">
             Your account is active, but your role permissions haven't been configured yet. 
             Please contact the <span class="font-bold text-teal-600">SystemAdmin</span> to grant you access.
           </p>
@@ -39,8 +41,8 @@ import { ReportService } from '../../services/report.service';
           <button class="sidebar-toggle" (click)="sidebarOpen.set(!sidebarOpen())">
             <i class="pi pi-bars"></i>
           </button>
-          <div class="brand-icon">
-            <i class="pi pi-heart-fill" style="color:#0d9488;font-size:1.4rem"></i>
+          <div class="brand-icon" [class.centered]="!sidebarOpen() && !isMobile()">
+            <img src="/logo.png" alt="s7 Logo" class="logo-img">
           </div>
           <div class="brand-text" *ngIf="sidebarOpen() || isMobile()">
             <span class="brand-name">s7 Drug House</span>
@@ -51,6 +53,13 @@ import { ReportService } from '../../services/report.service';
 
 
         <div class="header-right" *ngIf="user">
+          <!-- Universal Search Trigger -->
+          <button class="global-search-btn" (click)="globalSearch.toggle()" appTooltip="Global Search (Ctrl+K)">
+            <i class="pi pi-search"></i>
+            <span class="btn-text">Search...</span>
+            <span class="btn-key">CtrlK</span>
+          </button>
+
           <div class="header-time">
             <i class="pi pi-clock" style="font-size:.8rem;opacity:.6"></i>
             <span>{{ currentTime }}</span>
@@ -68,30 +77,34 @@ import { ReportService } from '../../services/report.service';
       <div class="app-body">
 
         <!-- ═══ SIDEBAR ═══ -->
-        <aside class="app-sidebar" [class.sidebar-collapsed]="!sidebarOpen()">
+        <aside class="app-sidebar">
           <nav class="sidebar-nav">
             <div class="nav-section-label">NAVIGATION</div>
 
-            <a class="nav-item" routerLink="/dashboard"
-               routerLinkActive="nav-active" [routerLinkActiveOptions]="{exact:true}">
+            <a class="nav-item" routerLink="/dashboard" *ngIf="isSystemAdmin() || hasPermission('Dashboard')"
+               routerLinkActive="nav-active" [routerLinkActiveOptions]="{exact:true}"
+               appTooltip="System Overview & Stats" [tooltipEnabled]="!sidebarOpen()">
               <i class="pi pi-home nav-icon"></i>
               <span class="nav-label">Dashboard</span>
             </a>
 
             <!-- ─── Inventory & Stock ─── -->
             <div class="nav-group" [class.group-open]="inventoryOpen()" [class.group-active]="isGroupActive('inventory')" *ngIf="isSystemAdmin() || hasPermission('Medicines') || hasPermission('Purchases')">
-              <div class="nav-item group-header" (click)="toggleGroup('inventory')">
+              <div class="nav-item group-header" (click)="toggleGroup('inventory')"
+                   appTooltip="Stock & Procurement" [tooltipEnabled]="!sidebarOpen()">
                 <i class="pi pi-box nav-icon"></i>
                 <span class="nav-label">Inventory & Stock</span>
                 <i class="pi pi-chevron-up group-arrow"></i>
               </div>
               <div class="sub-nav">
-                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Medicines')" routerLink="/dashboard/medicines" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Medicines')" routerLink="/dashboard/medicines" routerLinkActive="nav-active"
+                   appTooltip="Medicine List & Details" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-table nav-icon-dot"></i>
                   <span class="nav-label">Medicines</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Purchases')" routerLink="/dashboard/purchases" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Purchases')" routerLink="/dashboard/purchases" routerLinkActive="nav-active"
+                   appTooltip="New Purchase & Orders" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-truck nav-icon-dot"></i>
                   <span class="nav-label">Procurement</span>
                 </a>
               </div>
@@ -99,22 +112,26 @@ import { ReportService } from '../../services/report.service';
 
             <!-- ─── Sales & CRM ─── -->
             <div class="nav-group" [class.group-open]="salesOpen()" [class.group-active]="isGroupActive('sales')" *ngIf="isSystemAdmin() || hasPermission('Sales') || hasPermission('Due Collection') || hasPermission('Parties')">
-              <div class="nav-item group-header" (click)="toggleGroup('sales')">
+              <div class="nav-item group-header" (click)="toggleGroup('sales')"
+                   appTooltip="Transactions & Customers" [tooltipEnabled]="!sidebarOpen()">
                 <i class="pi pi-receipt nav-icon"></i>
                 <span class="nav-label">Sales & CRM</span>
                 <i class="pi pi-chevron-up group-arrow"></i>
               </div>
               <div class="sub-nav">
-                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Sales')" routerLink="/dashboard/sales" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Sales')" routerLink="/dashboard/sales" routerLinkActive="nav-active"
+                   appTooltip="Retail Billing & POS" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-desktop nav-icon-dot"></i>
                   <span class="nav-label">Sales POS</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Due Collection')" routerLink="/dashboard/due-collection" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Due Collection')" routerLink="/dashboard/due-collection" routerLinkActive="nav-active"
+                   appTooltip="Due Collection Records" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-wallet nav-icon-dot"></i>
                   <span class="nav-label">Due Collection</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Parties')" routerLink="/dashboard/parties" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Parties')" routerLink="/dashboard/parties" routerLinkActive="nav-active"
+                   appTooltip="Client & Party Ledger" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-users nav-icon-dot"></i>
                   <span class="nav-label">Customers & Parties</span>
                 </a>
               </div>
@@ -122,73 +139,78 @@ import { ReportService } from '../../services/report.service';
 
             <!-- ─── Reports & Analytics ─── -->
             <div class="nav-group" [class.group-open]="reportsOpen()" [class.group-active]="isGroupActive('reports')" *ngIf="hasAnyReportPermission()">
-              <div class="nav-item group-header" (click)="toggleGroup('reports')">
+              <div class="nav-item group-header" (click)="toggleGroup('reports')"
+                   appTooltip="Performance Analytics" [tooltipEnabled]="!sidebarOpen()">
                 <i class="pi pi-chart-line nav-icon"></i>
                 <span class="nav-label">Reports & Analytics</span>
                 <i class="pi pi-chevron-down group-arrow"></i>
               </div>
               <div class="sub-nav">
-                <a class="nav-item sub-item" *ngIf="hasAnyReportPermission()" routerLink="/dashboard/analytics" routerLinkActive="nav-active">
-                  <i class="pi pi-chart-bar nav-icon-dot text-teal-500"></i>
-                  <span class="nav-label text-xs font-bold text-teal-600">Visual Dashboard</span>
+                <a class="nav-item sub-item" *ngIf="hasAnyReportPermission()" routerLink="/dashboard/analytics" routerLinkActive="nav-active" appTooltip="Visual Data Charts" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-chart-bar nav-icon-dot text-teal-400"></i>
+                  <span class="nav-label text-xs font-bold text-teal-500">Visual Dashboard</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('Sales Reports')" routerLink="/dashboard/reports/sales-summary" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Sales Reports')" routerLink="/dashboard/reports/sales-summary" routerLinkActive="nav-active" appTooltip="Daily Sales Records" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-file-export nav-icon-dot"></i>
                   <span class="nav-label text-xs">Sales Summary</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('Purchase Reports')" routerLink="/dashboard/reports/purchase-summary" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Purchase Reports')" routerLink="/dashboard/reports/purchase-summary" routerLinkActive="nav-active" appTooltip="Procurement History" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-shopping-bag nav-icon-dot"></i>
                   <span class="nav-label text-xs">Purchase Summary</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('Inventory Reports')" routerLink="/dashboard/reports/stock-status" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Inventory Reports')" routerLink="/dashboard/reports/stock-status" routerLinkActive="nav-active" appTooltip="Live Stock Tracking" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-database nav-icon-dot"></i>
                   <span class="nav-label text-xs">Stock Status</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('Financial Reports')" routerLink="/dashboard/reports/profit-loss" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Financial Reports')" routerLink="/dashboard/reports/profit-loss" routerLinkActive="nav-active" appTooltip="Business Profit/Loss" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-percentage nav-icon-dot"></i>
                   <span class="nav-label text-xs">Profit & Loss</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('Expiry Reports')" routerLink="/dashboard/reports/expiry" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Expiry Reports')" routerLink="/dashboard/reports/expiry" routerLinkActive="nav-active" appTooltip="Expiry Date Reports" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-calendar-times nav-icon-dot"></i>
                   <span class="nav-label text-xs">Expiry Report</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('Top Selling Reports')" routerLink="/dashboard/reports/top-selling" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Top Selling Reports')" routerLink="/dashboard/reports/top-selling" routerLinkActive="nav-active" appTooltip="Best Business Items" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-star nav-icon-dot"></i>
                   <span class="nav-label text-xs">Top Selling</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('Low Stock Reports')" routerLink="/dashboard/reports/low-stock" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Low Stock Reports')" routerLink="/dashboard/reports/low-stock" routerLinkActive="nav-active" appTooltip="Restock Notifications" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-exclamation-circle nav-icon-dot"></i>
                   <span class="nav-label text-xs">Low Stock Alert</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('Ledger Reports')" routerLink="/dashboard/reports/ledger" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('Ledger Reports')" routerLink="/dashboard/reports/ledger" routerLinkActive="nav-active" appTooltip="Detailed Ledger Book" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-book nav-icon-dot"></i>
                   <span class="nav-label text-xs">Ledger Report</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('User Performance Reports')" routerLink="/dashboard/reports/user-performance" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('User Performance Reports')" routerLink="/dashboard/reports/user-performance" routerLinkActive="nav-active" appTooltip="Employee Sales Data" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-user-edit nav-icon-dot"></i>
                   <span class="nav-label text-xs">Staff Performance</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="canViewReport('VAT Reports')" routerLink="/dashboard/reports/vat" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="canViewReport('VAT Reports')" routerLink="/dashboard/reports/vat" routerLinkActive="nav-active" appTooltip="Government Tax Data" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-calculator nav-icon-dot"></i>
                   <span class="nav-label text-xs">VAT Collection</span>
                 </a>
               </div>
             </div>
 
+            <!-- Global Search Component -->
+            <app-global-search #globalSearch></app-global-search>
+
             <!-- ─── Administration ─── -->
             <div class="nav-group" [class.group-open]="adminOpen()" [class.group-active]="isGroupActive('admin')" *ngIf="isSystemAdmin() || hasPermission('Users') || hasPermission('Roles')">
-              <div class="nav-item group-header" (click)="toggleGroup('admin')">
+              <div class="nav-item group-header" (click)="toggleGroup('admin')"
+                   appTooltip="Users & Access Control" [tooltipEnabled]="!sidebarOpen()">
                 <i class="pi pi-shield nav-icon"></i>
                 <span class="nav-label">Administration</span>
                 <i class="pi pi-chevron-up group-arrow"></i>
               </div>
               <div class="sub-nav">
-                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Users')" routerLink="/dashboard/users" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Users')" routerLink="/dashboard/users" routerLinkActive="nav-active" appTooltip="User Accounts & Access" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-user-plus nav-icon-dot"></i>
                   <span class="nav-label">Manage Users</span>
                 </a>
-                <a class="nav-item sub-item" *ngIf="isSystemAdmin()" routerLink="/dashboard/roles" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin()" routerLink="/dashboard/roles" routerLinkActive="nav-active" appTooltip="RBAC Logic & Security" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-lock nav-icon-dot"></i>
                   <span class="nav-label">Roles & Permissions</span>
                 </a>
               </div>
@@ -196,42 +218,43 @@ import { ReportService } from '../../services/report.service';
 
             <!-- ─── Configurations (Master Data) ─── -->
             <div class="nav-group" [class.group-open]="configOpen()" [class.group-active]="isGroupActive('config')" *ngIf="isSystemAdmin() || hasPermission('Master Data')">
-              <div class="nav-item group-header" (click)="toggleGroup('config')">
+              <div class="nav-item group-header" (click)="toggleGroup('config')"
+                   appTooltip="System Settings" [tooltipEnabled]="!sidebarOpen()">
                 <i class="pi pi-cog nav-icon"></i>
                 <span class="nav-label">Configurations</span>
                 <i class="pi pi-chevron-up group-arrow"></i>
               </div>
               <div class="sub-nav">
-                <a class="nav-item sub-item" routerLink="/dashboard/taxes" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" routerLink="/dashboard/taxes" routerLinkActive="nav-active" appTooltip="VAT & Tax Settings" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-percentage nav-icon-dot"></i>
                   <span class="nav-label text-xs">Tax Settings</span>
                 </a>
-                <a class="nav-item sub-item" routerLink="/dashboard/uoms" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" routerLink="/dashboard/uoms" routerLinkActive="nav-active" appTooltip="Measurement Units" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-sliders-h nav-icon-dot"></i>
                   <span class="nav-label text-xs">Units of Measure</span>
                 </a>
-                <a class="nav-item sub-item" routerLink="/dashboard/generics" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" routerLink="/dashboard/generics" routerLinkActive="nav-active" appTooltip="Chemical Composition" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-info-circle nav-icon-dot"></i>
                   <span class="nav-label text-xs">Generics</span>
                 </a>
-                <a class="nav-item sub-item" routerLink="/dashboard/categories" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" routerLink="/dashboard/categories" routerLinkActive="nav-active" appTooltip="Medicine Categories" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-tags nav-icon-dot"></i>
                   <span class="nav-label text-xs">Categories</span>
                 </a>
-                <a class="nav-item sub-item" routerLink="/dashboard/manufacturers" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" routerLink="/dashboard/manufacturers" routerLinkActive="nav-active" appTooltip="Pharma Companies" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-building nav-icon-dot"></i>
                   <span class="nav-label text-xs">Manufacturers</span>
                 </a>
-                <a class="nav-item sub-item" routerLink="/dashboard/dosage-forms" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" routerLink="/dashboard/dosage-forms" routerLinkActive="nav-active" appTooltip="Dosage (Tablet/Capsule)" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-filter nav-icon-dot"></i>
                   <span class="nav-label text-xs">Dosage Forms</span>
                 </a>
-                <a class="nav-item sub-item" routerLink="/dashboard/strengths" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" routerLink="/dashboard/strengths" routerLinkActive="nav-active" appTooltip="Power/Potency (mg/ml)" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-sort-amount-up nav-icon-dot"></i>
                   <span class="nav-label text-xs">Strengths</span>
                 </a>
-                <a class="nav-item sub-item" routerLink="/dashboard/indications" routerLinkActive="nav-active">
-                  <i class="pi pi-circle nav-icon-dot"></i>
+                <a class="nav-item sub-item" routerLink="/dashboard/indications" routerLinkActive="nav-active" appTooltip="Medical Recommendations" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-question-circle nav-icon-dot"></i>
                   <span class="nav-label text-xs">Indications</span>
                 </a>
               </div>
@@ -239,7 +262,7 @@ import { ReportService } from '../../services/report.service';
           </nav>
 
           <div class="sidebar-footer">
-            <button class="logout-btn" (click)="logout()">
+            <button class="logout-btn" (click)="logout()" appTooltip="Exit System Safely" [tooltipEnabled]="!sidebarOpen()">
               <i class="pi pi-sign-out"></i>
               <span>Logout</span>
             </button>
@@ -247,7 +270,7 @@ import { ReportService } from '../../services/report.service';
         </aside>
 
         <!-- ═══ MAIN CONTENT ═══ -->
-        <main class="app-main">
+        <main class="app-main" *ngIf="isSystemAdmin() || hasPermission('Dashboard')">
           <router-outlet *ngIf="!isRoot()"></router-outlet>
 
           <!-- ── Dashboard Home ── -->
@@ -357,12 +380,12 @@ import { ReportService } from '../../services/report.service';
     .app-header {
       height: 64px;
       min-height: 64px;
-      background: #0f172a;
+      background: #1e293b; /* Softer Navy instead of Jet Black */
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 20px;
-      z-index: 50;
+      z-index: 1002; /* Must be ABOVE sidebar-backdrop and sidebar */
       box-shadow: 0 1px 0 rgba(255,255,255,.06);
     }
     .header-left  { display: flex; align-items: center; gap: 14px; }
@@ -385,14 +408,16 @@ import { ReportService } from '../../services/report.service';
     .sidebar-toggle:hover { background: rgba(255,255,255,.14); color: #fff; }
 
     .brand-icon {
-      width: 38px; height: 38px;
-      background: #ccfbf1;
-      border-radius: 10px;
+      width: 42px; height: 42px;
       display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease;
     }
-    .brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+    .brand-icon.centered { margin: 8px auto 4px; width: 44px; height: 44px; }
+    .logo-img { width: 100%; height: 100%; object-fit: contain; }
+
+    .brand-text { display: flex; flex-direction: column; line-height: 1.2; transition: opacity 0.3s; }
     .brand-name { font-size: .95rem; font-weight: 700; color: #f8fafc; letter-spacing: -.01em; }
-    .brand-sub  { font-size: .7rem;  color: #64748b; }
+    .brand-sub  { font-size: .7rem;  color: #94a3b8; }
 
     .header-time { 
       font-size: .75rem; color: #64748b; display: flex; align-items: center; gap: 4px;
@@ -420,6 +445,12 @@ import { ReportService } from '../../services/report.service';
     .user-name  { font-size: .8rem; font-weight: 600; color: #f1f5f9; }
     .user-role  { font-size: .68rem; color: #0d9488; font-weight: 500; }
 
+    @media (max-width: 640px) {
+      .user-info { display: none; }
+      .user-chip { padding: 4px; border-radius: 50%; max-height: 40px; margin-left: 0; gap: 0; }
+      .user-avatar { border-radius: 50%; }
+    }
+
     /* ─── Body ─── */
     .app-body {
       display: flex;
@@ -427,42 +458,58 @@ import { ReportService } from '../../services/report.service';
       overflow: hidden;
     }
 
-    /* ─── Sidebar ─── */
+    /* ─── Sidebar Core Layout ─── */
     .app-sidebar {
-      width: 240px;
-      min-width: 240px;
-      background: #1e293b;
+      width: 250px;
+      min-width: 250px;
+      background: rgba(30, 41, 59, 0.95);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
       display: flex;
       flex-direction: column;
+      height: 100%;
       overflow: hidden;
-      transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1);
-      z-index: 40;
+      z-index: 1000;
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1), transform .3s cubic-bezier(.4,0,.2,1);
     }
-    .sidebar-collapsed:not(.is-mobile) .app-sidebar { width: 70px; min-width: 70px; }
-    .sidebar-collapsed.is-mobile .app-sidebar { width: 0; min-width: 0; }
-
-
-    /* ─── Mobile Sidebar Overlay ─── */
+    
+    .app-shell.sidebar-collapsed:not(.is-mobile) .app-sidebar { 
+      width: 74px; 
+      min-width: 74px;
+      overflow: visible; /* Allows tooltips to escape sidebar boundary */
+    }
+    
+    /* ─── Mobile Sidebar & Overlay Fix ─── */
     .app-shell.is-mobile .app-sidebar {
       position: fixed;
       top: 64px;
       left: 0;
       height: calc(100vh - 64px);
-      z-index: 1000;
+      z-index: 1001; /* Above backdrop but below header */
       box-shadow: 20px 0 50px rgba(0,0,0,0.2);
+    }
+    
+    /* Hide sidebar completely on mobile when collapsed */
+    .app-shell.is-mobile.sidebar-collapsed .app-sidebar {
+      transform: translateX(-100%);
+      pointer-events: none;
     }
     .sidebar-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(2px);
-      z-index: 900;
+      background: rgba(15, 23, 42, 0.4); 
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+      z-index: 999;
       animation: fadeIn 0.2s ease-out;
+      cursor: pointer;
     }
-
-
+    
+    /* ─── Sidebar Nav: scrollable middle section ─── */
     .sidebar-nav {
       flex: 1;
+      min-height: 0; /* Critical: allows flex child to shrink and scroll */
       padding: 20px 12px 12px;
       display: flex;
       flex-direction: column;
@@ -470,10 +517,20 @@ import { ReportService } from '../../services/report.service';
       overflow-y: auto;
       overflow-x: hidden;
     }
+
     .sidebar-nav::-webkit-scrollbar { width: 4px; }
     .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
-    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-    .sidebar-nav::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+    .sidebar-nav::-webkit-scrollbar-thumb:hover { background: #0d9488; }
+
+    /* ─── Sidebar Footer: always pinned at bottom ─── */
+    .sidebar-footer {
+      flex-shrink: 0;
+      padding: 16px 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: rgba(30, 41, 59, 0.95);
+      z-index: 10;
+    }
 
     .nav-section-label {
       font-size: .64rem;
@@ -489,31 +546,43 @@ import { ReportService } from '../../services/report.service';
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
+      margin: 0 10px;
       border-radius: 12px;
       color: #94a3b8;
-      font-size: .9rem;
+      font-size: .875rem;
       font-weight: 500;
       cursor: pointer;
       text-decoration: none;
       transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
-      border-left: 3px solid transparent;
       white-space: nowrap;
+      position: relative;
     }
-    .nav-item:hover { background: rgba(255,255,255,0.05); color: #f1f5f9; }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: #f1f5f9; }
     .nav-active {
-      background: rgba(13,148,136,.12) !important;
-      color: #2dd4bf !important;
-      border-left-color: #0d9488 !important;
+      background: rgba(13, 148, 136, 0.15) !important;
+      color: #5eead4 !important;
       font-weight: 600;
-      box-shadow: inset 0 0 10px rgba(13, 148, 136, 0.1);
+      box-shadow: inset 0 0 12px rgba(13, 148, 136, 0.1);
     }
-    .nav-active .nav-icon { color: #0d9488 !important; transform: scale(1.1); }
-    .nav-icon { font-size: 1.05rem; flex-shrink: 0; transition: transform 0.2s; color: #64748b; }
-    .nav-label { flex: 1; transition: color 0.2s, opacity 0.2s; white-space: nowrap; }
-    .sidebar-collapsed:not(.is-mobile) .nav-label { opacity: 0; pointer-events: none; }
-    .sidebar-collapsed:not(.is-mobile) .nav-item { padding: 12px 0; justify-content: center; border-left: none; }
-    .sidebar-collapsed:not(.is-mobile) .nav-section-label { display: none; }
-    .sidebar-collapsed:not(.is-mobile) .group-arrow { display: none; }
+    .nav-active::after {
+      content: '';
+      position: absolute;
+      left: -8px;
+      top: 20%;
+      height: 60%;
+      width: 3px;
+      background: #0d9488;
+      border-radius: 0 4px 4px 0;
+      box-shadow: 0 0 10px #0d9488;
+    }
+    
+    .nav-active .nav-icon { color: #2dd4bf !important; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.4)); }
+    .nav-icon { font-size: 1.15rem; flex-shrink: 0; transition: transform 0.2s, color 0.2s; color: #cbd5e1; }
+    .nav-label { flex: 1; transition: opacity 0.3s; white-space: nowrap; font-weight: 500; }
+    .app-shell.sidebar-collapsed:not(.is-mobile) .nav-label { opacity: 0; visibility: hidden; width: 0; }
+    .app-shell.sidebar-collapsed:not(.is-mobile) .nav-item { padding: 12px 14px; justify-content: center; margin: 2px 8px; }
+    .app-shell.sidebar-collapsed:not(.is-mobile) .nav-section-label { opacity: 0; height: 0; padding: 0; margin: 0; }
+    .app-shell.sidebar-collapsed:not(.is-mobile) .group-arrow { display: none; }
 
 
     /* ─── Grouped Nav ─── */
@@ -524,7 +593,9 @@ import { ReportService } from '../../services/report.service';
     .group-open .group-arrow { transform: rotate(180deg); opacity: 0.8; color: #0d9488; }
     
     .group-active .group-header { color: #5eead4; background: rgba(13, 148, 136, 0.05); }
-    .group-active .group-header i:first-child { color: #0d9488; }
+    .group-active .group-header .nav-icon { color: #5eead4 !important; transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(94, 234, 212, 0.3)); }
+    
+    .app-shell.sidebar-collapsed:not(.is-mobile) .group-header { padding: 12px 14px; justify-content: center; }
     
     .sub-nav {
       max-height: 0;
@@ -535,29 +606,37 @@ import { ReportService } from '../../services/report.service';
       margin: 0 8px;
       border-radius: 0 0 12px 12px;
     }
-    .group-open .sub-nav { max-height: 600px; opacity: 1; padding: 4px 0 8px; margin-bottom: 8px; }
-    
-    .sub-item {
-      padding: 10px 16px 10px 42px !important;
-      font-size: 0.825rem !important;
-      border-radius: 8px !important;
-      margin: 0 8px;
-      color: #728197;
-      border-left: none !important;
-    }
-    .sub-item.nav-active { background: transparent !important; color: #2dd4bf !important; position: relative; }
-    .sub-item.nav-active::before {
-       content: ''; position: absolute; left: 16px; top: 18px; width: 6px; height: 6px; 
-       background: #0d9488; border-radius: 50%; box-shadow: 0 0 8px #0d9488;
-    }
-    
-    .nav-icon-dot { font-size: 0.4rem; opacity: 0.4; }
-    .sub-item.nav-active .nav-icon-dot { display: none; }
+    .group-open .sub-nav { max-height: 1000px; opacity: 1; padding: 4px 0 8px; margin-bottom: 8px; }
 
-    .sidebar-footer {
-      padding: 16px 12px;
-      border-top: 1px solid #334155;
+    /* Hierarchy Differentiation */
+    .nav-icon-dot { font-size: 0.85rem; opacity: 0.5; color: #94a3b8; transition: all 0.2s ease; }
+    .sub-item:hover .nav-icon-dot { opacity: 1; transform: scale(1.1); color: #f1f5f9; }
+    .sub-item.nav-active .nav-icon-dot { color: #5eead4; opacity: 1; font-size: 0.95rem; filter: drop-shadow(0 0 5px rgba(94, 234, 212, 0.3)); }
+    
+    /* Smart Sub-menu in Collapsed Mode */
+    .app-shell.sidebar-collapsed:not(.is-mobile) .sub-nav { 
+      display: flex !important; 
+      flex-direction: column; 
+      background: transparent;
+      margin: 0;
+      overflow: hidden; /* Don't break scroll container */
     }
+    .app-shell.sidebar-collapsed:not(.is-mobile) .sub-item {
+       padding: 10px 0 !important;
+       justify-content: center;
+       margin: 2px 4px;
+    }
+    .app-shell.sidebar-collapsed:not(.is-mobile) .sub-item .nav-icon-dot { font-size: 0.9rem; }
+    
+    /* Tooltip fix: use overflow visible only on individual hovered items via z-index */
+    .app-shell.sidebar-collapsed:not(.is-mobile) [data-tooltip]:hover {
+      overflow: visible;
+      z-index: 1100;
+    }
+    .app-shell.sidebar-collapsed:not(.is-mobile) .sidebar-footer {
+      padding: 12px 0;
+    }
+
     .logout-btn {
       width: 100%;
       display: flex;
@@ -575,10 +654,61 @@ import { ReportService } from '../../services/report.service';
       transition: background .15s, border-color .15s, color .15s;
       font-family: 'Inter', sans-serif;
     }
-    .logout-btn:hover {
-      background: rgba(239,68,68,.2);
-      border-color: rgba(239,68,68,.4);
-      color: #ef4444;
+    .logout-btn:hover { background: rgba(239,68,68,.2); border-color: rgba(239,68,68,.4); color: #ef4444; }
+    .app-shell.sidebar-collapsed:not(.is-mobile) .logout-btn span { display: none; }
+    .app-shell.sidebar-collapsed:not(.is-mobile) .logout-btn { padding: 10px 0; width: 44px; margin: 0 auto; height: 44px; border-radius: 12px; }
+
+    /* ─── Tooltip Styling ─── */
+    [data-tooltip] { position: relative; }
+    [data-tooltip]::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%) translateX(10px);
+      padding: 8px 14px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      color: #f8fafc;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 8px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+      font-family: 'Inter', sans-serif;
+    }
+    [data-tooltip]::after {
+      content: '';
+      position: absolute;
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%) translateX(5px);
+      border: 5px solid transparent;
+      border-right-color: rgba(15, 23, 42, 0.95);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+      pointer-events: none;
+    }
+    [data-tooltip]:hover::before, [data-tooltip]:hover::after {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(-50%) translateX(15px);
+    }
+    [data-tooltip]:hover::after {
+      transform: translateY(-50%) translateX(10px);
+    }
+
+    /* ─── Layout Z-Index Polish ─── */
+    .app-shell.sidebar-collapsed .nav-item:hover {
+      z-index: 1010; /* Ensures the hovered item and its tooltip stay on top of others */
     }
 
     /* ─── Main ─── */
@@ -650,6 +780,59 @@ import { ReportService } from '../../services/report.service';
     .kpi-label { font-size: .72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
     .kpi-value { font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
     .kpi-meta  { font-size: .72rem; color: #94a3b8; }
+
+    /* Global Search Button */
+    .global-search-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.04);
+      border: 1px solid rgba(15, 23, 42, 0.1);
+      padding: 8px 16px;
+      border-radius: 24px;
+      cursor: pointer;
+      margin-right: 1.5rem;
+      transition: all 0.25s ease;
+      color: #64748b;
+    }
+    .global-search-btn:hover {
+      background: rgba(15, 23, 42, 0.08);
+      border-color: rgba(15, 23, 42, 0.2);
+      color: #0f172a;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .global-search-btn .pi-search {
+      font-size: 1.1rem;
+    }
+    .btn-text {
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: -0.2px;
+    }
+    .btn-key {
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #475569;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+    }
+    
+    @media (max-width: 640px) {
+      .global-search-btn {
+        margin-right: 0.5rem;
+        padding: 8px;
+        border-radius: 50%;
+        gap: 0;
+        width: 36px;
+        height: 36px;
+        justify-content: center;
+      }
+      .global-search-btn .pi-search { margin-left: 2px; }
+      .btn-text, .btn-key { display: none; }
+    }
 
     /* Empty state overlay */
     .no-permissions-overlay {
@@ -763,7 +946,7 @@ export class DashboardComponent implements OnInit {
     this.user = this.authService.currentUserValue;
 
     this.updateTime();
-    setInterval(() => this.updateTime(), 60000);
+    setInterval(() => this.updateTime(), 1000);
 
     // Initial URL সেট করা হচ্ছে যাতে রিলোড করলে সঠিক পেইজ দেখায়
     this.currentUrl.set(this.router.url);
@@ -836,14 +1019,16 @@ export class DashboardComponent implements OnInit {
 
   isGroupActive(group: string): boolean {
     const url = this.currentUrl();
-    if (group === 'inventory') return url.includes('/medicines') || url.includes('/purchases');
-    if (group === 'sales') return url.includes('/sales') || url.includes('/due-collection') || url.includes('/parties');
-    if (group === 'admin') return url.includes('/users') || url.includes('/roles');
-    if (group === 'reports') return url.includes('/reports');
+    const sections = url.split('/');
+    const mainSection = sections[2] || ''; // 'dashboard/{mainSection}/...'
+
+    if (group === 'inventory') return mainSection === 'medicines' || mainSection === 'purchases';
+    if (group === 'sales') return mainSection === 'sales' || mainSection === 'due-collection' || mainSection === 'parties';
+    if (group === 'admin') return mainSection === 'users' || mainSection === 'roles';
+    if (group === 'reports') return mainSection === 'reports' || mainSection === 'analytics';
     if (group === 'config') {
-      return url.includes('/taxes') || url.includes('/uoms') || url.includes('/generics') ||
-        url.includes('/categories') || url.includes('/manufacturers') ||
-        url.includes('/dosage-forms') || url.includes('/strengths') || url.includes('/indications');
+      const configSections = ['taxes', 'uoms', 'generics', 'categories', 'manufacturers', 'dosage-forms', 'strengths', 'indications'];
+      return configSections.includes(mainSection);
     }
     return false;
   }

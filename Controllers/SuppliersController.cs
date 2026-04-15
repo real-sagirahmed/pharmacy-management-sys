@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PharmacyApi.Filters;
 using Microsoft.EntityFrameworkCore;
 using PharmacyApi.Data;
 using PharmacyApi.DTOs;
@@ -19,6 +20,7 @@ namespace PharmacyApi.Controllers
             _context = context;
         }
 
+        [ModulePermission("Parties", "view")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SupplierDto>>> GetSuppliers()
         {
@@ -36,6 +38,7 @@ namespace PharmacyApi.Controllers
                 }).ToListAsync();
         }
 
+        [ModulePermission("Parties", "view")]
         [HttpGet("{id}")]
         public async Task<ActionResult<SupplierDto>> GetSupplier(int id)
         {
@@ -55,6 +58,7 @@ namespace PharmacyApi.Controllers
             };
         }
 
+        [ModulePermission("Parties", "create")]
         [HttpPost]
         public async Task<ActionResult<SupplierDto>> PostSupplier(SupplierDto supplierDto)
         {
@@ -75,6 +79,7 @@ namespace PharmacyApi.Controllers
             return CreatedAtAction("GetSupplier", new { id = supplier.SupplierId }, supplierDto);
         }
 
+        [ModulePermission("Parties", "edit")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutSupplier(int id, SupplierDto supplierDto)
         {
@@ -96,6 +101,7 @@ namespace PharmacyApi.Controllers
             return NoContent();
         }
 
+        [ModulePermission("Parties", "delete")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSupplier(int id)
         {

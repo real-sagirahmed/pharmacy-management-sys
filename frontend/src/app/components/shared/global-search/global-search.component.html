@@ -1,0 +1,86 @@
+<p-dialog [(visible)]="visible" [modal]="true" [dismissableMask]="true" [showHeader]="false" appendTo="body"
+          styleClass="global-search-dialog" [style]="{width: '100%', maxWidth: '850px', margin: '0 20px', background: 'transparent', boxShadow: 'none'}" [contentStyle]="{padding: 0}">
+  
+  <div class="search-palette">
+    <!-- Header Input -->
+    <div class="search-header">
+      <i class="pi pi-search search-icon"></i>
+      <input type="text" [(ngModel)]="searchText" (ngModelChange)="onSearchChange()" 
+             placeholder="Search... (Try adding :due or :active)" class="search-input" autofocus>
+      
+      <div class="header-actions">
+        <!-- New Filter Toggle Button -->
+        <button class="icon-action-btn" [class.active-filter]="showFilters" (click)="toggleFilters()" title="Toggle Advanced Filters">
+          <i class="pi pi-sliders-h"></i>
+        </button>
+        <button class="icon-action-btn close-btn" (click)="visible = false" title="Close"><i class="pi pi-times"></i></button>
+      </div>
+    </div>
+
+    <!-- Filters Section (Collapsible) -->
+    <div class="search-filters" *ngIf="showFilters">
+      <div class="filters-header">
+        <span class="fh-title">Advanced Tuning</span>
+        <button class="clear-all-btn" (click)="clearAllFilters()" *ngIf="dateRange || selectedModules.length || selectedStatuses.length">
+          <i class="pi pi-filter-slash"></i> Clear All
+        </button>
+      </div>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label>Date Filter</label>
+          <p-calendar [(ngModel)]="dateRange" selectionMode="range" [readonlyInput]="true" placeholder="From Date - To Date" (onSelect)="onFilterChange()" (onClear)="onFilterChange()" [showIcon]="true" [showClear]="true" appendTo="body" styleClass="w-full"></p-calendar>
+        </div>
+        
+        <div class="filter-group">
+          <label>Module Selection</label>
+          <p-treeSelect [(ngModel)]="selectedModules" [options]="moduleNodes" selectionMode="checkbox" display="comma" [metaKeySelection]="false" [showClear]="true" placeholder="All Modules" (onNodeSelect)="onFilterChange()" (onNodeUnselect)="onFilterChange()" (onClear)="onFilterChange()" appendTo="body" class="w-full"></p-treeSelect>
+        </div>
+
+        <div class="filter-group">
+          <label>Status Criteria</label>
+          <p-treeSelect [(ngModel)]="selectedStatuses" [options]="statusNodes" selectionMode="checkbox" display="comma" [metaKeySelection]="false" [showClear]="true" placeholder="All Statuses" (onNodeSelect)="onFilterChange()" (onNodeUnselect)="onFilterChange()" (onClear)="onFilterChange()" appendTo="body" class="w-full"></p-treeSelect>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="search-results custom-scrollbar">
+      
+      <div class="loader-box" *ngIf="loading">
+        <i class="pi pi-spinner pi-spin text-teal-400 text-4xl mb-3"></i>
+        <p class="text-slate-400 text-sm font-semibold tracking-wide uppercase">Searching Global Index</p>
+      </div>
+
+      <div class="empty-state" *ngIf="!loading && results.length === 0 && searchText">
+        <div class="empty-icon-wrap"><i class="pi pi-folder-open text-5xl"></i></div>
+        <h3 class="text-slate-300 font-bold mt-4 text-lg">No Results Found</h3>
+        <p class="text-slate-500 text-sm">We couldn't find anything matching "{{searchText}}" with the current filters.</p>
+      </div>
+
+      <!-- Live Results View -->
+      <div class="result-list" *ngIf="!loading && results.length > 0">
+        <div class="result-item animate-fadein-up" *ngFor="let res of results; let i = index" [style.animationDelay.ms]="i * 30" (click)="navigateTo(res.routePath)">
+          <div class="result-icon">
+            <i [class]="getIconForType(res.type)"></i>
+          </div>
+          <div class="result-details">
+            <div class="res-title">{{ res.title }}</div>
+            <div class="res-sub">{{ res.subtitle }}</div>
+          </div>
+          <div class="result-meta">
+            <span class="res-badge">{{ res.info }}</span>
+            <span class="res-type">{{ res.type }}</span>
+          </div>
+          <i class="pi pi-angle-right goto-icon"></i>
+        </div>
+      </div>
+
+    </div>
+    
+    <!-- Footer Shortcut Info -->
+    <div class="search-footer">
+      <span class="kbd"><i class="pi pi-info-circle text-xs text-teal-500"></i> Press <strong>Enter</strong> or click to navigate directly</span>
+      <span class="kbd">Press <strong>Esc</strong> to dismiss window</span>
+    </div>
+  </div>
+</p-dialog>

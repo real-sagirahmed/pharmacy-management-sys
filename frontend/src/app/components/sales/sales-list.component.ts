@@ -1,4 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { AuthService } from '../../services/auth.service';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -33,7 +34,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
 <p-toast position="top-right" />
 <p-confirmDialog />
 
-<div class="sl-page">
+<div class="sl-page" *ngIf="isSystemAdmin() || hasPermission('Sales')">
 
   <!-- Header -->
   <div class="sl-header">
@@ -44,7 +45,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
         <p class="sl-sub">Manage all customer sales transactions</p>
       </div>
     </div>
-    <button class="btn-new-sale" (click)="goToNew()">
+    <button class="btn-new-sale" (click)="goToNew()" *ngIf="isSystemAdmin() || hasPermission('Sales', 'create')">
       <i class="pi pi-plus"></i> New Sale
     </button>
   </div>
@@ -111,10 +112,10 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
           <td><span style="font-size:0.8rem; color:#64748b">{{ s.createdBy }}</span></td>
           <td style="text-align:center">
             <div class="action-btns">
-              <button *ngIf="s.dueAmount > 0" class="act-btn pay" (click)="openPayDialog(s)" title="Collect Due">
+              <button *ngIf="s.dueAmount > 0 && (isSystemAdmin() || hasPermission('Due Collection', 'create'))" class="act-btn pay" (click)="openPayDialog(s)" title="Collect Due">
                 <i class="pi pi-money-bill"></i>
               </button>
-              <button *ngIf="s.saleStatus === 'Hold'" class="act-btn edit" (click)="resumeHold(s.saleId!)" title="Resume/Edit">
+              <button *ngIf="s.saleStatus === 'Hold' && (isSystemAdmin() || hasPermission('Sales', 'edit'))" class="act-btn edit" (click)="resumeHold(s.saleId!)" title="Resume/Edit">
                 <i class="pi pi-pencil"></i>
               </button>
               <button class="act-btn view" (click)="viewDetail(s)" title="View">
@@ -123,7 +124,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
               <button class="act-btn print" (click)="printInvoice(s.saleId!)" title="Print Invoice">
                 <i class="pi pi-print"></i>
               </button>
-              <button class="act-btn del" (click)="deleteSale(s.saleId!)" title="Delete">
+              <button class="act-btn del" (click)="deleteSale(s.saleId!)" title="Delete" *ngIf="isSystemAdmin() || hasPermission('Sales', 'delete')">
                 <i class="pi pi-trash"></i>
               </button>
             </div>
@@ -190,7 +191,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
                       <td>{{ p.createdAt | date:'dd/MM/yyyy hh:mm a' }}</td>
                       <td><span class="pay-badge">{{ p.paymentMethod }}</span></td>
                       <td class="text-right font-bold">৳{{ p.amount | number:'1.2-2' }}</td>
-                      <td class="text-xs text-slate-500">
+                      <td class="text-xs text-slate-700">
                           {{ p.transactionId || p.accountNumber || '' }}
                           <div *ngIf="p.remarks" class="remarks-text">{{ p.remarks }}</div>
                       </td>
@@ -253,7 +254,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
 
       <div class="pay-footer-stats">
           <div class="flex justify-between items-center px-2">
-              <span class="text-xs font-bold text-slate-500 uppercase">Total Paying</span>
+              <span class="text-xs font-bold text-slate-700 uppercase">Total Paying</span>
               <span class="text-xl font-black" [class.text-red-500]="getTotalPaymentAmount() > selectedSale.dueAmount + 0.01">
                   ৳{{ getTotalPaymentAmount() | number:'1.2-2' }}
               </span>
@@ -279,10 +280,10 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
     .sl-header-left { display:flex; align-items:center; gap:14px; }
     .sl-icon { width:46px;height:46px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem; }
     .sl-title { font-size:1.4rem;font-weight:800;color:#0f172a;margin:0; }
-    .sl-sub { font-size:.8rem;color:#64748b;margin:0; }
+    .sl-sub { font-size:.8rem;color:#334155;font-weight:500;margin:0; }
     .btn-new-sale { background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:.875rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:'Inter',sans-serif; }
     .sl-filters { display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap; }
-    .filter-input { padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:.875rem;font-family:'Inter',sans-serif;color:#0f172a;outline:none;&:focus{border-color:#0d9488} }
+    .filter-input { padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:.875rem;font-family:'Inter',sans-serif;color:#0f172a;outline:none;&:focus{border-color:#0d9488} }
     .search-box { width:260px; }
     .filter-cal, .filter-select { width:140px !important; }
     .btn-reset { width:38px;height:38px;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;&:hover{background:#f1f5f9} }
@@ -325,7 +326,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
     .font-black { font-weight: 900; }
     .text-xl { font-size: 1.25rem; }
     .text-red-500 { color: #ef4444; }
-    .text-slate-500 { color: #64748b; }
+    .text-slate-500 { color: #1e293b; font-weight: 500; } /* Darkened for better contrast */
     .text-teal { color: #0d9488; }
     .text-right { text-align: right; }
 
@@ -398,6 +399,7 @@ export class SalesListComponent implements OnInit {
     private printService: SalesInvoicePrintService,
     private paymentService: PaymentService,
     private moneyReceiptService: MoneyReceiptService,
+    private auth: AuthService,
     private confirmationService: ConfirmationService,
     private messageService: MessageService,
     private router: Router,
@@ -508,5 +510,13 @@ export class SalesListComponent implements OnInit {
         });
       }
     });
+  }
+
+  hasPermission(mod: string, act: 'view' | 'create' | 'edit' | 'delete' = 'view') {
+    return this.auth.hasPermission(mod, act);
+  }
+
+  isSystemAdmin() {
+    return this.auth.isSystemAdmin();
   }
 }

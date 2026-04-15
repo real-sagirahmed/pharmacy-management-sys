@@ -33,8 +33,9 @@
 }
 
 .page-sub {
-  font-size: 0.72rem;
-  color: #94a3b8;
+  font-size: 0.8rem;
+  color: #334155;
+  font-weight: 500;
   margin: 2px 0 0;
 }
 
@@ -104,14 +105,14 @@
 
 /* ─── Table Styles ────────────────────────────────────────────────────── */
 ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-  background-color: #f8fafc !important;
+  background-color: #f1f5f9 !important;
   color: #0d9488 !important;
-  font-weight: 700 !important;
-  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  font-size: 0.75rem !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
+  letter-spacing: 0.7px !important;
   padding: 10px 14px !important;
-  border-bottom: 2px solid #e2e8f0 !important;
+  border-bottom: 2.5px solid #0d9488 !important;
 }
 
 ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
@@ -133,7 +134,7 @@
 .text-sm { font-size: 0.875rem; }
 .text-green { color: #16a34a; }
 .text-red { color: #dc2626; }
-.text-muted { color: #94a3b8; }
+.text-muted { color: #475569; font-weight: 500; }
 
 /* ─── Status Badges ───────────────────────────────────────────────────── */
 .badge {

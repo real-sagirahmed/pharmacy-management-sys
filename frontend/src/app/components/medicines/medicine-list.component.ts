@@ -1,4 +1,5 @@
 import { Component, OnInit, signal, computed, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { AuthService } from '../../services/auth.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Medicine, MedicineService, MedicineSearchParameters } from '../../services/medicine.service';
@@ -22,6 +23,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { TooltipDirective } from '../../directives/tooltip.directive';
 
 @Component({
   selector: 'app-medicine-list',
@@ -29,10 +31,10 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, TableModule, ButtonModule,
     InputTextModule, InputNumberModule, TagModule, DialogModule, SelectModule,
-    DatePickerModule, PaginatorModule, ToastModule, ConfirmDialogModule
+    DatePickerModule, PaginatorModule, ToastModule, ConfirmDialogModule, TooltipDirective
   ],
   template: `
-    <div class="page-wrap animate-fadein-up">
+    <div class="page-wrap animate-fadein-up" *ngIf="isSystemAdmin() || hasPermission('Medicines')">
       <p-toast></p-toast>
       <p-confirmDialog></p-confirmDialog>
 
@@ -43,7 +45,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
             <h1 class="page-title">Medicine Inventory</h1>
             <p class="page-sub text-xs">Manage your medicines, stock levels and expiry dates.</p>
           </div>
-          <button class="btn-primary" (click)="openAdd()" title="Shortcut: Alt + N">
+          <button class="btn-primary" (click)="openAdd()" title="Shortcut: Alt + N" *ngIf="isSystemAdmin() || hasPermission('Medicines', 'create')">
             <i class="pi pi-plus"></i>
             <span>New Medicine</span>
           </button>
@@ -55,7 +57,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
             <i class="pi pi-search search-icon"></i>
             <input #searchInput type="text" pInputText [(ngModel)]="searchText" 
                    (input)="onSearchChange(searchText)"
-                   placeholder="Search by name, generic or brand... (Shortcut: /)" 
+                   placeholder="Search..." 
                    class="search-input">
             <button class="search-clear" *ngIf="searchText" (click)="clearSearch()">
               <i class="pi pi-times"></i>
@@ -85,7 +87,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
               <tr>
                 <th class="hidden lg:table-cell" style="min-width: 100px;">Code</th>
                 <th pSortableColumn="name" style="min-width: 150px;">Name <p-sortIcon field="name"></p-sortIcon></th>
-                <th class="hidden md:table-cell" style="min-width: 140px;">Category</th>
+                <th class="hidden md:table-cell" style="min-width: 140px;">Cat.</th>
                 <th class="hidden xl:table-cell" style="min-width: 150px;">Manufacturer</th>
                 <th class="hidden xl:table-cell" style="min-width: 120px;">Dosage Form</th>
                 <th class="hidden xl:table-cell" style="min-width: 100px;">Strength</th>
@@ -93,12 +95,12 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                 <th class="hidden lg:table-cell" style="min-width: 80px;">UOM</th>
                 <th class="hidden xl:table-cell" style="min-width: 150px;">Use For</th>
                 <th class="text-right hidden lg:table-cell" style="min-width: 100px;">Purchase</th>
-                <th class="text-right" style="min-width: 100px;">Sale</th>
-                <th class="hidden md:table-cell" style="min-width: 120px;">Batch</th>
+                <th class="text-right" style="min-width: 90px;">Sale</th>
+                <th class="hidden md:table-cell" style="min-width: 100px;">Batch</th>
                 <th class="hidden md:table-cell" style="min-width: 100px;">Expiry</th>
-                <th class="text-center" style="min-width: 80px;">Stock</th>
+                <th class="text-center" style="min-width: 70px;">Stock</th>
                 <th class="hidden lg:table-cell" style="min-width: 100px;">Status</th>
-                <th style="min-width: 130px;" alignFrozen="right" pFrozenColumn>Actions</th>
+                <th style="min-width: 110px;" alignFrozen="right" pFrozenColumn>Actions</th>
               </tr>
             </ng-template>
              <ng-template pTemplate="body" let-medicine>
@@ -107,7 +109,8 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                 <td>
                   <div class="flex items-center gap-2" style="white-space: nowrap;">
                     <span class="med-name text-sm">{{ medicine.name }}</span>
-                    <i *ngIf="isIncomplete(medicine)" class="pi pi-exclamation-circle incomplete-icon" title="Incomplete Information"></i>
+                    <i *ngIf="isIncomplete(medicine)" class="pi pi-exclamation-circle incomplete-icon" 
+                       [appTooltip]="'Incomplete Information: Missing category, manufacturer, or dosage details.'"></i>
                   </div>
                 </td>
                 <td class="hidden md:table-cell"><span class="category-badge">{{ medicine.category }}</span></td>
@@ -134,6 +137,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                   <button class="status-toggle-btn"
                           [class.active]="medicine.isActive"
                           (click)="toggleStatus(medicine)"
+                          [disabled]="!isSystemAdmin() && !hasPermission('Medicines', 'edit')"
                           [title]="medicine.isActive ? 'Click to Deactivate' : 'Click to Activate'">
                     <span class="toggle-track">
                       <span class="toggle-thumb"></span>
@@ -143,13 +147,13 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                 </td>
                 <td alignFrozen="right" pFrozenColumn>
                   <div class="action-btns">
-                    <button class="act-btn act-view" (click)="viewDetails(medicine)" title="Details">
+                    <button class="act-btn act-view" (click)="viewDetails(medicine)" [appTooltip]="'View Full Details'">
                       <i class="pi pi-eye"></i>
                     </button>
-                    <button class="act-btn act-edit" (click)="openEdit(medicine)" title="Edit">
+                    <button class="act-btn act-edit" (click)="openEdit(medicine)" [appTooltip]="'Edit Record'" *ngIf="isSystemAdmin() || hasPermission('Medicines', 'edit')">
                       <i class="pi pi-pencil"></i>
                     </button>
-                    <button class="act-btn act-del" (click)="deleteMedicine(medicine.medicineId)" title="Delete">
+                    <button class="act-btn act-del" (click)="deleteMedicine(medicine.medicineId)" [appTooltip]="'Delete Medicine'" *ngIf="isSystemAdmin() || hasPermission('Medicines', 'delete')">
                       <i class="pi pi-trash"></i>
                     </button>
                   </div>
@@ -221,7 +225,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                       </div>
                     </ng-template>
                   </p-select>
-                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Generic')">
+                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Generic')" *ngIf="isSystemAdmin() || hasPermission('Master Data', 'create')">
                     <i class="pi pi-plus-circle"></i> Add Quick Generic
                   </a>
                 </div>
@@ -241,7 +245,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                       </div>
                     </ng-template>
                   </p-select>
-                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Manufacturer')">
+                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Manufacturer')" *ngIf="isSystemAdmin() || hasPermission('Master Data', 'create')">
                     <i class="pi pi-plus-circle"></i> Add Quick Manufacturer
                   </a>
                 </div>
@@ -267,7 +271,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                       </div>
                     </ng-template>
                   </p-select>
-                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Category')">
+                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Category')" *ngIf="isSystemAdmin() || hasPermission('Master Data', 'create')">
                     <i class="pi pi-plus-circle"></i> Add Quick Category
                   </a>
                 </div>
@@ -287,7 +291,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                       </div>
                     </ng-template>
                   </p-select>
-                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('UOM')">
+                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('UOM')" *ngIf="isSystemAdmin() || hasPermission('Master Data', 'create')">
                     <i class="pi pi-plus-circle"></i> Add Quick UOM
                   </a>
                   <small class="error-text" *ngIf="medicineForm.get('uom')?.invalid && medicineForm.get('uom')?.touched">
@@ -310,7 +314,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                       </div>
                     </ng-template>
                   </p-select>
-                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Dosage Form')">
+                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Dosage Form')" *ngIf="isSystemAdmin() || hasPermission('Master Data', 'create')">
                     <i class="pi pi-plus-circle"></i> Add Quick Dosage Form
                   </a>
                 </div>
@@ -330,7 +334,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                       </div>
                     </ng-template>
                   </p-select>
-                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Strength')">
+                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Strength')" *ngIf="isSystemAdmin() || hasPermission('Master Data', 'create')">
                     <i class="pi pi-plus-circle"></i> Add Quick Strength
                   </a>
                 </div>
@@ -350,7 +354,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                       </div>
                     </ng-template>
                   </p-select>
-                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Use For')">
+                  <a href="javascript:void(0)" class="quick-add-link" (click)="openQuickAdd('Use For')" *ngIf="isSystemAdmin() || hasPermission('Master Data', 'create')">
                     <i class="pi pi-plus-circle"></i> Add Quick Use For
                   </a>
                 </div>
@@ -499,7 +503,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
             <button class="btn-cancel" (click)="showDetailsDialog=false">
               <i class="pi pi-times"></i> Close
             </button>
-            <button class="btn-save" (click)="openEdit(selectedMedicine()!)">
+            <button class="btn-save" (click)="openEdit(selectedMedicine()!)" *ngIf="isSystemAdmin() || hasPermission('Medicines', 'edit')">
               <i class="pi pi-pencil"></i>
               <span>Edit Records</span>
             </button>
@@ -627,19 +631,29 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
     .chip-teal   { background: #ccfbf1; color: #0f766e; }
     .chip-green  { background: #dcfce7; color: #15803d; }
 
-    .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-    .table-toolbar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; gap: 12px; flex-wrap: wrap; }
+    .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; margin-top: 8px; }
+    .table-toolbar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; gap: 12px; flex-wrap: wrap; padding: 12px 16px; }
+    
+    @media (max-width: 768px) {
+      .page-head { flex-direction: column; align-items: stretch !important; gap: 12px !important; padding: 12px 16px !important; }
+      .page-head > div { margin-left: 0 !important; }
+      .btn-primary { width: 100%; justify-content: center; }
+      .table-toolbar { flex-direction: column; align-items: stretch; gap: 12px; }
+      .search-wrap { max-width: 100%; }
+      .summary-row { justify-content: space-between; width: 100%; }
+      .result-count { order: 2; }
+    }
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1; max-width: 400px; }
     .search-icon { position: absolute; left: 12px; color: #94a3b8; font-size: .875rem; pointer-events: none; }
     .search-input { width: 100%; padding: 9px 36px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .875rem; font-family: 'Inter', sans-serif; outline: none; transition: border-color .15s; background: #f8fafc; color: #0f172a; }
     .search-input:focus { border-color: #0d9488; background: #fff; }
     .search-clear { position: absolute; right: 10px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: .875rem; }
-    .result-count { font-size: .8rem; color: #94a3b8; }
+    .result-count { font-size: .8rem; color: #334155; font-weight: 700; }
 
     .table-responsive { overflow-x: auto; width: 100%; }
-    .med-name { font-weight: 600; color: #0f172a; }
-    .text-muted { color: #64748b; }
-    .text-xs { font-size: 0.75rem; }
+    .med-name { font-weight: 700; color: #0f172a; font-size: 0.95rem; }
+    .text-muted { color: var(--color-text-muted); }
+    .text-xs { font-size: 0.8rem; font-weight: 500; }
     .action-btns { display: flex; gap: 4px; }
     .act-btn { width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .1s; }
     .act-btn:hover { transform: scale(1.1); }
@@ -668,28 +682,34 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
       z-index: 1000;
       background: #ffffff;
       border-bottom: 2px solid #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     }
-    .page-head { border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    .page-head { border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; }
     .page-title { font-size: 1.15rem !important; margin: 0; font-weight: 800; color: #1e293b; }
-    .page-sub { margin: 0; color: #64748b; font-size: 0.75rem; }
+    .page-sub { margin: 2px 0 0; color: #334155; font-size: 0.8rem; font-weight: 500; }
     .search-input { height: 34px; font-size: 13px !important; }
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; }
 
     /* Table Header Styling - Matching Procurement Records */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-      background-color: #f8fafc !important;
+      background-color: #f1f5f9 !important;
       color: #0d9488 !important;
-      font-weight: 700 !important;
+      font-weight: 800 !important;
       font-size: 0.75rem !important;
       text-transform: uppercase !important;
-      letter-spacing: 0.5px !important;
-      padding: 8px 10px !important;
-      border-bottom: 2px solid #0d9488 !important;
+      letter-spacing: 0.7px !important;
+      padding: 10px 12px !important;
+      border-bottom: 2.5px solid #0d9488 !important;
     }
     
+    ::ng-deep .p-datatable .p-datatable-tbody > tr {
+      background-color: #ffffff !important;
+      transition: background .2s;
+    }
+
     ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
-      padding: 6px 10px !important;
-      border-bottom: 1px solid #f1f5f9;
+      padding: 10px 12px !important;
+      border-bottom: 1px solid #edf2f7;
     }
 
     ::ng-deep .badge-slate-light { background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
@@ -898,7 +918,8 @@ export class MedicineListComponent implements OnInit {
     private useForService: UseForService,
     private fb: FormBuilder,
     private messageService: MessageService,
-    private confirmationService: ConfirmationService
+    private confirmationService: ConfirmationService,
+    private auth: AuthService
   ) {
     this.medicineForm = this.fb.group({
       medicineId: [0],
@@ -1253,5 +1274,13 @@ export class MedicineListComponent implements OnInit {
         });
         break;
     }
+  }
+
+  hasPermission(mod: string, act: 'view' | 'create' | 'edit' | 'delete' = 'view') {
+    return this.auth.hasPermission(mod, act);
+  }
+
+  isSystemAdmin() {
+    return this.auth.isSystemAdmin();
   }
 }

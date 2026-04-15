@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApi.DTOs;
 using PharmacyApi.Repositories;
+using PharmacyApi.Filters;
 
 namespace PharmacyApi.Controllers
 {
@@ -19,6 +20,7 @@ namespace PharmacyApi.Controllers
 
         // GET: api/Sales/next-invoice-code
         [HttpGet("next-invoice-code")]
+        [ModulePermission("Sales", "view")]
         public async Task<IActionResult> GetNextInvoiceCode()
         {
             var code = await _repo.GetNextInvoiceCodeAsync();
@@ -27,6 +29,7 @@ namespace PharmacyApi.Controllers
 
         // GET: api/Sales/medicine-batches/{medicineId}
         [HttpGet("medicine-batches/{medicineId}")]
+        [ModulePermission("Sales", "view")]
         public async Task<ActionResult<IEnumerable<SaleBatchInfoDto>>> GetMedicineBatches(int medicineId)
         {
             var batches = await _repo.GetBatchesForMedicineAsync(medicineId);
@@ -35,6 +38,7 @@ namespace PharmacyApi.Controllers
 
         // GET: api/Sales?searchText=&fromDate=&toDate=&saleStatus=&pageNumber=1&pageSize=15
         [HttpGet]
+        [ModulePermission("Sales", "view")]
         public async Task<ActionResult<PagedResult<SalesMasterDto>>> GetAll([FromQuery] SaleSearchParameters parameters)
         {
             var result = await _repo.GetPagedAsync(parameters);
@@ -43,6 +47,7 @@ namespace PharmacyApi.Controllers
 
         // GET: api/Sales/{id}
         [HttpGet("{id}")]
+        [ModulePermission("Sales", "view")]
         public async Task<ActionResult<SalesMasterDto>> GetById(int id)
         {
             var sale = await _repo.GetByIdAsync(id);
@@ -52,6 +57,7 @@ namespace PharmacyApi.Controllers
 
         // POST: api/Sales — Completed Sale
         [HttpPost]
+        [ModulePermission("Sales", "create")]
         public async Task<ActionResult<SalesMasterDto>> Create([FromBody] SalesMasterDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -68,6 +74,7 @@ namespace PharmacyApi.Controllers
 
         // POST: api/Sales/hold — Hold Sale (does NOT deduct stock)
         [HttpPost("hold")]
+        [ModulePermission("Sales", "create")]
         public async Task<ActionResult<SalesMasterDto>> Hold([FromBody] SalesMasterDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -84,6 +91,7 @@ namespace PharmacyApi.Controllers
 
         // DELETE: api/Sales/{id}
         [HttpDelete("{id}")]
+        [ModulePermission("Sales", "delete")]
         public async Task<IActionResult> Delete(int id)
         {
             var success = await _repo.DeleteAsync(id);

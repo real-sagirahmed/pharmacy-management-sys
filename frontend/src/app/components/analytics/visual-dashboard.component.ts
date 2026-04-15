@@ -20,7 +20,7 @@ import { ReportService } from '../../services/report.service';
             <p class="page-sub text-xs">Analytics and insights on sales & performance.</p>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-500">Date Range:</span>
+            <span class="text-xs font-bold text-slate-700">Date Range:</span>
             <p-calendar [(ngModel)]="dateRange" selectionMode="range" [readonlyInput]="true" 
                         dateFormat="dd/mm/yy" class="p-inputtext-sm" placeholder="Select Dates">
             </p-calendar>
@@ -118,7 +118,7 @@ import { ReportService } from '../../services/report.service';
     .kpi-emerald-icon{ background: #d1fae5; color: #059669; }
     
     .kpi-info { flex: 1; display: flex; flex-direction: column; }
-    .kpi-label { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+    .kpi-label { font-size: 0.75rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
     .kpi-value { font-size: 1.4rem; font-weight: 800; color: #1e293b; }
     .kpi-trend { font-size: 0.7rem; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
     .trend-up { color: #10b981; }
@@ -127,9 +127,19 @@ import { ReportService } from '../../services/report.service';
     /* Chart Cards */
     .chart-row { display: flex; gap: 16px; min-height: 280px; }
     .chart-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
-    .chart-title { font-size: 0.85rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #f1f5f9; }
+    .chart-title { font-size: 0.9rem; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1.5px solid #f1f5f9; }
     .chart-container { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: center; }
     .center-chart { display: flex; justify-content: center; align-items: center; }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .header-section .flex { flex-direction: column; align-items: flex-start; gap: 1rem; }
+      .header-section .flex.items-center.gap-2 { width: 100%; justify-content: space-between; }
+      .kpi-grid { grid-template-columns: 1fr !important; }
+      .chart-row { flex-direction: column; min-height: auto; }
+      .chart-card { min-height: 300px; }
+      .chart-container { height: 250px; }
+    }
   `]
 })
 export class VisualDashboardComponent implements OnInit {

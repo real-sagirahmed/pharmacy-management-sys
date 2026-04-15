@@ -5,6 +5,7 @@ using PharmacyApi.Data;
 using PharmacyApi.DTOs;
 using PharmacyApi.Models;
 using PharmacyApi.Repositories;
+using PharmacyApi.Filters;
 
 namespace PharmacyApi.Controllers
 {
@@ -21,6 +22,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet]
+        [ModulePermission("Medicines", "view")]
         public async Task<ActionResult<PagedResult<MedicineDto>>> GetMedicines([FromQuery] MedicineSearchParameters parms)
         {
             try
@@ -35,6 +37,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("{id}")]
+        [ModulePermission("Medicines", "view")]
         public async Task<ActionResult<MedicineDto>> GetMedicine(int id)
         {
             try
@@ -50,6 +53,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost]
+        [ModulePermission("Medicines", "create")]
         public async Task<ActionResult<MedicineDto>> PostMedicine(MedicineDto medicineDto)
         {
             try
@@ -72,6 +76,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPut("{id}")]
+        [ModulePermission("Medicines", "edit")]
         public async Task<IActionResult> PutMedicine(int id, MedicineDto medicineDto)
         {
             try
@@ -98,6 +103,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("next-code")]
+        [ModulePermission("Medicines", "view")]
         public async Task<ActionResult<string>> GetNextCode()
         {
             try
@@ -112,6 +118,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpDelete("{id}")]
+        [ModulePermission("Medicines", "delete")]
         public async Task<IActionResult> DeleteMedicine(int id)
         {
             try
@@ -126,6 +133,7 @@ namespace PharmacyApi.Controllers
             }
         }
         [HttpPatch("{id}/toggle-status")]
+        [ModulePermission("Medicines", "edit")]
         public async Task<IActionResult> ToggleStatus(int id)
         {
             try
@@ -147,6 +155,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("check-batch/{medicineId}/{batchNumber}")]
+        [ModulePermission("Medicines", "view")]
         public async Task<ActionResult<bool>> CheckBatch(int medicineId, string batchNumber)
         {
             try

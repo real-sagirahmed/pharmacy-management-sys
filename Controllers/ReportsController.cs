@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApi.Repositories;
+using PharmacyApi.Filters;
 using System;
 using System.Threading.Tasks;
 
@@ -19,6 +20,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("sales-summary")]
+        [ModulePermission("Sales Reports", "view")]
         public async Task<IActionResult> GetSalesSummary([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             var data = await _reportRepository.GetSalesSummaryAsync(startDate, endDate);
@@ -26,6 +28,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("stock-status")]
+        [ModulePermission("Inventory Reports", "view")]
         public async Task<IActionResult> GetStockStatus()
         {
             var data = await _reportRepository.GetStockStatusAsync();
@@ -33,6 +36,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("profit-loss")]
+        [ModulePermission("Financial Reports", "view")]
         public async Task<IActionResult> GetProfitLoss([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             var data = await _reportRepository.GetProfitLossAsync(startDate, endDate);
@@ -40,12 +44,14 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("purchase-summary")]
+        [ModulePermission("Purchase Reports", "view")]
         public async Task<IActionResult> GetPurchaseSummary([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             var data = await _reportRepository.GetPurchaseSummaryAsync(startDate, endDate);
             return Ok(data);
         }
         [HttpGet("expiry")]
+        [ModulePermission("Expiry Reports", "view")]
         public async Task<IActionResult> GetExpiryReport([FromQuery] int months = 6)
         {
             var data = await _reportRepository.GetExpiryReportAsync(months);
@@ -53,6 +59,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("top-selling")]
+        [ModulePermission("Top Selling Reports", "view")]
         public async Task<IActionResult> GetTopSellingMedicines([FromQuery] DateTime startDate, [FromQuery] DateTime endDate, [FromQuery] int count = 10)
         {
             var data = await _reportRepository.GetTopSellingMedicinesAsync(startDate, endDate, count);
@@ -60,6 +67,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("low-stock")]
+        [ModulePermission("Low Stock Reports", "view")]
         public async Task<IActionResult> GetLowStockReport()
         {
             var data = await _reportRepository.GetLowStockReportAsync();
@@ -67,6 +75,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("ledger")]
+        [ModulePermission("Ledger Reports", "view")]
         public async Task<IActionResult> GetLedgerReport([FromQuery] int partyId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             if (partyId <= 0) return BadRequest("Valid Party ID is required.");
@@ -75,6 +84,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("user-performance")]
+        [ModulePermission("User Performance Reports", "view")]
         public async Task<IActionResult> GetUserPerformance([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             var data = await _reportRepository.GetUserPerformanceReportAsync(startDate, endDate);
@@ -82,6 +92,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet("vat-report")]
+        [ModulePermission("VAT Reports", "view")]
         public async Task<IActionResult> GetVatReport([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             var data = await _reportRepository.GetTaxReportAsync(startDate, endDate);

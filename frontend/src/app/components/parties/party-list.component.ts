@@ -1,4 +1,5 @@
 import { Component, OnInit, signal, computed, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { AuthService } from '../../services/auth.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Party, PartyService } from '../../services/party.service';
@@ -12,6 +13,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { TooltipDirective } from '../../directives/tooltip.directive';
 
 @Component({
   selector: 'app-party-list',
@@ -19,11 +21,12 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule,
     TableModule, ButtonModule, InputTextModule, TagModule,
-    DialogModule, ConfirmDialogModule, ToastModule, SelectModule, ToggleSwitchModule
+    DialogModule, ConfirmDialogModule, ToastModule, SelectModule, ToggleSwitchModule,
+    TooltipDirective
   ],
   providers: [ConfirmationService, MessageService],
   template: `
-    <div class="page-wrap animate-fadein-up">
+    <div class="page-wrap animate-fadein-up" *ngIf="isSystemAdmin() || hasPermission('Parties')">
       <p-toast></p-toast>
       <p-confirmDialog></p-confirmDialog>
 
@@ -32,9 +35,9 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
         <div class="page-head pt-2 pb-1 px-4">
           <div style="margin-left: 12px;">
             <h1 class="page-title">Party Management</h1>
-            <p class="page-sub text-xs">Manage Customers & Suppliers (Party Master)</p>
+            <p class="page-sub text-xs font-medium" style="color:#334155;">Manage Customers & Suppliers (Party Master)</p>
           </div>
-          <button class="btn-primary" (click)="openAdd()" title="Shortcut: Alt + N">
+          <button class="btn-primary" (click)="openAdd()" [appTooltip]="'Add New Party (Shortcut: Alt + N)'" *ngIf="isSystemAdmin() || hasPermission('Parties', 'create')">
             <i class="pi pi-plus"></i>
             <span>Add New Party</span>
           </button>
@@ -52,7 +55,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             </button>
           </div>
           <div class="flex items-center gap-4">
-            <span class="result-count font-semibold">{{ filteredParties().length }} items found</span>
+            <span class="result-count font-semibold" style="color:#475569;">{{ filteredParties().length }} items found</span>
             <div class="summary-row">
               <div class="chip chip-teal"><i class="pi pi-users"></i> {{ parties().length }} Total</div>
               <div class="chip chip-blue"><i class="pi pi-user"></i> {{ customerCount() }} Customers</div>
@@ -98,8 +101,9 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
                   <td>
                     <button class="status-toggle-btn"
                             [class.active]="p.isActive"
-                            (click)="toggleStatus(p)"
-                            [title]="p.isActive ? 'Click to Deactivate' : 'Click to Activate'">
+                            (click)="toggleActive(p)"
+                            [disabled]="!isSystemAdmin() && !hasPermission('Parties', 'edit')"
+                            [appTooltip]="p.isActive ? 'Deactivate Party Account' : 'Activate Party Account'">
                       <span class="toggle-track">
                         <span class="toggle-thumb"></span>
                       </span>
@@ -108,8 +112,12 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
                   </td>
                   <td alignFrozen="right" pFrozenColumn>
                     <div class="action-btns">
-                      <button class="act-btn act-edit" title="Edit" (click)="openEdit(p)"><i class="pi pi-pencil"></i></button>
-                      <button class="act-btn act-del" title="Delete" (click)="confirmDelete(p)"><i class="pi pi-trash"></i></button>
+                      <button class="act-btn edit" (click)="openEdit(p)" [appTooltip]="'Edit Party Details'" *ngIf="isSystemAdmin() || hasPermission('Parties', 'edit')">
+                        <i class="pi pi-pencil"></i>
+                      </button>
+                      <button class="act-btn del" (click)="deleteParty(p.partyId)" [appTooltip]="'Delete Party'" *ngIf="isSystemAdmin() || hasPermission('Parties', 'delete')">
+                        <i class="pi pi-trash"></i>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -232,7 +240,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     }
     .page-head { border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
     .page-title { font-size: 1.15rem !important; margin: 0; font-weight: 800; color: #1e293b; }
-    .page-sub { margin: 0; color: #64748b; font-size: 0.75rem; }
+    .page-sub { margin: 0; color: #334155; font-size: 0.8rem; font-weight: 500; }
     
     .btn-primary {
       display: flex; align-items: center; gap: 8px;
@@ -253,39 +261,39 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     .search-input { width: 100%; padding: 9px 36px; height: 34px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px !important; font-family: 'Inter', sans-serif; outline: none; transition: border-color .15s; background: #f8fafc; color: #0f172a; }
     .search-input:focus { border-color: #0d9488; background: #fff; }
     .search-clear { position: absolute; right: 10px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: .875rem; }
-    .result-count { font-size: .8rem; color: #94a3b8; }
+    .result-count { font-size: .8rem; color: #475569; font-weight: 600; }
 
     .summary-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 600; }
     .chip-teal   { background: #ccfbf1; color: #0f766e; }
-    .chip-blue   { background: #dbeafe; color: #1d4ed8; }
-    .chip-amber  { background: #fef3c7; color: #b45309; }
+    .chip-blue   { background: #dbeafe; color: #1e40af; }
+    .chip-amber  { background: #fef3c7; color: #92400e; }
 
     .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
     .table-responsive { overflow-x: auto; width: 100%; }
 
     /* Table Header Styling */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-      background-color: #f8fafc !important;
+      background-color: #f1f5f9 !important;
       color: #0d9488 !important;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       font-size: 0.75rem !important;
       text-transform: uppercase !important;
-      letter-spacing: 0.5px !important;
-      padding: 8px 10px !important;
-      border-bottom: 2px solid #0d9488 !important;
+      letter-spacing: 0.7px !important;
+      padding: 10px 12px !important;
+      border-bottom: 2.5px solid #0d9488 !important;
     }
     
     ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
-      padding: 6px 10px !important;
-      border-bottom: 1px solid #f1f5f9;
+      padding: 8px 12px !important;
+      border-bottom: 1px solid #edf2f7;
     }
 
     .med-code-badge { font-family: monospace; background: #eff6ff; color: #3b82f6; padding: 2px 8px; border-radius: 6px; font-size: .75rem; font-weight: 700; }
     .med-name { font-weight: 600; color: #0f172a; }
     .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: .72rem; font-weight: 600; }
-    .badge-blue { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
-    .badge-amber { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .badge-blue { background: #eff6ff; color: #1e40af; border: 1.5px solid #bfdbfe; font-weight: 800; }
+    .badge-amber { background: #fffbeb; color: #92400e; border: 1.5px solid #fde68a; font-weight: 800; }
 
     /* ─── Status Toggle Switch ─── */
     .status-toggle-btn { display: inline-flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; padding: 0; font-family: 'Inter', sans-serif; }
@@ -295,12 +303,13 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     .status-toggle-btn.active .toggle-thumb { transform: translateX(16px); }
     .toggle-label { font-size: .72rem; font-weight: 600; color: #64748b; }
     .status-toggle-btn.active .toggle-label { color: #0d9488; }
+    .status-toggle-btn:disabled { cursor: not-allowed; opacity: 0.6; }
 
     .action-btns { display: flex; gap: 4px; }
     .act-btn { width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .1s; }
     .act-btn:hover { transform: scale(1.1); }
-    .act-edit { background: #eff6ff; color: #3b82f6; }
-    .act-del  { background: #fff1f2; color: #f43f5e; }
+    .act-btn.edit { background: #eff6ff; color: #3b82f6; }
+    .act-btn.del  { background: #fff1f2; color: #f43f5e; }
 
     /* ─── Premium Dialog & Form ─── */
     ::ng-deep .premium-dialog .p-dialog-header { background: #fff; border-bottom: 1px solid #f1f5f9; padding: 14px 20px; border-radius: 16px 16px 0 0; }
@@ -315,7 +324,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
       flex-shrink: 0;
     }
     ::ng-deep .dialog-title-text { font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; }
-    ::ng-deep .dialog-sub-text { font-size: .7rem; color: #64748b; margin: 0; }
+    ::ng-deep .dialog-sub-text { font-size: .72rem; color: #475569; font-weight: 500; margin: 0; }
 
     ::ng-deep .med-form-premium { background: #fff; width: 100%; }
     ::ng-deep .form-scroll-area { 
@@ -325,7 +334,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
     ::ng-deep .form-section { display: flex; flex-direction: column; gap: 12px; padding-bottom: 18px; border-bottom: 1px dashed #e2e8f0; }
     ::ng-deep .form-section.no-border { border-bottom: none; padding-bottom: 0; }
-    ::ng-deep .section-tag { font-size: .6rem; font-weight: 700; color: #94a3b8; letter-spacing: .1em; display: flex; align-items: center; gap: 6px; }
+    ::ng-deep .section-tag { font-size: .65rem; font-weight: 800; color: #475569; letter-spacing: .1em; display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
 
     ::ng-deep .grid-form-premium { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     @media (max-width: 550px) { ::ng-deep .grid-form-premium { grid-template-columns: 1fr; gap: 12px; } }
@@ -333,7 +342,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     ::ng-deep .form-field-premium { display: flex; flex-direction: column; gap: 6px; width: 100%; }
     ::ng-deep .form-field-premium.full { grid-column: 1 / -1; }
     
-    ::ng-deep .field-label-premium { font-size: .75rem; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 6px; margin-bottom: 0; }
+    ::ng-deep .field-label-premium { font-size: .8rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 6px; margin-bottom: 0; }
     ::ng-deep .required { color: #f43f5e; }
 
     ::ng-deep .premium-input, ::ng-deep .readonly-input {
@@ -347,7 +356,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     ::ng-deep .premium-select { border-radius: 10px; font-size: .8rem; }
     ::ng-deep .premium-select .p-select-label { padding: 8px 12px; }
 
-    ::ng-deep .info-text { font-size: .65rem; color: #94a3b8; font-style: italic; margin-top: 1px; }
+    ::ng-deep .info-text { font-size: .65rem; color: #64748b; font-style: italic; font-weight: 500; margin-top: 1px; }
     ::ng-deep .error-text { color: #f43f5e; font-size: .68rem; font-weight: 500; margin-top: 1px; }
 
     ::ng-deep .status-field { display: flex; flex-direction: row; align-items: center; justify-content: space-between; margin-top: 4px; }
@@ -448,7 +457,8 @@ export class PartyListComponent implements OnInit {
     private partyService: PartyService,
     private fb: FormBuilder,
     private confirmationService: ConfirmationService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private auth: AuthService
   ) {
     this.form = this.fb.group({
       code:      ['', [Validators.required, Validators.maxLength(20)]],
@@ -544,5 +554,13 @@ export class PartyListComponent implements OnInit {
   isInvalid(field: string): boolean {
     const c = this.form.get(field);
     return !!(c && c.invalid && (c.dirty || c.touched));
+  }
+
+  hasPermission(mod: string, act: 'view' | 'create' | 'edit' | 'delete' = 'view') {
+    return this.auth.hasPermission(mod, act);
+  }
+
+  isSystemAdmin() {
+    return this.auth.isSystemAdmin();
   }
 }

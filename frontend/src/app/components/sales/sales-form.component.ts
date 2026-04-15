@@ -19,6 +19,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { InputTextModule } from 'primeng/inputtext';
 import { DividerModule } from 'primeng/divider';
+import { TooltipDirective } from '../../directives/tooltip.directive';
 
 // Services & Models
 import { SalesService, SaleMaster, SaleDetail, SalePayment, SaleBatchInfo } from '../../services/sales.service';
@@ -74,7 +75,7 @@ interface PayRow {
     AutoCompleteModule, InputNumberModule, SelectModule,
     DatePickerModule, ButtonModule, TableModule,
     DialogModule, ConfirmDialogModule, ToastModule,
-    InputTextModule, DividerModule
+    InputTextModule, DividerModule, TooltipDirective
   ],
   providers: [ConfirmationService, MessageService, DatePipe],
   templateUrl: './sales-form.component.html',

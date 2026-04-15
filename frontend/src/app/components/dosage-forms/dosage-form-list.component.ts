@@ -147,7 +147,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     }
     .page-head { border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
     .page-title { font-size: 1.15rem !important; margin: 0; font-weight: 800; color: #1e293b; }
-    .page-sub { margin: 0; color: #64748b; }
+    .page-sub { margin: 0; color: #334155; font-size: 0.8rem; font-weight: 500; }
     
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     
@@ -169,11 +169,11 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     .search-input { width: 100%; padding: 9px 36px; height: 34px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px !important; font-family: 'Inter', sans-serif; outline: none; transition: border-color .15s; background: #f8fafc; color: #0f172a; }
     .search-input:focus { border-color: #0d9488; background: #fff; }
     .search-clear { position: absolute; right: 10px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: .875rem; }
-    .result-count { font-size: .8rem; color: #94a3b8; }
+    .result-count { font-size: .8rem; color: #475569; font-weight: 600; }
     
     .table-responsive { overflow-x: auto; width: 100%; }
     .med-name { font-weight: 600; color: #0f172a; }
-    .text-muted { color: #64748b; }
+    .text-muted { color: #475569; font-weight: 500; }
     .text-xs { font-size: 0.75rem; }
     .badge-slate-light { background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
     .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: .72rem; font-weight: 600; }
@@ -181,9 +181,9 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     
     /* Table Header Styling */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-      background-color: #f8fafc !important; color: #0d9488 !important; font-weight: 700 !important; font-size: 0.75rem !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; padding: 8px 10px !important; border-bottom: 2px solid #0d9488 !important;
+      background-color: #f1f5f9 !important; color: #0d9488 !important; font-weight: 800 !important; font-size: 0.75rem !important; text-transform: uppercase !important; letter-spacing: 0.7px !important; padding: 10px 12px !important; border-bottom: 2.5px solid #0d9488 !important;
     }
-    ::ng-deep .p-datatable .p-datatable-tbody > tr > td { padding: 6px 10px !important; border-bottom: 1px solid #f1f5f9; }
+    ::ng-deep .p-datatable .p-datatable-tbody > tr > td { padding: 8px 12px !important; border-bottom: 1px solid #edf2f7; }
     
     /* ─── Status Toggle Switch ─── */
     .status-toggle-btn { display: inline-flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; padding: 0; font-family: 'Inter', sans-serif; }
@@ -206,7 +206,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     .dialog-form { display: flex; flex-direction: column; gap: 14px; padding: 4px 0; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group label { font-size: .8rem; font-weight: 600; color: #334155; }
+    .form-group label { font-size: .8rem; font-weight: 700; color: #1e293b; }
     .form-group input { width: 100%; }
     .field-readonly { background: #f8fafc !important; color: #64748b; font-weight: 500; }
     .err { color: #dc2626; font-size: .75rem; }

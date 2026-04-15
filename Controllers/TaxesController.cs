@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PharmacyApi.Filters;
 using PharmacyApi.DTOs;
 using PharmacyApi.Models;
 using PharmacyApi.Repositories;
@@ -18,6 +19,7 @@ namespace PharmacyApi.Controllers
             _repo = repo;
         }
 
+        [ModulePermission("Master Data", "view")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TaxDto>>> GetAll()
         {
@@ -25,6 +27,7 @@ namespace PharmacyApi.Controllers
             catch (Exception ex) { return StatusCode(500, ex.Message); }
         }
 
+        [ModulePermission("Master Data", "view")]
         [HttpGet("next-code/{prefix}")]
         public async Task<IActionResult> GetNextCode(string prefix)
         {
@@ -32,6 +35,7 @@ namespace PharmacyApi.Controllers
             catch (Exception ex) { return StatusCode(500, ex.Message); }
         }
 
+        [ModulePermission("Master Data", "view")]
         [HttpGet("{id:int}")]
         public async Task<ActionResult<TaxDto>> GetById(int id)
         {
@@ -44,6 +48,7 @@ namespace PharmacyApi.Controllers
             catch (Exception ex) { return StatusCode(500, ex.Message); }
         }
 
+        [ModulePermission("Master Data", "create")]
         [HttpPost]
         public async Task<ActionResult<TaxDto>> Create(TaxDto dto)
         {
@@ -61,6 +66,7 @@ namespace PharmacyApi.Controllers
             catch (Exception ex) { return StatusCode(500, ex.Message); }
         }
 
+        [ModulePermission("Master Data", "edit")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, TaxDto dto)
         {
@@ -80,6 +86,7 @@ namespace PharmacyApi.Controllers
             catch (Exception ex) { return StatusCode(500, ex.Message); }
         }
 
+        [ModulePermission("Master Data", "delete")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {

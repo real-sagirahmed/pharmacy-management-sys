@@ -26,15 +26,15 @@
   font-size: 1.3rem; box-shadow: 0 4px 12px rgba(13,148,136,.3);
 }
 .page-title { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0; }
-.page-sub { font-size: .8rem; color: #64748b; margin: 0; }
+.page-sub { font-size: .85rem; color: #334155; font-weight: 500; margin: 0; }
 
 .invoice-badge {
   display: flex; flex-direction: column; align-items: flex-end;
   background: #fff; border: 1px solid #e2e8f0;
   border-radius: 12px; padding: 10px 18px;
   box-shadow: 0 2px 8px rgba(0,0,0,.04);
-  .inv-label { font-size: .65rem; font-weight: 700; color: #94a3b8; letter-spacing: .08em; }
-  .inv-code { font-size: 1.1rem; font-weight: 800; color: #0d9488; }
+  .inv-label { font-size: .65rem; font-weight: 800; color: #475569; letter-spacing: .08em; }
+  .inv-code { font-size: 1.1rem; font-weight: 900; color: #0d9488; }
 }
 
 // ── Body layout ───────────────────────────────────────────────────────────────
@@ -73,7 +73,7 @@
 
 .section-header {
   display: flex; align-items: center; gap: 8px;
-  font-size: .7rem; font-weight: 700; color: #64748b;
+  font-size: .75rem; font-weight: 800; color: #475569;
   letter-spacing: .1em; margin-bottom: 16px;
 
   .section-icon { color: #3b82f6; }
@@ -103,7 +103,7 @@
 }
 
 .info-field { display: flex; flex-direction: column; gap: 6px; }
-.field-label { font-size: .75rem; font-weight: 600; color: #475569; }
+.field-label { font-size: .75rem; font-weight: 700; color: #1e293b; }
 .required-star::after { content: ' *'; color: #ef4444; }
 
 .field-input {
@@ -130,8 +130,8 @@
   background: #f8fafc; border-radius: 12px; padding: 12px 16px;
   @media (max-width: 768px) { grid-template-columns: 1fr; }
   .cust-info-item { display: flex; flex-direction: column; gap: 4px;
-    label { font-size: .65rem; font-weight: 700; color: #94a3b8; letter-spacing: .06em; }
-    span { font-size: .875rem; color: #0f172a; font-weight: 600; }
+    label { font-size: .65rem; font-weight: 800; color: #475569; letter-spacing: .08em; text-transform: uppercase; }
+    span { font-size: .875rem; color: #0f172a; font-weight: 700; }
   }
 }
 
@@ -140,8 +140,8 @@
   display: flex; gap: 12px; align-items: flex-end;
   background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 12px 16px;
   .guest-field { display: flex; flex-direction: column; gap: 4px; flex: 1;
-    label { font-size: .65rem; font-weight: 700; color: #94a3b8; letter-spacing: .06em; text-transform: uppercase; }
-    .field-input { padding: 7px 10px; font-size: .8rem; }
+    label { font-size: .65rem; font-weight: 800; color: #475569; letter-spacing: .08em; text-transform: uppercase; }
+    .field-input { padding: 7px 10px; font-size: .85rem; font-weight: 600; }
   }
   .guest-hint { display: flex; align-items: center; gap: 6px; font-size: .75rem; color: #92400e; margin-bottom: 8px;
     i { color: #f59e0b; }
@@ -167,10 +167,10 @@
   width: 100%; border-collapse: collapse; table-layout: fixed;
 
   thead tr {
-    background: #f8fafc; border-bottom: 2px solid #e2e8f0;
+    background: #f1f5f9; border-bottom: 2.5px solid #0d9488;
     th { 
-      padding: 10px 4px; font-size: .65rem; font-weight: 700; color: #64748b; 
-      letter-spacing: .05em; text-align: left; background: #f8fafc; text-transform: uppercase;
+      padding: 12px 6px; font-size: .7rem; font-weight: 800; color: #0d9488; 
+      letter-spacing: .06em; text-align: left; background: #f1f5f9; text-transform: uppercase;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       &.col-exp, &.col-stock, &.col-qty { text-align: center; }
       &.col-total { text-align: right; padding-right: 12px; }
@@ -207,8 +207,8 @@
   display: flex; align-items: center; justify-content: flex-end; gap: 4px;
   background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
   padding: 6px 10px; height: 38px;
-  .currency-label { font-size: 0.7rem; color: #94a3b8; font-weight: 700; }
-  .line-total-val { font-size: 0.95rem; font-weight: 800; color: #0f172a; }
+  .currency-label { font-size: 0.75rem; color: #64748b; font-weight: 800; }
+  .line-total-val { font-size: 1rem; font-weight: 900; color: #0f172a; }
 }
 
 .med-input { 
@@ -337,7 +337,7 @@
 
 .summary-card { background: #0f172a; color: #fff; }
 .summary-title {
-  font-size: .65rem; font-weight: 700; color: #22d3ee; letter-spacing: .1em; margin-bottom: 16px;
+  font-size: .65rem; font-weight: 800; color: #06b6d4; letter-spacing: .12em; margin-bottom: 16px;
 }
 
 .summary-lines { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
@@ -356,7 +356,7 @@
 
 .grand-total-block {
   border-top: 1px solid #1e293b; padding-top: 16px;
-  .gt-label { font-size: 0.7rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.1em; margin-bottom: 6px; text-transform: uppercase; }
+  .gt-label { font-size: 0.75rem; font-weight: 800; color: #cbd5e1; letter-spacing: 0.12em; margin-bottom: 6px; text-transform: uppercase; }
   .gt-value { 
     font-size: 2.2rem; font-weight: 900; color: #4ade80; 
     text-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
@@ -371,7 +371,7 @@
 }
 
 // Payment Mode
-.pay-title { font-size: .65rem; font-weight: 700; color: #94a3b8; letter-spacing: .1em; margin-bottom: 14px; }
+.pay-title { font-size: .65rem; font-weight: 800; color: #475569; letter-spacing: .12em; margin-bottom: 14px; }
 
 .pay-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .pay-btn {
@@ -527,3 +527,90 @@
 }
 
 .near-exp-dot { font-size: .9rem; }
+
+// ── Responsive Optimization Part 2 (Adaptive Tables) ─────────────────────
+@media (max-width: 768px) {
+  .pos-page { padding: 8px; }
+  .card-section { padding: 16px; border-radius: 16px; }
+
+  /* Hide standard table headers */
+  .adaptive-table thead {
+    display: none;
+  }
+
+  /* Force table rows and cells to behave as blocks */
+  .adaptive-table tbody > tr {
+    display: block !important;
+    border: 1.5px solid #e2e8f0 !important;
+    margin-bottom: 1.5rem !important;
+    background: #fff !important;
+    border-radius: 16px !important;
+    padding: 12px 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    position: relative;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+
+    &.near-expiry-row {
+      border-left: 6px solid #f59e0b !important;
+    }
+    &.row-active {
+      border-color: #0d9488 !important;
+      box-shadow: 0 8px 20px rgba(13, 148, 136, 0.1) !important;
+    }
+  }
+
+  .adaptive-table tbody > tr > td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border: none !important;
+    padding: 10px 12px !important;
+    text-align: right !important;
+    width: 100% !important;
+    border-bottom: 1px dashed #f1f5f9 !important;
+
+    &:last-child { border-bottom: none !important; }
+  }
+
+  /* Responsive Labels (Pseudo-labels) from data-label attribute */
+  .adaptive-table tbody > tr > td:before {
+    content: attr(data-label);
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+    margin-right: 1rem;
+    text-align: left;
+    letter-spacing: 0.05em;
+  }
+
+  /* Specific column adjustments for mobile */
+  .col-prod, .col-batch, .col-exp, .col-stock, .col-qty, .col-price, .col-disc, .col-tax, .col-total {
+    width: 100% !important;
+    text-align: right !important;
+  }
+
+  .col-del {
+    position: absolute; top: 12px; right: 12px;
+    width: auto !important; border: none !important; padding: 0 !important;
+    &:before { display: none !important; }
+  }
+
+  .qty-adjuster { width: 140px; margin-left: auto; }
+  .disc-cell-v2 { width: 180px; margin-left: auto; }
+  .total-result-box { background: #f0fdfa; border-color: #0d9488; }
+
+  /* Footer Adjustments */
+  .pos-footer-grid { gap: 16px; }
+  .grand-total-block .gt-value { font-size: 1.8rem; }
+  .pay-methods { grid-template-columns: 1fr 1fr; }
+  .change-return-block .cr-value { font-size: 1.4rem; }
+}
+
+@media (max-width: 480px) {
+  .pay-methods { grid-template-columns: 1fr; }
+  .action-grid-mini { grid-template-columns: 1fr; }
+  .page-title { font-size: 1.2rem; }
+}

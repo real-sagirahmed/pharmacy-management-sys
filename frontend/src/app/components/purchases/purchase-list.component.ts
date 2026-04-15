@@ -1,4 +1,5 @@
 import { Component, OnInit, signal, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { AuthService } from '../../services/auth.service';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -15,6 +16,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { PaymentService } from '../../services/payment.service';
 import { MoneyReceiptService } from '../due-collection/money-receipt.service';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { TooltipDirective } from '../../directives/tooltip.directive';
 
 @Component({
   selector: 'app-purchase-list',
@@ -22,11 +24,11 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
   imports: [
     CommonModule, RouterModule, FormsModule,
     TableModule, ToastModule, ConfirmDialogModule,
-    PaginatorModule, DialogModule, SelectModule, InputNumberModule
+    PaginatorModule, DialogModule, SelectModule, InputNumberModule, TooltipDirective
   ],
   providers: [MessageService, ConfirmationService],
   template: `
-    <div class="page-wrap animate-fadein-up">
+    <div class="page-wrap animate-fadein-up" *ngIf="isSystemAdmin() || hasPermission('Purchases')">
       <p-toast></p-toast>
       <p-confirmDialog></p-confirmDialog>
       
@@ -37,7 +39,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
             <h1 class="page-title">Procurement Records</h1>
             <p class="page-sub text-xs">All GRN purchase orders from suppliers</p>
           </div>
-          <button class="btn-primary" (click)="router.navigate(['/dashboard/purchases/new'])" title="Shortcut: Alt + N">
+          <button class="btn-primary" (click)="router.navigate(['/dashboard/purchases/new'])" title="Shortcut: Alt + N" *ngIf="isSystemAdmin() || hasPermission('Purchases', 'create')">
             <i class="pi pi-plus"></i> New GRN
           </button>
         </div>
@@ -104,16 +106,16 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
                   </td>
                   <td alignFrozen="right" pFrozenColumn>
                     <div class="action-btns">
-                      <button *ngIf="p.dueAmount > 0" class="act-btn act-pay" (click)="openPayDialog(p)" title="Pay Due">
+                      <button *ngIf="p.dueAmount > 0" class="act-btn act-pay" (click)="openPayDialog(p)" [appTooltip]="'Pay Due: ' + (p.dueAmount | number:'1.2-2') + ' Tk'">
                         <i class="pi pi-money-bill"></i>
                       </button>
-                      <button class="act-btn act-view" (click)="viewDetails(p)" title="View Details">
+                      <button class="act-btn act-view" (click)="viewDetails(p)" [appTooltip]="'View GRN Details'">
                         <i class="pi pi-eye"></i>
                       </button>
-                      <button class="act-btn act-print" (click)="printGrn(p)" title="Print GRN">
+                      <button class="act-btn act-print" (click)="printGrn(p)" [appTooltip]="'Print GRN Report'">
                         <i class="pi pi-print"></i>
                       </button>
-                      <button class="act-btn act-del" (click)="deletePurchase(p)" title="Delete GRN">
+                      <button class="act-btn act-del" (click)="deletePurchase(p)" [appTooltip]="'Delete GRN (Stock will revert)'" *ngIf="isSystemAdmin() || hasPermission('Purchases', 'delete')">
                         <i class="pi pi-trash"></i>
                       </button>
                     </div>
@@ -266,7 +268,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
           <div class="pay-footer-stats">
               <div class="flex justify-between items-center px-2">
-                  <span class="text-xs font-bold text-slate-500 uppercase">Total Paying</span>
+                  <span class="text-xs font-bold text-slate-700 uppercase">Total Paying</span>
                   <span class="text-xl font-black" [class.text-red-500]="getTotalPaymentAmount() > selectedPurchase.dueAmount + 0.01">
                       ৳{{ getTotalPaymentAmount() | number:'1.2-2' }}
                   </span>
@@ -305,7 +307,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
     }
     
     .page-title { font-size: 1.15rem !important; margin: 0; font-weight: 800; color: #1e293b; }
-    .page-sub { margin: 0; color: #64748b; font-size: 0.75rem; }
+    .page-sub { margin: 0; color: #334155; font-size: 0.8rem; font-weight: 500; }
 
     .btn-primary {
       display: flex; align-items: center; gap: 8px;
@@ -331,7 +333,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
     .search-input:focus { border-color: #0d9488; background: #fff; }
     .search-clear { position: absolute; right: 10px; background: none; border: none; color: #94a3b8; cursor: pointer; }
 
-    .result-count { font-size: .8rem; color: #94a3b8; }
+    .result-count { font-size: .8rem; color: #475569; font-weight: 600; }
     .summary-row { display: flex; gap: 10px; }
     .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 600; }
     .chip-teal { background: #ccfbf1; color: #0f766e; }
@@ -341,22 +343,22 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
     /* Table Header Styling */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-      background-color: #f8fafc !important;
+      background-color: #f1f5f9 !important;
       color: #0d9488 !important;
-      font-weight: 700 !important;
+      font-weight: 800 !important;
       font-size: 0.75rem !important;
       text-transform: uppercase !important;
-      letter-spacing: 0.5px !important;
-      padding: 8px 10px !important;
-      border-bottom: 2px solid #0d9488 !important;
+      letter-spacing: 0.7px !important;
+      padding: 10px 12px !important;
+      border-bottom: 2.5px solid #0d9488 !important;
     }
     
     ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
-      padding: 6px 10px !important;
-      border-bottom: 1px solid #f1f5f9;
+      padding: 8px 12px !important;
+      border-bottom: 1px solid #edf2f7;
     }
 
-    .text-muted { color: #64748b; }
+    .text-muted { color: #475569; font-weight: 500; }
     .text-xs { font-size: .75rem; }
     .text-sm { font-size: .82rem; }
     .font-semibold { font-weight: 600; }
@@ -394,7 +396,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
     .details-wrap { display: flex; flex-direction: column; gap: 14px; padding: 18px 24px; max-height: 70vh; overflow-y: auto; }
     .det-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .det-item { display: flex; flex-direction: column; gap: 2px; background: #f8fafc; border-radius: 8px; padding: 8px 12px; }
-    .det-item span { font-size: .68rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
+    .det-item span { font-size: .68rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
     .det-item strong { font-size: .85rem; color: #0f172a; }
     .det-item.grand { background: #ccfbf1; }
     .det-item.grand strong { color: #0d9488; font-size: 1rem; }
@@ -402,7 +404,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
     .detail-section { border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 5px; }
     .det-heading { font-size: .7rem; font-weight: 700; color: #0d9488; text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
     .det-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-    .det-table th { background: #f8fafc; color: #64748b; font-weight: 700; padding: 6px 8px; text-align: left; font-size: .68rem; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+    .det-table th { background: #f1f5f9; color: #334155; font-weight: 800; padding: 8px 10px; text-align: left; font-size: .7rem; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
     .det-table td { padding: 6px 8px; border-bottom: 1px solid #f8fafc; }
     .batch-mono { font-family: monospace; color: #0d9488; font-size: .75rem; }
     .pay-badge { background: #eff6ff; color: #3b82f6; padding: 2px 8px; border-radius: 6px; font-size: .72rem; font-weight: 700; }
@@ -441,10 +443,10 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
     .pay-form { display: flex; flex-direction: column; gap: 16px; padding-top: 10px; }
     .pay-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 12px; }
     .pay-sum-item { display: flex; flex-direction: column; gap: 2px; }
-    .pay-sum-item span { font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+    .pay-sum-item span { font-size: 0.65rem; font-weight: 800; color: #475569; text-transform: uppercase; }
     .pay-sum-item strong { font-size: 0.9rem; color: #0f172a; }
     .pay-rows-title { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding: 4px 0; }
-    .pay-rows-title span { font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pay-rows-title span { font-size: 0.75rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.08em; }
     .btn-add-row { background: #eff6ff; color: #3b82f6; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
     .pay-row { background: #fff; border: 1.5px solid #f1f5f9; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .pay-row-top { display: grid; grid-template-columns: 120px 1fr 34px; gap: 8px; }
@@ -509,6 +511,7 @@ export class PurchaseListComponent implements OnInit {
     private purchaseService: PurchaseService,
     private paymentService: PaymentService,
     private moneyReceiptService: MoneyReceiptService,
+    private auth: AuthService,
     private grnPrintService: GrnPrintService,
     private confirmationService: ConfirmationService,
     private messageService: MessageService
@@ -640,5 +643,13 @@ export class PurchaseListComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not load details for printing.' });
       }
     });
+  }
+
+  hasPermission(mod: string, act: 'view' | 'create' | 'edit' | 'delete' = 'view') {
+    return this.auth.hasPermission(mod, act);
+  }
+
+  isSystemAdmin() {
+    return this.auth.isSystemAdmin();
   }
 }

@@ -25,7 +25,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
   ],
   providers: [ConfirmationService, MessageService],
   template: `
-    <div class="page-wrap animate-fadein-up">
+    <div class="page-wrap animate-fadein-up" *ngIf="isSystemAdmin() || hasPermission('Users')">
       <p-toast></p-toast>
       <p-confirmDialog></p-confirmDialog>
 
@@ -34,13 +34,14 @@ import { ConfirmationService, MessageService } from 'primeng/api';
         <div class="page-head pt-2 pb-1 px-4">
           <div style="margin-left: 12px;">
             <h1 class="page-title">User Management</h1>
-            <p class="page-sub text-xs">Manage system users and their roles.</p>
+            <p class="page-sub text-xs">Manage system users, access levels, and account security.</p>
           </div>
           <div class="flex items-center gap-2">
             <button pButton icon="pi pi-shield" label="Roles & Permissions" 
                     class="p-button-outlined p-button-sm p-button-secondary"
                     (click)="showRoleManagement()"></button>
-            <button pButton icon="pi pi-plus" label="Add New User" 
+            <button *ngIf="isSystemAdmin() || hasPermission('Users', 'create')" 
+                    pButton icon="pi pi-plus" label="Add New User" 
                     class="p-button-sm p-button-success"
                     (click)="showAddDialog()"></button>
             <span class="admin-badge"><i class="pi pi-lock"></i> Admin Only</span>
@@ -97,9 +98,9 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                       <div class="user-info">
                         <div class="user-name med-name flex items-center gap-2">
                           {{ u.fullName }}
-                          <span *ngIf="isUserSystemAdmin(u)" class="sysadmin-badge-inline">👑 System Owner</span>
+                          <span *ngIf="isUserSystemAdmin(u)" class="sysadmin-badge-inline uppercase">👑 System Owner</span>
                         </div>
-                        <div class="user-username text-xs">&#64;{{ u.userName }} • <span class="text-muted">{{ u.email }}</span></div>
+                        <div class="user-username text-xs font-bold text-slate-800">&#64;{{ u.userName }} • <span class="text-slate-600 font-medium">{{ u.email }}</span></div>
                       </div>
                     </div>
                   </td>
@@ -117,8 +118,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                   </td>
                   <td>
                     <div class="flex gap-2">
-                      <!-- Role change & toggle blocked for SystemAdmin UNLESS caller is also a SystemAdmin -->
-                      <ng-container *ngIf="!isUserSystemAdmin(u) || authService.isSystemAdmin(); else sysAdminLock">
+                      <!-- Role change & toggle blocked for SystemAdmin UNLESS caller is also a SystemAdmin, PLUS requires EDIT permission -->
+                      <ng-container *ngIf="(!isUserSystemAdmin(u) || isSystemAdmin()) && (isSystemAdmin() || hasPermission('Users', 'edit')); else sysAdminLock">
                         <select class="role-select" (change)="onRoleChange(u.id, $any($event.target).value)">
                           <option value="" disabled selected>Role…</option>
                           <option value="Admin">Admin</option>
@@ -140,15 +141,15 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                   </td>
                   <td alignFrozen="right" pFrozenColumn>
                     <div class="action-btns">
-                      <!-- Edit blocked for SystemAdmin UNLESS the caller is also a SystemAdmin -->
-                      <ng-container *ngIf="!isUserSystemAdmin(u) || authService.isSystemAdmin()">
+                      <!-- Edit blocked for SystemAdmin UNLESS the caller is also a SystemAdmin, PLUS requires EDIT permission -->
+                      <ng-container *ngIf="(!isUserSystemAdmin(u) || isSystemAdmin()) && (isSystemAdmin() || hasPermission('Users', 'edit'))">
                         <button class="act-btn act-edit" title="Edit user" (click)="showEditDialog(u)">
                           <i class="pi pi-pencil"></i>
                         </button>
                       </ng-container>
                       
-                      <!-- Delete blocked for SystemAdmin UNLESS the caller is also a SystemAdmin -->
-                      <ng-container *ngIf="!isUserSystemAdmin(u) || authService.isSystemAdmin()">
+                      <!-- Delete blocked for SystemAdmin UNLESS the caller is also a SystemAdmin, PLUS requires DELETE permission -->
+                      <ng-container *ngIf="(!isUserSystemAdmin(u) || isSystemAdmin()) && (isSystemAdmin() || hasPermission('Users', 'delete'))">
                         <button class="act-btn act-del" title="Delete user" 
                                 (click)="onDelete(u.id)"
                                 [disabled]="isCurrentUser(u.userName)">
@@ -268,7 +269,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     }
     .page-head { border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
     .page-title { font-size: 1.15rem !important; margin: 0; font-weight: 800; color: #1e293b; }
-    .page-sub { margin: 0; color: #64748b; }
+    .page-sub { margin: 0; color: #334155; font-size: 0.8rem; font-weight: 500; }
     .admin-badge {
       display: flex; align-items: center; gap: 6px; background: #ede9fe; color: #7c3aed; padding: 6px 14px;
       border-radius: 99px; font-size: .75rem; font-weight: 700; border: 1px solid #ddd6fe; margin-right: 12px;
@@ -277,8 +278,9 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     
     .summary-row { display: flex; gap: 10px; flex-wrap: wrap; }
-    .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 600; }
-    .chip-teal { background: #ccfbf1; color: #0f766e; } .chip-green { background: #dcfce7; color: #15803d; } .chip-slate { background: #f1f5f9; color: #475569; } .chip-purple { background: #ede9fe; color: #7c3aed; }
+    .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 700; }
+    .chip-teal { background: #ccfbf1; color: #0f766e; } .chip-green { background: #dcfce7; color: #15803d; } .chip-slate { background: #f1f5f9; color: #1e293b; } .chip-purple { background: #ede9fe; color: #6d28d9; }
+    .chip-emerald { background: #dcfce7; color: #065f46; } .chip-rose { background: #fee2e2; color: #991b1b; }
     
     .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0 0 16px 16px; overflow: hidden; display: flex; flex-direction: column; }
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1; max-width: 400px; }
@@ -295,9 +297,16 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     
     /* Table Header Styling */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-      background-color: #f8fafc !important; color: #0d9488 !important; font-weight: 700 !important; font-size: 0.75rem !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; padding: 8px 10px !important; border-bottom: 2px solid #0d9488 !important;
+      background-color: #f1f5f9 !important; 
+      color: #0d9488 !important; 
+      font-weight: 900 !important; 
+      font-size: 0.75rem !important; 
+      text-transform: uppercase !important; 
+      letter-spacing: 0.8px !important; 
+      padding: 12px 12px !important; 
+      border-bottom: 2.5px solid #0d9488 !important;
     }
-    ::ng-deep .p-datatable .p-datatable-tbody > tr > td { padding: 6px 10px !important; border-bottom: 1px solid #f1f5f9; }
+    ::ng-deep .p-datatable .p-datatable-tbody > tr > td { padding: 8px 12px !important; border-bottom: 1px solid #edf2f7; }
     
     /* Avatar & Inline Card */
     .user-card-inline { display: flex; align-items: center; gap: 12px; }
@@ -365,7 +374,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 
     .dialog-form { display: flex; flex-direction: column; gap: 1.25rem; }
     .field { display: flex; flex-direction: column; gap: 0.5rem; }
-    .field label { font-size: 0.85rem; font-weight: 700; color: #475569; letter-spacing: 0.025em; }
+    .field label { font-size: 0.85rem; font-weight: 800; color: #1e293b; letter-spacing: 0.025em; }
 
     ::ng-deep .user-dialog .p-inputtext, 
     ::ng-deep .user-dialog .p-dropdown,
@@ -375,9 +384,9 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     }
     ::ng-deep .user-dialog .p-inputtext:focus,
     ::ng-deep .user-dialog .p-dropdown:focus-within {
-      border-color: #0d9488 !important; box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1) !important; background: #fff;
+      border-color: #0d9488 !important; box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15) !important; background: #fff;
     }
-    ::ng-deep .p-input-icon-left i { color: #94a3b8; }
+    ::ng-deep .p-input-icon-left i { color: #64748b; }
     ::ng-deep .p-input-icon-left .p-inputtext { padding-left: 2.5rem !important; }
     
     .dialog-footer { display: flex; justify-content: flex-end; gap: 0.75rem; width: 100%; }
@@ -446,16 +455,24 @@ export class UserManagementComponent implements OnInit {
     }
   }
 
-  isUserSystemAdmin(user: any): boolean {
-    return user?.roles?.includes('SystemAdmin') ?? false;
+  isUserSystemAdmin(u: any): boolean {
+    return u.roles && u.roles.includes('SystemAdmin');
+  }
+
+  isCurrentUser(userName: string): boolean {
+    return this.authService.getUsername()?.toLowerCase() === userName?.toLowerCase();
+  }
+
+  hasPermission(mod: string, act: 'view' | 'create' | 'edit' | 'delete' = 'view') {
+    return this.authService.hasPermission(mod, act);
+  }
+
+  isSystemAdmin() {
+    return this.authService.isSystemAdmin();
   }
 
   countRole(role: string): number {
     return this.users().filter(u => u.roles?.includes(role)).length;
-  }
-
-  isCurrentUser(username: string): boolean {
-    return this.authService.currentUserValue?.userName === username;
   }
 
   countStatus(active: boolean): number {

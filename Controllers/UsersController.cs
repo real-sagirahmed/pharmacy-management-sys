@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApi.DTOs;
 using PharmacyApi.Services;
+using PharmacyApi.Filters;
 
 namespace PharmacyApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin,SystemAdmin")]
+    [Authorize]
     public class UsersController : ControllerBase
     {
         private readonly IUserManagementService _userService;
@@ -18,6 +19,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpGet]
+        [ModulePermission("Users", "view")]
         public async Task<IActionResult> GetUsers()
         {
             var users = await _userService.GetAllUsersAsync();
@@ -25,6 +27,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost("create-by-admin")]
+        [ModulePermission("Users", "create")]
         public async Task<IActionResult> CreateByAdmin([FromBody] CreateUserDto model)
         {
             var result = await _userService.CreateUserAsync(model);
@@ -34,6 +37,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPatch("{id}/toggle-status")]
+        [ModulePermission("Users", "edit")]
         public async Task<IActionResult> ToggleStatus(string id)
         {
             var success = await _userService.ToggleUserStatusAsync(id);
@@ -43,6 +47,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPut("{id}")]
+        [ModulePermission("Users", "edit")]
         public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserDto model)
         {
             // Security Hardening: Only SystemAdmin can edit a SystemAdmin user
@@ -59,6 +64,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpDelete("{id}")]
+        [ModulePermission("Users", "delete")]
         public async Task<IActionResult> DeleteUser(string id)
         {
             var result = await _userService.DeleteUserAsync(id);
@@ -70,6 +76,7 @@ namespace PharmacyApi.Controllers
         // ─── Role Assignment ───
 
         [HttpPost("update-role")]
+        [ModulePermission("Users", "edit")]
         public async Task<IActionResult> UpdateRole([FromBody] UpdateUserRoleDto model)
         {
             // Security Hardening: Only SystemAdmin can assign the SystemAdmin role
@@ -100,6 +107,7 @@ namespace PharmacyApi.Controllers
         // ─── Role Management ───
 
         [HttpGet("roles")]
+        [ModulePermission("Roles", "view")]
         public async Task<IActionResult> GetRoles()
         {
             var roles = await _userService.GetRolesAsync();
@@ -107,7 +115,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost("roles")]
-        [Authorize(Roles = "SystemAdmin")]
+        [ModulePermission("Roles", "create")]
         public async Task<IActionResult> CreateRole([FromBody] string roleName)
         {
             var result = await _userService.CreateRoleAsync(roleName);
@@ -117,7 +125,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPut("roles/{roleId}")]
-        [Authorize(Roles = "SystemAdmin")]
+        [ModulePermission("Roles", "edit")]
         public async Task<IActionResult> UpdateRoleName(string roleId, [FromBody] string newName)
         {
             var result = await _userService.UpdateRoleAsync(roleId, newName);
@@ -127,7 +135,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpDelete("roles/{roleId}")]
-        [Authorize(Roles = "SystemAdmin")]
+        [ModulePermission("Roles", "delete")]
         public async Task<IActionResult> DeleteRole(string roleId)
         {
             var result = await _userService.DeleteRoleAsync(roleId);
@@ -139,6 +147,7 @@ namespace PharmacyApi.Controllers
         // ─── Permission Management ───
 
         [HttpGet("permissions/{roleId}")]
+        [ModulePermission("Roles", "view")]
         public async Task<IActionResult> GetPermissions(string roleId)
         {
             var permissions = await _userService.GetPermissionsByRoleAsync(roleId);
@@ -146,7 +155,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost("permissions/{roleId}")]
-        [Authorize(Roles = "SystemAdmin")]
+        [ModulePermission("Roles", "edit")]
         public async Task<IActionResult> UpdatePermissions(string roleId, [FromBody] List<PermissionDto> permissions)
         {
             await _userService.UpdatePermissionsAsync(roleId, permissions);

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApi.DTOs;
 using PharmacyApi.Repositories;
+using PharmacyApi.Filters;
 
 namespace PharmacyApi.Controllers
 {
@@ -19,6 +20,7 @@ namespace PharmacyApi.Controllers
 
         // GET: api/purchases/next-grn
         [HttpGet("next-grn")]
+        [ModulePermission("Purchases", "view")]
         public async Task<ActionResult<string>> GetNextGrn()
         {
             var code = await _repo.GetNextGrnCodeAsync();
@@ -27,6 +29,7 @@ namespace PharmacyApi.Controllers
 
         // GET: api/purchases
         [HttpGet]
+        [ModulePermission("Purchases", "view")]
         public async Task<ActionResult<IEnumerable<PurchaseMasterDto>>> GetPurchases()
         {
             var result = await _repo.GetAllAsync();
@@ -35,6 +38,7 @@ namespace PharmacyApi.Controllers
 
         // GET: api/purchases/paged
         [HttpGet("paged")]
+        [ModulePermission("Purchases", "view")]
         public async Task<ActionResult<PagedResult<PurchaseMasterDto>>> GetPaged([FromQuery] PurchaseSearchParameters parameters)
         {
             var result = await _repo.GetPagedAsync(parameters);
@@ -43,6 +47,7 @@ namespace PharmacyApi.Controllers
 
         // GET: api/purchases/{id}
         [HttpGet("{id}")]
+        [ModulePermission("Purchases", "view")]
         public async Task<ActionResult<PurchaseMasterDto>> GetPurchase(int id)
         {
             var result = await _repo.GetByIdAsync(id);
@@ -52,6 +57,7 @@ namespace PharmacyApi.Controllers
 
         // POST: api/purchases
         [HttpPost]
+        [ModulePermission("Purchases", "create")]
         public async Task<ActionResult<PurchaseMasterDto>> PostPurchase(PurchaseMasterDto purchaseDto)
         {
             try
@@ -71,6 +77,7 @@ namespace PharmacyApi.Controllers
 
         // DELETE: api/purchases/{id}
         [HttpDelete("{id}")]
+        [ModulePermission("Purchases", "delete")]
         public async Task<IActionResult> DeletePurchase(int id)
         {
             var success = await _repo.DeleteAsync(id);
