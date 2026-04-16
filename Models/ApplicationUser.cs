@@ -8,6 +8,11 @@ namespace PharmacyApi.Models
         [StringLength(100)]
         public string FullName { get; set; } = string.Empty;
 
+        [StringLength(500)]
+        public string? Address { get; set; }
+
+        public string? ProfilePicturePath { get; set; }
+
         public bool IsActive { get; set; } = true;
     }
 }

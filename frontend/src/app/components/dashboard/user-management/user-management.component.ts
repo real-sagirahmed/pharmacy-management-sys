@@ -83,6 +83,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                 <tr>
                   <th style="min-width: 250px;" pSortableColumn="fullName">User Details <p-sortIcon field="fullName"></p-sortIcon></th>
                   <th style="min-width: 150px;">Roles</th>
+                  <th style="min-width: 140px;">Mobile</th>
+                  <th style="min-width: 180px;">Address</th>
                   <th style="min-width: 120px;">Status</th>
                   <th style="min-width: 150px;">Operations</th>
                   <th alignFrozen="right" pFrozenColumn style="min-width: 80px;">Actions</th>
@@ -93,7 +95,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                   <td>
                     <div class="user-card-inline">
                       <div class="avatar" [style.background]="getAvatarColor(u.fullName)">
-                        {{ u.fullName?.charAt(0)?.toUpperCase() || '?' }}
+                        <img *ngIf="u.profilePicturePath" [src]="authService.getProfileImageUrl(u.profilePicturePath)" class="avatar-img">
+                        <span *ngIf="!u.profilePicturePath">{{ u.fullName?.charAt(0)?.toUpperCase() || '?' }}</span>
                       </div>
                       <div class="user-info">
                         <div class="user-name med-name flex items-center gap-2">
@@ -109,6 +112,18 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                       <span *ngFor="let role of u.roles" class="role-badge" [class]="getRoleBadgeClass(role)">
                         {{ role }}
                       </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="user-phone" style="font-size: 0.8rem; font-weight: 600; color: #475569;">
+                      <i class="pi pi-phone mr-1 text-slate-400"></i>
+                      {{ u.phoneNumber || 'N/A' }}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="user-address text-xs text-slate-500" [title]="u.address" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;">
+                      <i class="pi pi-home mr-1"></i>
+                      {{ u.address || 'N/A' }}
                     </div>
                   </td>
                   <td>
@@ -166,7 +181,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
               </ng-template>
 
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="5"><div class="empty-state"><i class="pi pi-users empty-icon"></i><p class="empty-text">No users found</p></div></td></tr>
+                <tr><td colspan="7"><div class="empty-state"><i class="pi pi-users empty-icon"></i><p class="empty-text">No users found</p></div></td></tr>
               </ng-template>
             </p-table>
           </div>
@@ -200,6 +215,17 @@ import { ConfirmationService, MessageService } from 'primeng/api';
               <label for="password">Password</label>
               <p-password [(ngModel)]="newUser.password" [feedback]="false" [toggleMask]="true" 
                           placeholder="••••••••" styleClass="w-full" [inputStyle]="{width: '100%'}"></p-password>
+            </div>
+            <div class="field">
+              <label for="phoneNumber">Mobile Number</label>
+              <div class="p-input-icon-left">
+                <i class="pi pi-phone"></i>
+                <input type="text" pInputText id="phoneNumber" [(ngModel)]="newUser.phoneNumber" placeholder="01XXX-XXXXXX" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="address">Residential Address</label>
+              <textarea pInputText id="address" [(ngModel)]="newUser.address" placeholder="House #, Road #, Area, City..." rows="2" style="width: 100%; border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 10px;"></textarea>
             </div>
             <div class="field">
               <label for="role">Initial Role</label>
@@ -244,6 +270,17 @@ import { ConfirmationService, MessageService } from 'primeng/api';
               <label for="epassword">New Password (optional)</label>
               <p-password [(ngModel)]="editUser.password" [feedback]="false" [toggleMask]="true" 
                           placeholder="Leave blank to keep current" styleClass="w-full" [inputStyle]="{width: '100%'}"></p-password>
+            </div>
+            <div class="field">
+              <label for="ephoneNumber">Mobile Number</label>
+              <div class="p-input-icon-left">
+                <i class="pi pi-phone"></i>
+                <input type="text" pInputText id="ephoneNumber" [(ngModel)]="editUser.phoneNumber" placeholder="01XXX-XXXXXX" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="eaddress">Residential Address</label>
+              <textarea pInputText id="eaddress" [(ngModel)]="editUser.address" placeholder="Enter full address" rows="2" style="width: 100%; border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 10px;"></textarea>
             </div>
           </div>
         </ng-template>
@@ -314,7 +351,9 @@ import { ConfirmationService, MessageService } from 'primeng/api';
       width: 36px; height: 36px; border-radius: 10px;
       color: #fff; font-size: 1rem; font-weight: 700;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      overflow: hidden;
     }
+    .avatar-img { width: 100%; height: 100%; object-fit: cover; }
     .user-info { display: flex; flex-direction: column; }
     .user-username { font-weight: 600; color: #475569; }
 
@@ -401,11 +440,11 @@ export class UserManagementComponent implements OnInit {
 
   // Add User Dialog
   displayAddDialog = false;
-  newUser = { fullName: '', userName: '', email: '', password: '', role: 'Cashier' };
+  newUser = { fullName: '', userName: '', email: '', password: '', role: 'Cashier', phoneNumber: '', address: '' };
   
   // Edit User Dialog
   displayEditDialog = false;
-  editUser = { id: '', fullName: '', userName: '', email: '', password: '' };
+  editUser = { id: '', fullName: '', userName: '', email: '', phoneNumber: '', address: '', password: '' };
 
   availableRoles = ['Admin', 'Manager', 'Pharmacist', 'Cashier'];
 
@@ -500,7 +539,7 @@ export class UserManagementComponent implements OnInit {
   }
 
   showAddDialog() {
-    this.newUser = { fullName: '', userName: '', email: '', password: '', role: 'Cashier' };
+    this.newUser = { fullName: '', userName: '', email: '', password: '', role: 'Cashier', phoneNumber: '', address: '' };
     this.displayAddDialog = true;
   }
 
@@ -537,6 +576,8 @@ export class UserManagementComponent implements OnInit {
       fullName: user.fullName,
       userName: user.userName,
       email: user.email,
+      phoneNumber: user.phoneNumber || '',
+      address: user.address || '',
       password: ''
     };
     this.displayEditDialog = true;
@@ -551,6 +592,17 @@ export class UserManagementComponent implements OnInit {
     this.saving = true;
     this.userService.updateUser(this.editUser.id, this.editUser).subscribe({
       next: () => {
+        // If current admin is editing their own record, update the cache to sync UI
+        if (this.editUser.id === this.authService.currentUserValue?.id) {
+          this.authService.updateCachedUser({
+            fullName: this.editUser.fullName,
+            userName: this.editUser.userName,
+            email: this.editUser.email,
+            phoneNumber: this.editUser.phoneNumber,
+            address: this.editUser.address
+          });
+        }
+
         this.messageService.add({ severity: 'success', summary: 'Updated', detail: 'User details updated.' });
         this.displayEditDialog = false;
         this.saving = false;

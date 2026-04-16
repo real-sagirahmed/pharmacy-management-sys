@@ -9,6 +9,7 @@ export interface UserDto {
   email: string;
   fullName: string;
   isActive: boolean;
+  profilePicturePath?: string;
   roles: string[];
 }
 
@@ -58,6 +59,15 @@ export class UserService {
 
   deleteUser(id: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`);
+  }
+
+  changePassword(data: any): Observable<any> {
+    // Auth endpoints are somewhat separate from Users endpoint, let's point to Auth/change-password natively
+    return this.http.post(`${environment.apiUrl}/Auth/change-password`, data);
+  }
+
+  uploadProfilePicture(formData: FormData): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/Auth/upload-profile-picture`, formData);
   }
 
   // Role & Permission Management

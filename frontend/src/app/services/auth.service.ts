@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, map } from 'rxjs';
+import { BehaviorSubject, Observable, map, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -22,10 +22,24 @@ export class AuthService {
   login(username: string, password: string): Observable<any> {
     return this.http.post<any>(`${environment.apiUrl}/Auth/login`, { username, password })
       .pipe(map(user => {
+        // user metadata saved, but no token as it's now HttpOnly Cookie
         localStorage.setItem('currentUser', JSON.stringify(user));
         this.currentUserSubject.next(user);
         return user;
       }));
+  }
+
+  updateCachedUser(updatedFields: any) {
+    const merged = { ...this.currentUserValue, ...updatedFields };
+    localStorage.setItem('currentUser', JSON.stringify(merged));
+    this.currentUserSubject.next(merged);
+  }
+
+  getProfileImageUrl(path: string | null): string | null {
+    if (!path) return null;
+    // apiUrl is http://localhost:5171/api, we need http://localhost:5171
+    const baseUrl = environment.apiUrl.replace('/api', '');
+    return `${baseUrl}${path}`;
   }
   
   hasPermission(moduleName: string, action: 'view' | 'create' | 'edit' | 'delete' = 'view'): boolean {
@@ -46,12 +60,18 @@ export class AuthService {
   }
 
   logout() {
-    localStorage.removeItem('currentUser');
-    this.currentUserSubject.next({});
+    return this.http.post(`${environment.apiUrl}/Auth/logout`, {}).pipe(
+      tap(() => {
+        localStorage.removeItem('currentUser');
+        this.currentUserSubject.next({});
+      }),
+      map(() => true)
+    ).subscribe();
   }
 
   isLoggedIn(): boolean {
-    return !!this.currentUserValue.token;
+    // Check if user ID or Username exists, since token is now in a secure cookie
+    return !!this.currentUserValue?.id || !!this.currentUserValue?.userName;
   }
 
   getRoles(): string[] {
@@ -67,7 +87,7 @@ export class AuthService {
 
   /** Returns the current logged-in user's username */
   getUsername(): string | undefined {
-    return this.currentUserValue?.username;
+    return this.currentUserValue?.userName;
   }
 
   /** Returns true if the current user is SystemAdmin or Admin (Role check only) */

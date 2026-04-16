@@ -20,14 +20,16 @@ namespace PharmacyApi.Controllers
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
         private readonly IUserManagementService _userService;
+        private readonly IWebHostEnvironment _environment;
 
-        public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration, IEmailService emailService, IUserManagementService userService)
+        public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration, IEmailService emailService, IUserManagementService userService, IWebHostEnvironment environment)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
             _emailService = emailService;
             _userService = userService;
+            _environment = environment;
         }
 
         [HttpPost("register")]
@@ -44,7 +46,9 @@ namespace PharmacyApi.Controllers
                 Email = model.Email,
                 SecurityStamp = Guid.NewGuid().ToString(),
                 UserName = model.Username,
-                FullName = model.FullName
+                FullName = model.FullName,
+                PhoneNumber = model.PhoneNumber,
+                Address = model.Address
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -92,11 +96,24 @@ namespace PharmacyApi.Controllers
                     );
 
                 var permissions = await _userService.GetEffectivePermissionsAsync(user.Id);
+                var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+                Response.Cookies.Append("auth_token", tokenString, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true, // monsterasp.net has SSL
+                    SameSite = SameSiteMode.Strict,
+                    Expires = token.ValidTo
+                });
 
                 return Ok(new
                 {
-                    token = new JwtSecurityTokenHandler().WriteToken(token),
-                    expiration = token.ValidTo,
+                    id = user.Id,
+                    userName = user.UserName,
+                    email = user.Email,
+                    phoneNumber = user.PhoneNumber,
+                    address = user.Address,
+                    profilePicturePath = user.ProfilePicturePath,
                     roles = userRoles,
                     fullName = user.FullName,
                     permissions = permissions
@@ -147,6 +164,67 @@ namespace PharmacyApi.Controllers
 
             return BadRequest(string.Join(", ", result.Errors.Select(e => e.Description)));
         }
+
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordModel model)
+        {
+            var user = await _userManager.FindByIdAsync(model.UserId);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
+            if (result.Succeeded)
+            {
+                return Ok(new { Message = "Password changed successfully." });
+            }
+
+            return BadRequest(string.Join(", ", result.Errors.Select(e => e.Description)));
+        }
+
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            Response.Cookies.Delete("auth_token");
+            return Ok(new { Message = "Logged out successfully" });
+        }
+
+        [HttpPost("upload-profile-picture")]
+        public async Task<IActionResult> UploadProfilePicture([FromForm] IFormFile file, [FromForm] string userId)
+        {
+            if (file == null || file.Length == 0) return BadRequest("No file uploaded.");
+            
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound("User not found.");
+
+            // Create uploads directory if it doesn't exist
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "profiles");
+            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+            // Generate unique filename
+            var fileName = $"{userId}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            // Delete old file if exists
+            if (!string.IsNullOrEmpty(user.ProfilePicturePath))
+            {
+                var oldPath = Path.Combine(_environment.WebRootPath, user.ProfilePicturePath.TrimStart('/'));
+                if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+            }
+
+            // Save new file
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // Update user record
+            user.ProfilePicturePath = $"/uploads/profiles/{fileName}";
+            await _userManager.UpdateAsync(user);
+
+            return Ok(new { profilePicturePath = user.ProfilePicturePath });
+        }
     }
 
     public class RegisterModel
@@ -165,6 +243,8 @@ namespace PharmacyApi.Controllers
         [Required(ErrorMessage = "Full Name is required")]
         public string FullName { get; set; } = string.Empty;
 
+        public string? PhoneNumber { get; set; }
+        public string? Address { get; set; }
         public string Role { get; set; } = "Cashier";
     }
 
@@ -192,6 +272,19 @@ namespace PharmacyApi.Controllers
 
         [Required(ErrorMessage = "Token is required")]
         public string Token { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "New Password is required")]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class ChangePasswordModel
+    {
+        [Required(ErrorMessage = "User ID is required")]
+        public string UserId { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Old Password is required")]
+        public string OldPassword { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "New Password is required")]
         [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]

@@ -55,6 +55,9 @@ namespace PharmacyApi.Services
                     Email = user.Email!,
                     FullName = user.FullName,
                     IsActive = user.IsActive,
+                    PhoneNumber = user.PhoneNumber,
+                    Address = user.Address,
+                    ProfilePicturePath = user.ProfilePicturePath,
                     Roles = roles
                 });
             }
@@ -68,6 +71,8 @@ namespace PharmacyApi.Services
                 UserName = model.UserName,
                 Email = model.Email,
                 FullName = model.FullName,
+                PhoneNumber = model.PhoneNumber,
+                Address = model.Address,
                 IsActive = true
             };
 
@@ -183,6 +188,8 @@ namespace PharmacyApi.Services
             if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
 
             user.FullName = model.FullName;
+            user.PhoneNumber = model.PhoneNumber;
+            user.Address = model.Address;
 
             // Update Email if changed
             if (!string.Equals(user.Email, model.Email, StringComparison.OrdinalIgnoreCase))

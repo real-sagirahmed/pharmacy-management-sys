@@ -9,10 +9,15 @@ import { ReportService } from '../../services/report.service';
 import { TooltipDirective } from '../../directives/tooltip.directive';
 import { GlobalSearchComponent } from '../shared/global-search/global-search.component';
 
+import { FormsModule } from '@angular/forms';
+import { UserService } from '../../services/user.service';
+import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, TooltipDirective, GlobalSearchComponent],
+  imports: [CommonModule, RouterModule, TooltipDirective, GlobalSearchComponent, DialogModule, TooltipModule, FormsModule],
   providers: [CurrencyPipe, DatePipe],
   template: `
 
@@ -60,19 +65,111 @@ import { GlobalSearchComponent } from '../shared/global-search/global-search.com
             <span class="btn-key">CtrlK</span>
           </button>
 
-          <div class="header-time">
-            <i class="pi pi-clock" style="font-size:.8rem;opacity:.6"></i>
-            <span>{{ currentTime }}</span>
+          <div class="header-clock">
+            <span class="clock-time">{{ currentClock }}</span>
+            <span class="clock-date">{{ currentDate }}</span>
           </div>
-          <div class="user-chip">
-            <div class="user-avatar">{{ user.fullName?.charAt(0) || 'U' }}</div>
+          <div class="user-chip" (click)="showProfileDetails()" pTooltip="View Profile" [tooltipPosition]="'bottom'">
+            <div class="user-avatar">
+              <img *ngIf="user.profilePicturePath" [src]="authService.getProfileImageUrl(user.profilePicturePath)" class="avatar-img-tiny">
+              <span *ngIf="!user.profilePicturePath">{{ user.fullName?.charAt(0) || 'U' }}</span>
+            </div>
             <div class="user-info">
               <span class="user-name">{{ user.fullName }}</span>
               <span class="user-role">{{ user.roles?.[0] }}</span>
             </div>
           </div>
+          <button class="logout-btn" (click)="logout()" pTooltip="Log Out" [tooltipPosition]="'bottom'">
+            <i class="pi pi-power-off"></i>
+          </button>
         </div>
       </header>
+
+      <p-dialog [(visible)]="profileDialogVisible" [modal]="true" [dismissableMask]="true" [showHeader]="false" styleClass="profile-dialog-card" [style]="{width: '380px'}" appendTo="body">
+        <div class="profile-card" *ngIf="user">
+          <div class="pc-header">
+            <div class="pc-avatar" [class.pc-avatar-editable]="profileMode === 'view'">
+              <img *ngIf="user.profilePicturePath" [src]="authService.getProfileImageUrl(user.profilePicturePath)" class="avatar-img-full">
+              <span *ngIf="!user.profilePicturePath">{{ user.fullName?.charAt(0) || 'U' }}</span>
+              
+              <div class="avatar-upload-overlay" *ngIf="profileMode === 'view'" (click)="fileInput.click()">
+                <i class="pi pi-camera"></i>
+                <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept="image/*">
+              </div>
+            </div>
+            <h2 class="pc-name">{{ user.fullName }}</h2>
+            <p class="pc-email">{{ user.email }}</p>
+          </div>
+          <div class="pc-body">
+            <!-- View Mode -->
+            <ng-container *ngIf="profileMode === 'view'">
+              <div class="pc-info-row">
+                <span class="pc-label">Username</span>
+                <span class="pc-value">{{ user.userName }}</span>
+              </div>
+              <div class="pc-info-row">
+                <span class="pc-label">Mobile</span>
+                <span class="pc-value">{{ user.phoneNumber || 'N/A' }}</span>
+              </div>
+              <div class="pc-info-row">
+                <span class="pc-label">Role</span>
+                <span class="pc-badge">{{ user.roles?.[0] }}</span>
+              </div>
+              <div class="pc-info-row">
+                <span class="pc-label">Address</span>
+                <span class="pc-value">{{ user.address || 'Not set' }}</span>
+              </div>
+            </ng-container>
+
+            <!-- Edit Profile Mode -->
+            <ng-container *ngIf="profileMode === 'edit'">
+              <div class="pc-form-group">
+                  <label>Full Name</label>
+                  <input type="text" [(ngModel)]="editProfileData.fullName" class="form-input">
+              </div>
+              <div class="pc-form-group">
+                  <label>Email Address</label>
+                  <input type="email" [(ngModel)]="editProfileData.email" class="form-input">
+              </div>
+              <div class="pc-form-group">
+                  <label>Mobile Number</label>
+                  <input type="text" [(ngModel)]="editProfileData.phoneNumber" class="form-input">
+              </div>
+              <div class="pc-form-group">
+                  <label>Address</label>
+                  <textarea [(ngModel)]="editProfileData.address" class="form-input" rows="2" placeholder="Full address..."></textarea>
+              </div>
+            </ng-container>
+
+            <!-- Change Password Mode -->
+            <ng-container *ngIf="profileMode === 'password'">
+              <div class="pc-form-group">
+                  <label>Current Password</label>
+                  <input type="password" [(ngModel)]="passwordData.oldPassword" class="form-input">
+              </div>
+              <div class="pc-form-group">
+                  <label>New Password</label>
+                  <input type="password" [(ngModel)]="passwordData.newPassword" class="form-input">
+              </div>
+            </ng-container>
+          </div>
+          <div class="pc-footer">
+            <ng-container *ngIf="profileMode === 'view'">
+               <button class="pc-action-btn edit-btn" (click)="switchToEdit()">Edit</button>
+               <button class="pc-action-btn pwd-btn" (click)="switchToPassword()">Security</button>
+               <button class="pc-action-btn pc-close-btn" (click)="profileDialogVisible = false">Close</button>
+            </ng-container>
+            <ng-container *ngIf="profileMode === 'edit'">
+               <button class="pc-action-btn save-btn" (click)="saveProfile()">Save</button>
+               <button class="pc-action-btn pc-close-btn" (click)="profileMode = 'view'">Cancel</button>
+            </ng-container>
+            <ng-container *ngIf="profileMode === 'password'">
+               <button class="pc-action-btn pwd-btn" style="color:#fff; border-color:transparent; background-color:#ef4444" (click)="changePassword()">Confirm</button>
+               <button class="pc-action-btn pc-close-btn" (click)="profileMode = 'view'">Cancel</button>
+            </ng-container>
+          </div>
+        </div>
+      </p-dialog>
 
       <div class="app-body">
 
@@ -419,10 +516,30 @@ import { GlobalSearchComponent } from '../shared/global-search/global-search.com
     .brand-name { font-size: .95rem; font-weight: 700; color: #f8fafc; letter-spacing: -.01em; }
     .brand-sub  { font-size: .7rem;  color: #94a3b8; }
 
-    .header-time { 
-      font-size: .75rem; color: #64748b; display: flex; align-items: center; gap: 4px;
-      @media (max-width: 768px) { display: none; }
+    .header-clock {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      line-height: 1.25;
+      padding: 0 4px;
+      border-left: 1px solid rgba(255,255,255,0.07);
+      padding-left: 14px;
     }
+    .clock-time {
+      font-size: .9rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      letter-spacing: .02em;
+      font-variant-numeric: tabular-nums;
+    }
+    .clock-date {
+      font-size: .67rem;
+      font-weight: 500;
+      color: #64748b;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    @media (max-width: 768px) { .header-clock { display: none; } }
 
 
     .user-chip {
@@ -442,14 +559,71 @@ import { GlobalSearchComponent } from '../shared/global-search/global-search.com
       display: flex; align-items: center; justify-content: center;
     }
     .user-info  { display: flex; flex-direction: column; line-height: 1.25; }
+    .user-chip { cursor: pointer; transition: all 0.2s ease; }
+    .user-chip:hover { background: rgba(255,255,255,.1); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: rgba(255,255,255,0.2); }
     .user-name  { font-size: .8rem; font-weight: 600; color: #f1f5f9; }
     .user-role  { font-size: .68rem; color: #0d9488; font-weight: 500; }
+    .avatar-img-tiny { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+
+    .logout-btn {
+      background: rgba(239, 68, 68, 0.05); /* Soft Red */
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      width: 38px; height: 38px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.25s; font-size: 1.1rem;
+    }
+    .logout-btn:hover { background: #ef4444; color: #fff; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); transform: translateY(-1px); }
 
     @media (max-width: 640px) {
       .user-info { display: none; }
       .user-chip { padding: 4px; border-radius: 50%; max-height: 40px; margin-left: 0; gap: 0; }
       .user-avatar { border-radius: 50%; }
+      .logout-btn { width: 34px; height: 34px; font-size: 1rem; border-radius: 50%; }
     }
+
+    /* ─── Profile Details Card Profile ─── */
+    ::ng-deep .profile-dialog-card {
+      background: rgba(15, 23, 42, 0.95) !important;
+      -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5) !important;
+      overflow: hidden;
+    }
+    .profile-card { display: flex; flex-direction: column; color: #f8fafc; padding: 2rem 1.5rem; text-align: center; }
+    .pc-header { display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+    .pc-avatar { width: 80px; height: 80px; background: linear-gradient(135deg, #0d9488, #0f766e); border-radius: 50%; color: #fff; font-size: 2.5rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; box-shadow: 0 8px 16px rgba(13, 148, 136, 0.3); border: 2px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; }
+    .pc-avatar-editable { cursor: pointer; }
+    .avatar-img-full { width: 100%; height: 100%; object-fit: cover; }
+    .avatar-upload-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; font-size: 1.5rem; }
+    .pc-avatar:hover .avatar-upload-overlay { opacity: 1; }
+    .pc-name { font-size: 1.25rem; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+    .pc-email { font-size: 0.85rem; color: #94a3b8; margin: 0; }
+    .pc-body { display: flex; flex-direction: column; gap: 1rem; text-align: left; margin-bottom: 2rem; }
+    .pc-info-row { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 12px 16px; border-radius: 12px; }
+    .pc-label { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pc-value { font-size: 0.9rem; font-weight: 600; color: #e2e8f0; }
+    .pc-badge { background: rgba(13, 148, 136, 0.15); color: #2dd4bf; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(13, 148, 136, 0.3); }
+    .status-active { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+    
+    .pc-form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .pc-form-group label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
+    .form-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 12px; color: #f1f5f9; font-size: 0.9rem; transition: border-color 0.2s; outline: none; width: 100%; box-sizing: border-box; }
+    .form-input:focus { border-color: #0d9488; }
+    
+    .pc-footer { display: flex; gap: 8px; justify-content: center; width: 100%; }
+    .pc-action-btn { flex: 1; padding: 10px 0; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; font-size: 0.85rem; }
+    .edit-btn { background: rgba(13, 148, 136, 0.15); color: #2dd4bf; border: 1px solid rgba(13, 148, 136, 0.3); }
+    .edit-btn:hover { background: rgba(13, 148, 136, 0.25); }
+    .pwd-btn { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .pwd-btn:hover { background: rgba(245, 158, 11, 0.25); }
+    .save-btn { background: #0d9488; color: #fff; }
+    .save-btn:hover { background: #0f766e; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); }
+    
+    .pc-close-btn { background: rgba(255,255,255,0.05); color: #f1f5f9; border: 1px solid rgba(255,255,255,0.1); }
+    .pc-close-btn:hover { background: rgba(255,255,255,0.1); }
 
     /* ─── Body ─── */
     .app-body {
@@ -912,6 +1086,8 @@ import { GlobalSearchComponent } from '../shared/global-search/global-search.com
 export class DashboardComponent implements OnInit {
   user: any;
   currentTime = '';
+  currentClock = '';
+  currentDate = '';
   medicineCount = 0;
   lowStockCount = 0;
   sidebarOpen = signal(true);
@@ -928,6 +1104,11 @@ export class DashboardComponent implements OnInit {
 
   todaySalesAmount = 0;
   todayOrderCount = 0;
+  profileDialogVisible: boolean = false;
+
+  profileMode: 'view' | 'edit' | 'password' = 'view';
+  editProfileData: any = {};
+  passwordData: any = {};
 
   constructor(
     private router: Router,
@@ -935,7 +1116,8 @@ export class DashboardComponent implements OnInit {
     private medicineService: MedicineService,
     private salesService: SalesService,
     private reportService: ReportService,
-    private datePipe: DatePipe
+    private datePipe: DatePipe,
+    private userService: UserService
   ) { }
 
 
@@ -1035,7 +1217,9 @@ export class DashboardComponent implements OnInit {
 
   updateTime() {
     const now = new Date();
-    this.currentTime = now.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/,/g, '');
+    this.currentClock = now.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    this.currentDate = now.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', weekday: 'short' });
+    this.currentTime = this.currentClock + ' ' + this.currentDate;
   }
 
   isRoot() { return this.currentUrl() === '/dashboard'; }
@@ -1081,9 +1265,89 @@ export class DashboardComponent implements OnInit {
   }
 
 
+  showProfileDetails() {
+    this.profileMode = 'view';
+    this.profileDialogVisible = true;
+  }
+
+  switchToEdit() {
+    this.editProfileData = {
+      fullName: this.user.fullName,
+      email: this.user.email,
+      phoneNumber: this.user.phoneNumber,
+      address: this.user.address
+    };
+    this.profileMode = 'edit';
+  }
+
+  switchToPassword() {
+    this.passwordData = { oldPassword: '', newPassword: '' };
+    this.profileMode = 'password';
+  }
+
+  saveProfile() {
+    if (!this.editProfileData.fullName || !this.editProfileData.email) {
+       alert("Full Name and Email are required."); return;
+    }
+    const updatedUser = { ...this.user, ...this.editProfileData };
+    this.userService.updateUser(this.user.id, updatedUser).subscribe({
+      next: (res) => {
+        // Update both memory and localStorage metadata
+        this.user = { ...this.user, ...this.editProfileData };
+        this.authService.updateCachedUser(this.editProfileData);
+        
+        this.profileMode = 'view';
+        alert("Profile updated successfully!");
+      },
+      error: (err) => alert("Failed to update profile. " + (err.error || ""))
+    });
+  }
+
+  changePassword() {
+    if (!this.passwordData.oldPassword || !this.passwordData.newPassword) {
+      alert("Both Current and New passwords are required."); return;
+    }
+    this.userService.changePassword({ userId: this.user.id, oldPassword: this.passwordData.oldPassword, newPassword: this.passwordData.newPassword }).subscribe({
+      next: (res) => {
+        alert("Password updated securely. For security reasons, your session will now expire.");
+        this.logout();
+      },
+      error: (err) => {
+        console.error(err);
+        alert("Failed to change password: " + (err.error || "Please verify your Current Password."));
+      }
+    });
+  }
+
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File is too large (max 2MB)");
+        return;
+      }
+      this.uploadProfilePicture(file);
+    }
+  }
+
+  uploadProfilePicture(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('userId', this.user.id);
+
+    this.userService.uploadProfilePicture(formData).subscribe({
+      next: (res: any) => {
+        const update = { profilePicturePath: res.profilePicturePath };
+        this.user = { ...this.user, ...update };
+        this.authService.updateCachedUser(update);
+      },
+      error: (err) => alert("Failed to upload image: " + (err.error || ""))
+    });
   }
 
   private checkMobile() {
