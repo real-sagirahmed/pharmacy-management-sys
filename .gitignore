@@ -24,3 +24,4 @@ App_Data/Logs/
 .vs/
 .vscode/
 *.user
+devHistory/
