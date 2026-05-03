@@ -279,7 +279,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
     .sl-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
     .sl-header-left { display:flex; align-items:center; gap:14px; }
     .sl-icon { width:46px;height:46px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem; }
-    .sl-title { font-size:1.4rem;font-weight:800;color:#0f172a;margin:0; }
+    .sl-title { font-size:1.4rem;font-weight:800;color:#0d9488;margin:0; }
     .sl-sub { font-size:.8rem;color:#334155;font-weight:500;margin:0; }
     .btn-new-sale { background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:.875rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:'Inter',sans-serif; }
     .sl-filters { display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap; }
