@@ -6,6 +6,7 @@
 frontend/node_modules/
 frontend/dist/
 frontend/.angular/
+.angular/
 
 # Backend (now at root)
 bin/
@@ -13,11 +14,13 @@ obj/
 appsettings.Development.json
 wwwroot/
 publish/
+publish_portable_test/
+
+# Logs & Runtime Data
+*.log
+App_Data/Logs/
 
 # IDE
 .vs/
 .vscode/
 *.user
-
-# Logs
-*.log

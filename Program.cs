@@ -168,7 +168,8 @@ using (var scope = app.Services.CreateScope())
                     EmailConfirmed = true
                 };
 
-                var sysAdminPassword = sysAdminConfig["Password"] ?? "SysAdmin@2026!";
+                var sysAdminPassword = sysAdminConfig["Password"]
+                    ?? throw new InvalidOperationException("SystemAdminSeed:Password is not configured. Set the ADMIN_PASSWORD secret in GitHub Secrets or appsettings.Development.json.");
                 var createResult = await userManager.CreateAsync(sysAdminUser, sysAdminPassword);
 
                 if (createResult.Succeeded)

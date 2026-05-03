@@ -22,13 +22,9 @@ jobs:
         run: |
           cd frontend
           npm install --legacy-peer-deps
-          # Clean root's wwwroot first
           rm -rf ../wwwroot
           npm run build
           cd ..
-          
-          # Angular 17+ Application builder outputs to wwwroot/browser
-          # Move browser contents to wwwroot root if they exist
           if [ -d "wwwroot/browser" ]; then
             cp -r wwwroot/browser/* wwwroot/
             rm -rf wwwroot/browser
@@ -39,22 +35,57 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Inject Secrets into appsettings.json
+        run: |
+          cat > appsettings.json << 'APPSETTINGS_EOF'
+          {
+            "ConnectionStrings": {
+              "DefaultConnection": "${{ secrets.DB_CONNECTION }}"
+            },
+            "Jwt": {
+              "Key": "${{ secrets.JWT_KEY }}",
+              "Issuer": "PharmacyApi",
+              "Audience": "PharmacyFrontend"
+            },
+            "Logging": {
+              "LogLevel": {
+                "Default": "Information",
+                "Microsoft.AspNetCore": "Warning"
+              }
+            },
+            "AllowedHosts": "*",
+            "Cors": {
+              "AllowedOrigins": [
+                "http://pharmacymsys.runasp.net",
+                "http://localhost:4200"
+              ]
+            },
+            "SmtpSettings": {
+              "Host": "smtp.gmail.com",
+              "Port": 587,
+              "EnableSsl": true,
+              "Username": "${{ secrets.SMTP_USERNAME }}",
+              "Password": "${{ secrets.SMTP_PASSWORD }}",
+              "SenderEmail": "${{ secrets.SMTP_USERNAME }}",
+              "SenderName": "teams7"
+            },
+            "SystemAdminSeed": {
+              "FullName": "System Administrator",
+              "UserName": "SystemAdmin",
+              "Email": "sysadmin@s7pharmacy.com",
+              "Password": "${{ secrets.ADMIN_PASSWORD }}"
+            }
+          }
+          APPSETTINGS_EOF
+
       - name: Publish .NET Backend
         run: |
-          # Ensure publish directory is clean and exists
           rm -rf ./publish
-          
-          # Build a FRAMEWORK-DEPENDENT version (Standard for Shared Hosting/IIS)
           dotnet publish -c Release -o ./publish
-          
-          # CRITICAL Check: Ensure the updated wwwroot is in the final publish folder
           rm -rf ./publish/wwwroot
           cp -r wwwroot ./publish/wwwroot
-          
-          # CREATE APP_OFFLINE.HTM to unlock files on server
           echo "<html><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>System Update in Progress</h1><p>Update Time: $(date)</p></body></html>" > ./publish/app_offline.htm
-
-          echo "Final publish directory structure verification (Recursive):"
+          echo "Final publish directory structure verification:"
           ls -R ./publish
 
       - name: Deploy to FTP
@@ -71,9 +102,7 @@ jobs:
       - name: Cleanup app_offline.htm (Bring Site Online)
         if: always()
         run: |
-          # Install lftp as it is not pre-installed on the runner
           sudo apt-get update && sudo apt-get install -y lftp
-          
           echo "Attempting to delete app_offline.htm using lftp..."
           lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" -e "
             set ftp:ssl-allow no;
@@ -82,3 +111,4 @@ jobs:
             rm -f app_offline.htm;
             quit
           " ${{ secrets.FTP_SERVER }}
+
