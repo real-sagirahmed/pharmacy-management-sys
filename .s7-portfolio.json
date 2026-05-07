@@ -1,7 +1,64 @@
 {
-  "case_study": "এই প্রোজেক্টে আমি ক্লিন আর্কিটেকচার এবং রিপোজিটরি প্যাটার্ন ব্যবহার করেছি যাতে কোড মেইনটেইনেবল হয়।",
-  "showcase_files": [
-    "Services/EmailService.cs",
-    "Controllers/ManufacturersController.cs"
+  "name": "pharmacy-management-sys",
+  "name_en": "Pharmacy Management System",
+  "name_bn": "ফার্মেসী ম্যানেজমেন্ট সিস্টেম",
+  "description": "Enterprise-grade Pharmacy Management System with .NET & Angular.",
+  "description_en": "A robust POS and inventory solution featuring role-based access control, real-time sales tracking, and automated stock alerts.",
+  "description_bn": "রোল-ভিত্তিক অ্যাক্সেস কন্ট্রোল, রিয়েল-টাইম সেলস ট্র্যাকিং এবং স্বয়ংক্রিয় স্টক অ্যালার্ট সহ একটি শক্তিশালী POS এবং ইনভেন্টরি সলিউশন।",
+  "url": "https://github.com/real-sagirahmed/pharmacy-management-sys",
+  "live_demo": "https://pharmacymsys.runasp.net",
+  "image": "img/projects/pharmacy-sys.jpg",
+  "preview_video": "img/projects/pharmacyVid.mp4",
+  "topics": ["portfolio-show", "coded", "featured"],
+  "stack": ["dotnet", "angular", "sqlserver", "csharp", "js"],
+  "is_private": false,
+  "youtube_video": "hpwOlwJm6-E",
+  "case_study": {
+    "challenge_en": "Developing a system that handles thousands of medicine batches while ensuring strict FEFO (First Expired First Out) rules and preventing unauthorized access to sensitive financial data.",
+    "challenge_bn": "হাজার হাজার ওষুধের ব্যাচ হ্যান্ডেল করা এবং কঠোর FEFO (ফার্স্ট এক্সপায়ারড ফার্স্ট আউট) নিয়ম নিশ্চিত করা, পাশাপাশি আর্থিক তথ্যে অননুমোদিত অ্যাক্সেস রোধ করা ছিল একটি বড় চ্যালেঞ্জ।",
+    "solution_en": "Built a multi-layered architecture with Repository Pattern. Implemented a custom Permission Matrix for granular RBAC and optimized SQL queries to calculate real-time stock across multiple batches based on expiry dates.",
+    "solution_bn": "রিপোজিটরি প্যাটার্ন সহ মাল্টি-লেয়ারড আর্কিটেকচার তৈরি করা হয়েছে। সুনির্দিষ্ট অ্যাক্সেস কন্ট্রোলের জন্য কাস্টম পারমিশন ম্যাট্রিক্স এবং এক্সপায়ারি ডেটের ওপর ভিত্তি করে রিয়েল-টাইম স্টক ক্যালকুলেশনের জন্য অপ্টিমাইজড SQL কোয়েরি ব্যবহার করা হয়েছে।",
+    "key_features_en": [
+      "Advanced POS with FEFO Batch Selection",
+      "Granular Role-Based Access Control (RBAC)",
+      "Daily Auto-Reset Invoice Generation Logic",
+      "Transaction-safe Sales Processing (Rollback support)"
+    ],
+    "key_features_bn": [
+      "FEFO ব্যাচ সিলেকশন সহ অ্যাডভান্সড POS",
+      "সুনির্দিষ্ট রোল-বেসড অ্যাক্সেস কন্ট্রোল (RBAC)",
+      "প্রতিদিন অটো-রিসেট ইনভয়েস জেনারেশন লজিক",
+      "ট্রানজ্যাকশন-সেফ সেলস প্রসেসিং (Rollback সাপোর্ট)"
+    ]
+  },
+  "snippets": [
+    {
+      "file": "SalesRepository.cs (FEFO Logic)",
+      "language": "csharp",
+      "content": "// FEFO (First Expired First Out) Batch Selection\npublic async Task<IEnumerable<SaleBatchInfoDto>> GetBatchesForMedicineAsync(int medicineId)\n{\n    var today = DateTime.UtcNow.Date;\n    var batches = await _context.PurchaseDetails\n        .Where(pd => pd.MedicineId == medicineId)\n        .OrderBy(b => b.ExpiryDate ?? DateTime.MaxValue)\n        .Select(pd => new SaleBatchInfoDto { \n            BatchNumber = pd.BatchNumber, \n            ExpiryDate = pd.ExpiryDate, \n            AvailableQty = pd.Quantity \n        }).ToListAsync();\n    \n    // Subtract all sales from batches sequentially (FEFO Logic)\n    return batches.Where(b => b.AvailableQty > 0);\n}",
+      "explanation_en": "Implements FEFO (First Expired First Out) logic to ensure medicines with the nearest expiry dates are sold first.",
+      "explanation_bn": "FEFO লজিক ইমপ্লিমেন্ট করে নিশ্চিত করে যে যেসব ওষুধের মেয়াদ আগে শেষ হবে সেগুলো আগে বিক্রি হয়।"
+    },
+    {
+      "file": "ModulePermissionFilter.cs (RBAC Logic)",
+      "language": "csharp",
+      "content": "// Granular Role-Based Access Control (RBAC)\npublic async Task OnAuthorizationAsync(AuthorizationFilterContext context)\n{\n    var userId = context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;\n    var permissions = await _userService.GetEffectivePermissionsAsync(userId);\n    \n    var hasAccess = permissions.Any(p => p.ModuleName == _module && \n        ((_action == \"view\" && p.CanView) || (_action == \"create\" && p.CanCreate)));\n\n    if (!hasAccess) context.Result = new ForbidResult();\n}",
+      "explanation_en": "A sophisticated RBAC filter that checks granular permissions for every module before allowing an API call.",
+      "explanation_bn": "একটি উন্নত RBAC ফিল্টার যা প্রতিটি এপিআই কলের আগে ইউজারের মডিউল-ভিত্তিক পারমিশন যাচাই করে।"
+    },
+    {
+      "file": "SalesRepository.cs (Invoice Logic)",
+      "language": "csharp",
+      "content": "// Daily Auto-Reset Invoice Logic\npublic async Task<string> GetNextInvoiceCodeAsync()\n{\n    var today = DateTime.UtcNow.Date;\n    var prefix = $\"INV{today:yyyyMMdd}-\";\n    var lastInvoice = await _context.SalesMasters\n        .Where(s => s.InvoiceCode.StartsWith(prefix))\n        .OrderByDescending(s => s.SaleId)\n        .Select(s => s.InvoiceCode).FirstOrDefaultAsync();\n\n    int nextNum = lastInvoice != null ? int.Parse(lastInvoice.Split('-')[1]) + 1 : 1;\n    return $\"{prefix}{nextNum}\";\n}",
+      "explanation_en": "Generates a unique invoice code every day that resets its counter.",
+      "explanation_bn": "প্রতিদিন একটি ইউনিক ইনভয়েস কোড তৈরি করে যার কাউন্টার প্রতিদিন রিসেট হয়।"
+    },
+    {
+      "file": "SalesRepository.cs (Transaction Safe)",
+      "language": "csharp",
+      "content": "// Transaction-safe Sales Processing with Rollback\nusing var transaction = await _context.Database.BeginTransactionAsync();\ntry {\n    // Atomic operation for Sales Processing...\n    await _context.SaveChangesAsync();\n    await transaction.CommitAsync();\n}\ncatch (Exception) {\n    await transaction.RollbackAsync();\n    throw;\n}",
+      "explanation_en": "Ensures transaction safety using Rollback to maintain data integrity.",
+      "explanation_bn": "রোলব্যাক ব্যবহারের মাধ্যমে ট্রানজ্যাকশন সেফটি নিশ্চিত করে।"
+    }
   ]
 }
