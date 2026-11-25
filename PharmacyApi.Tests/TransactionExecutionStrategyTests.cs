@@ -40,6 +40,7 @@ public class TransactionExecutionStrategyTests
         services.AddIdentityCore<ApplicationUser>()
             .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
+        services.AddScoped<IUserManagementService, UserManagementService>();
         return services.BuildServiceProvider();
     }
 
@@ -50,8 +51,9 @@ public class TransactionExecutionStrategyTests
         using var provider = CreateProvider(ctx, Guid.NewGuid().ToString());
         var db = provider.GetRequiredService<ApplicationDbContext>();
         var userMgr = provider.GetRequiredService<UserManager<ApplicationUser>>();
+        var userSvc = provider.GetRequiredService<IUserManagementService>();
 
-        var controller = new TenantsController(db, ctx, userMgr);
+        var controller = new TenantsController(db, ctx, userMgr, userSvc);
         var dto = new CreateTenantDto
         {
             PharmacyName = "Green Care Pharma",

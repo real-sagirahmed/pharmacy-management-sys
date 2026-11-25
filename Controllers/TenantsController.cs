@@ -16,15 +16,18 @@ namespace PharmacyApi.Controllers
         private readonly ApplicationDbContext _db;
         private readonly ITenantContextService _ctx;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IUserManagementService _userService;
 
         public TenantsController(
             ApplicationDbContext db,
             ITenantContextService ctx,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IUserManagementService userService)
         {
             _db          = db;
             _ctx         = ctx;
             _userManager = userManager;
+            _userService = userService;
         }
 
         // ── GET /api/tenants/config ─────────────────────────────────────────
@@ -101,12 +104,25 @@ namespace PharmacyApi.Controllers
         }
 
         // ── POST /api/tenants ─────────────────────────────────────────────────
-        // নতুন ফার্মেসি (Tenant) + Default Branch তৈরি
+        // নতুন ফার্মেসি (Tenant) + Default Branch + Default RolePermissions + Optional Initial Admin তৈরি
         [HttpPost]
         [Authorize(Roles = "SystemAdmin")]
         public async Task<IActionResult> Create([FromBody] CreateTenantDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            bool hasAnyAdminField = !string.IsNullOrWhiteSpace(dto.AdminUserName)
+                                 || !string.IsNullOrWhiteSpace(dto.AdminEmail)
+                                 || !string.IsNullOrWhiteSpace(dto.AdminPassword)
+                                 || !string.IsNullOrWhiteSpace(dto.AdminFullName);
+
+            if (hasAnyAdminField &&
+                (string.IsNullOrWhiteSpace(dto.AdminUserName) ||
+                 string.IsNullOrWhiteSpace(dto.AdminEmail) ||
+                 string.IsNullOrWhiteSpace(dto.AdminPassword)))
+            {
+                return BadRequest("Initial Admin তৈরি করতে AdminUserName, AdminEmail এবং AdminPassword তিনটিই প্রদান করতে হবে।");
+            }
 
             return await _db.ExecuteInTransactionAsync<IActionResult>(async ct =>
             {
@@ -141,11 +157,68 @@ namespace PharmacyApi.Controllers
                 _db.Branches.Add(defaultBranch);
                 await _db.SaveChangesAsync(ct);
 
+                // নতুন Tenant-এর জন্য Default RolePermissions (Admin/Manager/Cashier) সিড করা
+                await _userService.SeedDefaultPermissionsForTenantAsync(tenant.TenantId, ct);
+
+                ApplicationUser? createdAdmin = null;
+                if (hasAnyAdminField)
+                {
+                    var adminUserName = dto.AdminUserName!.Trim();
+                    var adminEmail    = dto.AdminEmail!.Trim();
+
+                    if (await _userManager.FindByNameAsync(adminUserName) != null)
+                        return (false, BadRequest($"ইউজারনেম '{adminUserName}' ইতিমধ্যে ব্যবহৃত হচ্ছে।"));
+
+                    if (await _userManager.FindByEmailAsync(adminEmail) != null)
+                        return (false, BadRequest($"ইমেইল '{adminEmail}' ইতিমধ্যে ব্যবহৃত হচ্ছে।"));
+
+                    createdAdmin = new ApplicationUser
+                    {
+                        UserName       = adminUserName,
+                        Email          = adminEmail,
+                        FullName       = string.IsNullOrWhiteSpace(dto.AdminFullName)
+                                             ? $"{dto.PharmacyName.Trim()} Admin"
+                                             : dto.AdminFullName.Trim(),
+                        PhoneNumber    = dto.AdminPhoneNumber?.Trim() ?? dto.Phone?.Trim(),
+                        Address        = dto.Address,
+                        SecurityStamp  = Guid.NewGuid().ToString(),
+                        // ARCHITECTURAL INTENT: Initial Tenant Admin owner MUST belong to tenant.TenantId
+                        // with BranchId = null so the owner can view and switch across all branches of the pharmacy.
+                        TenantId       = tenant.TenantId,
+                        BranchId       = null,
+                        IsActive       = true,
+                        EmailConfirmed = true
+                    };
+
+                    var createUserResult = await _userManager.CreateAsync(createdAdmin, dto.AdminPassword!);
+                    if (!createUserResult.Succeeded)
+                    {
+                        var errors = string.Join("; ", createUserResult.Errors.Select(e => e.Description));
+                        return (false, BadRequest(errors));
+                    }
+
+                    var addRoleResult = await _userManager.AddToRoleAsync(createdAdmin, "Admin");
+                    if (!addRoleResult.Succeeded)
+                    {
+                        var errors = string.Join("; ", addRoleResult.Errors.Select(e => e.Description));
+                        return (false, BadRequest(errors));
+                    }
+                }
+
                 IActionResult result = CreatedAtAction(nameof(GetById), new { id = tenant.TenantId }, new
                 {
                     tenant.TenantId,
                     defaultBranch.BranchId,
-                    tenant.PharmacyName
+                    tenant.PharmacyName,
+                    adminUser = createdAdmin == null ? null : new
+                    {
+                        id       = createdAdmin.Id,
+                        userName = createdAdmin.UserName,
+                        email    = createdAdmin.Email,
+                        fullName = createdAdmin.FullName,
+                        tenantId = createdAdmin.TenantId,
+                        branchId = createdAdmin.BranchId
+                    }
                 });
                 return (true, result);
             });
@@ -227,6 +300,13 @@ namespace PharmacyApi.Controllers
         public string? SubscriptionPlan { get; set; }
         public DateTime? SubscriptionExpiry { get; set; }
         public string? HeadOfficeBranchName { get; set; }
+
+        // Optional All-or-None group for onboarding the Tenant's initial Admin user
+        [StringLength(100)] public string? AdminFullName { get; set; }
+        [StringLength(50)]  public string? AdminUserName { get; set; }
+        [EmailAddress]      public string? AdminEmail { get; set; }
+        [MinLength(6)]      public string? AdminPassword { get; set; }
+        public string? AdminPhoneNumber { get; set; }
     }
 
     public class UpdateTenantDto
