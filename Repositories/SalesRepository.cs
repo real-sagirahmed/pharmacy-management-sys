@@ -73,24 +73,9 @@ namespace PharmacyApi.Repositories
                 })
                 .ToListAsync();
 
-            // Fallback for legacy medicines without MedicineBatch entry
-            if (!batches.Any())
-            {
-                var med = await _context.Medicines.AsNoTracking()
-                    .FirstOrDefaultAsync(m => m.MedicineId == medicineId);
-                if (med != null && med.StockQuantity > 0)
-                {
-                    batches.Add(new SaleBatchInfoDto
-                    {
-                        BatchNumber  = string.IsNullOrEmpty(med.Batch) ? "DEFAULT" : med.Batch,
-                        ExpiryDate   = med.ExpiryDate,
-                        AvailableQty = med.StockQuantity,
-                        SalePrice    = med.SalePrice,
-                        IsNearExpiry = med.ExpiryDate.HasValue && med.ExpiryDate.Value.Date <= nearExpiryThreshold
-                    });
-                }
-            }
-
+            // ARCHITECTURAL INTENT: Never fall back to tenant-wide Medicine.StockQuantity when a branch
+            // has no MedicineBatches rows. Pre-SaaS opening stock was backfilled into Branch 1 during migration;
+            // falling back here would leak another branch's stock into zero-stock branches as a phantom batch.
             return batches;
         }
 
@@ -305,7 +290,11 @@ namespace PharmacyApi.Repositories
                     // Details + Batch Stock Deduction (only for Completed sales)
                     foreach (var item in dto.SalesDetails)
                     {
-                        var med = await _context.Medicines.FindAsync(item.MedicineId);
+                        if (item.Quantity <= 0)
+                            throw new InvalidOperationException("বিক্রয়ের পরিমাণ অন্তত ১ হতে হবে।");
+
+                        var med = await _context.Medicines
+                            .FirstOrDefaultAsync(m => m.MedicineId == item.MedicineId && m.TenantId == tenantId, ct);
                         if (med == null)
                             throw new InvalidOperationException($"ওষুধ আইডি {item.MedicineId} ডাটাবেসে পাওয়া যায়নি।");
 
@@ -319,32 +308,31 @@ namespace PharmacyApi.Repositories
                                     .FirstOrDefaultAsync(b => b.TenantId == tenantId &&
                                                               b.BranchId == branchId &&
                                                               b.MedicineId == item.MedicineId &&
-                                                              b.BatchNumber == cleanBatch);
+                                                              b.BatchNumber == cleanBatch, ct);
 
-                                if (targetBatch != null)
-                                {
-                                    if (targetBatch.Status == "Recalled")
-                                        throw new InvalidOperationException($"ওষুধ '{med.Name}' (ব্যাচ: {targetBatch.BatchNumber}) রিকল করা হয়েছে। এটি বিক্রি সম্পূর্ণ নিষিদ্ধ।");
-                                    if (targetBatch.Status == "Quarantined")
-                                        throw new InvalidOperationException($"ওষুধ '{med.Name}' (ব্যাচ: {targetBatch.BatchNumber}) কোয়ারেন্টাইন করা হয়েছে। এটি বিক্রি করা যাবে না।");
-                                    if (targetBatch.ExpiryDate.Date < now.Date)
-                                        throw new InvalidOperationException($"ওষুধ '{med.Name}' (ব্যাচ: {targetBatch.BatchNumber}) এর মেয়াদ {targetBatch.ExpiryDate:dd/MM/yyyy} তারিখে শেষ হয়ে গেছে। মেয়াদোত্তীর্ণ ওষুধ বিক্রি সম্পূর্ণ নিষিদ্ধ।");
-                                    if (targetBatch.CurrentStock < item.Quantity)
-                                        throw new InvalidOperationException($"ব্যাচ '{targetBatch.BatchNumber}'-এ অপর্যাপ্ত স্টক। উপলব্ধ: {targetBatch.CurrentStock}, চাওয়া হয়েছে: {item.Quantity}।");
+                                // ARCHITECTURAL INTENT: Explicitly supplied BatchNumber must exist as an active batch
+                                // inside the selling branch. Never fall back to tenant-wide Medicine.StockQuantity when
+                                // targetBatch is null, as that bypasses expiry, recall, quarantine, and branch stock locks.
+                                if (targetBatch == null)
+                                    throw new InvalidOperationException($"ওষুধ '{med.Name}'-এর ব্যাচ '{cleanBatch}' এই শাখার ইনভেন্টরিতে পাওয়া যায়নি।");
 
-                                    targetBatch.CurrentStock -= item.Quantity;
-                                    item.ExpiryDate = targetBatch.ExpiryDate;
-                                }
-                                else
-                                {
-                                    // If batch was manually entered but not yet in MedicineBatches, check Medicine catalog stock
-                                    if (med.StockQuantity < item.Quantity)
-                                        throw new InvalidOperationException($"'{med.Name}' এর অপর্যাপ্ত স্টক। উপলব্ধ: {med.StockQuantity}, চাওয়া হয়েছে: {item.Quantity}।");
-                                }
+                                if (targetBatch.Status == "Recalled")
+                                    throw new InvalidOperationException($"ওষুধ '{med.Name}' (ব্যাচ: {targetBatch.BatchNumber}) রিকল করা হয়েছে। এটি বিক্রি সম্পূর্ণ নিষিদ্ধ।");
+                                if (targetBatch.Status == "Quarantined")
+                                    throw new InvalidOperationException($"ওষুধ '{med.Name}' (ব্যাচ: {targetBatch.BatchNumber}) কোয়ারেন্টাইন করা হয়েছে। এটি বিক্রি করা যাবে না।");
+                                if (!string.Equals(targetBatch.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                                    throw new InvalidOperationException($"ওষুধ '{med.Name}'-এর ব্যাচ '{targetBatch.BatchNumber}' সক্রিয় নয় (স্ট্যাটাস: {targetBatch.Status})।");
+                                if (targetBatch.ExpiryDate.Date < now.Date)
+                                    throw new InvalidOperationException($"ওষুধ '{med.Name}' (ব্যাচ: {targetBatch.BatchNumber}) এর মেয়াদ {targetBatch.ExpiryDate:dd/MM/yyyy} তারিখে শেষ হয়ে গেছে। মেয়াদোত্তীর্ণ ওষুধ বিক্রি সম্পূর্ণ নিষিদ্ধ।");
+                                if (targetBatch.CurrentStock < item.Quantity)
+                                    throw new InvalidOperationException($"ব্যাচ '{targetBatch.BatchNumber}'-এ অপর্যাপ্ত স্টক। উপলব্ধ: {targetBatch.CurrentStock}, চাওয়া হয়েছে: {item.Quantity}।");
+
+                                targetBatch.CurrentStock -= item.Quantity;
+                                item.ExpiryDate = targetBatch.ExpiryDate;
                             }
                             else
                             {
-                                // Automatic FIFO deduction across active, non-expired batches
+                                // Automatic FIFO deduction across active, non-expired batches in this branch only
                                 var activeBatches = await _context.MedicineBatches
                                     .Where(b => b.TenantId == tenantId &&
                                                 b.BranchId == branchId &&
@@ -354,13 +342,15 @@ namespace PharmacyApi.Repositories
                                                 b.ExpiryDate >= now.Date)
                                     .OrderBy(b => b.ExpiryDate)
                                     .ThenBy(b => b.ReceivedAt)
-                                    .ToListAsync();
+                                    .ToListAsync(ct);
 
                                 int totalBatchStock = activeBatches.Sum(b => b.CurrentStock);
-                                if (totalBatchStock < item.Quantity && med.StockQuantity < item.Quantity)
+                                // ARCHITECTURAL INTENT: Check branch-scoped active batch sum strictly (NEVER `&& med.StockQuantity`),
+                                // so another branch's inventory in the shared Medicine catalog can never authorize zero-stock sales.
+                                if (totalBatchStock < item.Quantity)
                                 {
                                     throw new InvalidOperationException(
-                                        $"'{med.Name}' এর জন্য সক্রিয় ও মেয়াদযুক্ত স্টক আছে মাত্র {totalBatchStock} টি। চাওয়া হয়েছে: {item.Quantity} টি।");
+                                        $"'{med.Name}' এর জন্য এই শাখায় সক্রিয় ও মেয়াদযুক্ত স্টক আছে মাত্র {totalBatchStock} টি। চাওয়া হয়েছে: {item.Quantity} টি।");
                                 }
 
                                 int remaining = item.Quantity;
@@ -380,9 +370,8 @@ namespace PharmacyApi.Repositories
                                 }
                             }
 
-                            // Update tenant-wide medicine catalog stock
+                            // Keep tenant-wide catalog summary synced with branch batch deduction
                             med.StockQuantity = Math.Max(0, med.StockQuantity - item.Quantity);
-                            _context.Entry(med).State = EntityState.Modified;
                         }
 
                         var detail = new SalesDetail
@@ -473,11 +462,11 @@ namespace PharmacyApi.Repositories
                                 }
                             }
 
-                            var med = await _context.Medicines.FindAsync(item.MedicineId);
+                            var med = await _context.Medicines
+                                .FirstOrDefaultAsync(m => m.MedicineId == item.MedicineId && m.TenantId == sale.TenantId);
                             if (med != null)
                             {
                                 med.StockQuantity += item.Quantity;
-                                _context.Entry(med).State = EntityState.Modified;
                             }
                         }
                     }
