@@ -192,6 +192,13 @@ using (var scope = app.Services.CreateScope())
         }
         // ─────────────────────────────────────────────────────────────────────
 
+        // Ensure Tenant 1 has baseline RolePermissions if none exist yet (fresh DB or wiped rows recovery)
+        if (await context.Tenants.IgnoreQueryFilters().AnyAsync(t => t.TenantId == 1))
+        {
+            var userMgmtService = services.GetRequiredService<IUserManagementService>();
+            await userMgmtService.SeedDefaultPermissionsForTenantAsync(1);
+        }
+
         // Promote first user to Admin if no Admin exists
         var admins = await userManager.GetUsersInRoleAsync("Admin");
         if (!admins.Any())

@@ -13,6 +13,12 @@ export interface UserDto {
   roles: string[];
 }
 
+export interface TenantSummaryDto {
+  tenantId: number;
+  pharmacyName: string;
+  isActive: boolean;
+}
+
 export interface RoleDto {
   id: string;
   name: string;
@@ -91,11 +97,17 @@ export class UserService {
     return this.http.delete(`${this.apiUrl}/roles/${roleId}`);
   }
 
-  getPermissions(roleId: string): Observable<PermissionDto[]> {
-    return this.http.get<PermissionDto[]>(`${this.apiUrl}/permissions/${roleId}`);
+  getTenants(): Observable<TenantSummaryDto[]> {
+    return this.http.get<TenantSummaryDto[]>(`${environment.apiUrl}/tenants`);
   }
 
-  updatePermissions(roleId: string, permissions: PermissionDto[]): Observable<any> {
-    return this.http.post(`${this.apiUrl}/permissions/${roleId}`, permissions);
+  getPermissions(roleId: string, tenantId?: number): Observable<PermissionDto[]> {
+    const query = tenantId ? `?tenantId=${tenantId}` : '';
+    return this.http.get<PermissionDto[]>(`${this.apiUrl}/permissions/${roleId}${query}`);
+  }
+
+  updatePermissions(roleId: string, permissions: PermissionDto[], tenantId?: number): Observable<any> {
+    const query = tenantId ? `?tenantId=${tenantId}` : '';
+    return this.http.post(`${this.apiUrl}/permissions/${roleId}${query}`, permissions);
   }
 }

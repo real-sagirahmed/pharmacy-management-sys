@@ -148,18 +148,44 @@ namespace PharmacyApi.Controllers
 
         [HttpGet("permissions/{roleId}")]
         [ModulePermission("Roles", "view")]
-        public async Task<IActionResult> GetPermissions(string roleId)
+        public async Task<IActionResult> GetPermissions(string roleId, [FromQuery] int? tenantId = null)
         {
-            var permissions = await _userService.GetPermissionsByRoleAsync(roleId);
-            return Ok(permissions);
+            try
+            {
+                var permissions = await _userService.GetPermissionsByRoleAsync(roleId, tenantId);
+                return Ok(permissions);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         [HttpPost("permissions/{roleId}")]
         [ModulePermission("Roles", "edit")]
-        public async Task<IActionResult> UpdatePermissions(string roleId, [FromBody] List<PermissionDto> permissions)
+        public async Task<IActionResult> UpdatePermissions(string roleId, [FromBody] List<PermissionDto> permissions, [FromQuery] int? tenantId = null)
         {
-            await _userService.UpdatePermissionsAsync(roleId, permissions);
-            return Ok(new { Message = "Permissions updated successfully" });
+            try
+            {
+                await _userService.UpdatePermissionsAsync(roleId, permissions, tenantId);
+                return Ok(new { Message = "Permissions updated successfully" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
     }
 }

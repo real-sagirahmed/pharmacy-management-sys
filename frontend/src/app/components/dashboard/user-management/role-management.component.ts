@@ -2,7 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { UserService, RoleDto, PermissionDto } from '../../../services/user.service';
+import { UserService, RoleDto, PermissionDto, TenantSummaryDto } from '../../../services/user.service';
 import { AuthService } from '../../../services/auth.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -42,6 +42,18 @@ import { TagModule } from 'primeng/tag';
           <div class="flex flex-col mr-auto">
             <h1 class="text-base font-extrabold text-slate-900 m-0 leading-tight">Roles & Permissions</h1>
             <p class="text-[11px] text-slate-700 m-0 leading-none mt-1 font-semibold">Define system roles and module permissions.</p>
+          </div>
+
+          <!-- Tenant Selector (SystemAdmin only — prevents TenantId = 0 permission corruption) -->
+          <div class="flex items-center gap-2" *ngIf="isSystemAdmin">
+            <span class="text-[11px] font-bold text-slate-600 whitespace-nowrap">Pharmacy:</span>
+            <p-dropdown [options]="tenants"
+                        [ngModel]="selectedTenantId"
+                        (ngModelChange)="onTenantChange($event)"
+                        optionLabel="pharmacyName"
+                        optionValue="tenantId"
+                        placeholder="Select Tenant..."
+                        [style]="{'min-width': '180px'}"></p-dropdown>
           </div>
 
           <!-- Create Role Section (Merged) -->
@@ -186,7 +198,7 @@ import { TagModule } from 'primeng/tag';
                       <i class="pi pi-th-large text-slate-500 text-[10px]"></i>
                     </div>
                     <button pButton icon="pi pi-save" (click)="savePermissions()" 
-                            [disabled]="saving" class="p-button-success p-button-sm h-8 w-8"></button>
+                            [disabled]="savingPermissions || !hasUnsavedChanges() || (isSystemAdmin && !selectedTenantId)" class="p-button-success p-button-sm h-8 w-8"></button>
                   </div>
                 </th>
               </tr>
@@ -376,6 +388,8 @@ import { TagModule } from 'primeng/tag';
 export class RoleManagementComponent implements OnInit {
   roles: RoleDto[] = [];
   selectedRole: RoleDto | null = null;
+  tenants: TenantSummaryDto[] = [];
+  selectedTenantId: number | null = null;
   newRoleName = '';
   creatingRole = false;
   
@@ -429,31 +443,82 @@ export class RoleManagementComponent implements OnInit {
 
   ngOnInit() {
     this.loadRoles();
+    if (this.isSystemAdmin) {
+      this.loadTenants();
+    }
   }
 
   loadRoles() {
     this.userService.getRoles().subscribe(data => this.roles = data);
   }
 
-  onRoleSelect(role: RoleDto) {
+  loadTenants() {
+    this.userService.getTenants().subscribe({
+      next: (data) => {
+        this.tenants = data;
+        if (!this.selectedTenantId && data.length > 0) {
+          const preferred = data.find(t => t.isActive) || data[0];
+          this.selectedTenantId = preferred.tenantId;
+          if (this.selectedRole) {
+            this.loadPermissions(this.selectedRole.id);
+          }
+        }
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load tenants for permission scoping.' });
+      }
+    });
+  }
+
+  private confirmDiscardIfDirty(onProceed: () => void, onCancel?: () => void) {
     if (this.hasUnsavedChanges()) {
       this.confirmationService.confirm({
-        message: 'You have unsaved changes. Discard them and switch role?',
+        message: 'You have unsaved changes. Discard them and continue?',
         header: 'Unsaved Changes',
         icon: 'pi pi-exclamation-triangle',
-        accept: () => {
-          this.selectedRole = role;
-          this.loadPermissions(role.id);
-        }
+        accept: onProceed,
+        reject: onCancel
       });
     } else {
-      this.selectedRole = role;
-      this.loadPermissions(role.id);
+      onProceed();
     }
   }
 
+  onTenantChange(newTenantId: number) {
+    if (newTenantId === this.selectedTenantId) return;
+    const prevTenantId = this.selectedTenantId;
+    this.confirmDiscardIfDirty(
+      () => {
+        this.selectedTenantId = newTenantId;
+        if (this.selectedRole) {
+          this.loadPermissions(this.selectedRole.id);
+        }
+      },
+      () => {
+        // Restore visual p-dropdown binding if user cancels switch
+        this.selectedTenantId = newTenantId;
+        setTimeout(() => {
+          this.selectedTenantId = prevTenantId;
+        });
+      }
+    );
+  }
+
+  onRoleSelect(role: RoleDto) {
+    this.confirmDiscardIfDirty(() => {
+      this.selectedRole = role;
+      this.loadPermissions(role.id);
+    });
+  }
+
   loadPermissions(roleId: string) {
-    this.userService.getPermissions(roleId).subscribe(data => {
+    if (this.isSystemAdmin && !this.selectedTenantId) {
+      this.permissions = [];
+      this.backupPermissions = '';
+      return;
+    }
+
+    this.userService.getPermissions(roleId, this.selectedTenantId ?? undefined).subscribe(data => {
       let finalPerms: PermissionDto[] = [];
       
       // Map modules to current interface
@@ -532,8 +597,12 @@ export class RoleManagementComponent implements OnInit {
 
   savePermissions() {
     if (!this.selectedRole) return;
+    if (this.isSystemAdmin && !this.selectedTenantId) {
+      this.messageService.add({ severity: 'warn', summary: 'Select Tenant', detail: 'Please select a pharmacy before saving permissions.' });
+      return;
+    }
     this.savingPermissions = true;
-    this.userService.updatePermissions(this.selectedRole.id, this.permissions).subscribe({
+    this.userService.updatePermissions(this.selectedRole.id, this.permissions, this.selectedTenantId ?? undefined).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Permissions updated successfully.' });
         this.savingPermissions = false;

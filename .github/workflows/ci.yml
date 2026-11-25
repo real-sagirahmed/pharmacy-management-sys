@@ -38,3 +38,6 @@ jobs:
 
       - name: Build .NET Backend (Release)
         run: dotnet build --configuration Release --no-restore
+
+      - name: Run Backend Regression Tests
+        run: dotnet test PharmacyApi.Tests/PharmacyApi.Tests.csproj --configuration Release

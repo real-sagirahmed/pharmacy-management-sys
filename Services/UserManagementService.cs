@@ -17,8 +17,9 @@ namespace PharmacyApi.Services
         Task<IdentityResult> UpdateRoleAsync(string roleId, string newName);
         Task<IdentityResult> DeleteRoleAsync(string roleId);
         Task<IdentityResult> DeleteUserAsync(string userId);
-        Task<IEnumerable<PermissionDto>> GetPermissionsByRoleAsync(string roleId);
-        Task UpdatePermissionsAsync(string roleId, IEnumerable<PermissionDto> permissions);
+        Task<IEnumerable<PermissionDto>> GetPermissionsByRoleAsync(string roleId, int? tenantId = null);
+        Task UpdatePermissionsAsync(string roleId, IEnumerable<PermissionDto> permissions, int? tenantId = null);
+        Task SeedDefaultPermissionsForTenantAsync(int tenantId, CancellationToken cancellationToken = default);
         Task<IEnumerable<PermissionDto>> GetEffectivePermissionsAsync(string userId);
         Task<IdentityResult> AssignUserRoleAsync(string userId, string newRole);
         Task<bool> IsUserSystemAdminAsync(string userId);
@@ -239,10 +240,34 @@ namespace PharmacyApi.Services
             return result;
         }
 
-        public async Task<IEnumerable<PermissionDto>> GetPermissionsByRoleAsync(string roleId)
+        private int ResolveTargetTenantId(int? requestedTenantId)
         {
+            if (!_ctx.IsSystemAdmin)
+            {
+                if (!_ctx.TenantId.HasValue || _ctx.TenantId.Value <= 0)
+                    throw new UnauthorizedAccessException("Tenant context is required to access or update role permissions.");
+
+                return _ctx.TenantId.Value;
+            }
+
+            var resolved = requestedTenantId.HasValue && requestedTenantId.Value > 0
+                ? requestedTenantId.Value
+                : (_ctx.TenantId.HasValue && _ctx.TenantId.Value > 0 ? _ctx.TenantId.Value : 0);
+
+            if (resolved <= 0)
+                throw new ArgumentException("A valid positive TenantId is required when SystemAdmin manages tenant role permissions.");
+
+            return resolved;
+        }
+
+        public async Task<IEnumerable<PermissionDto>> GetPermissionsByRoleAsync(string roleId, int? tenantId = null)
+        {
+            var targetTenantId = ResolveTargetTenantId(tenantId);
+
             return await _context.RolePermissions
-                .Where(p => p.RoleId == roleId)
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(p => p.TenantId == targetTenantId && p.RoleId == roleId)
                 .Select(p => new PermissionDto
                 {
                     Id = p.Id,
@@ -255,23 +280,139 @@ namespace PharmacyApi.Services
                 }).ToListAsync();
         }
 
-        public async Task UpdatePermissionsAsync(string roleId, IEnumerable<PermissionDto> permissions)
+        public async Task UpdatePermissionsAsync(string roleId, IEnumerable<PermissionDto> permissions, int? tenantId = null)
         {
-            var existing = await _context.RolePermissions.Where(p => p.RoleId == roleId).ToListAsync();
+            var targetTenantId = ResolveTargetTenantId(tenantId);
+
+            var role = await _roleManager.FindByIdAsync(roleId);
+            if (role == null)
+                throw new KeyNotFoundException("Role not found.");
+
+            if (role.Name != null && role.Name.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("SystemAdmin permissions are automatic and cannot be modified.");
+
+            var existing = await _context.RolePermissions
+                .IgnoreQueryFilters()
+                .Where(p => p.TenantId == targetTenantId && p.RoleId == roleId)
+                .ToListAsync();
             _context.RolePermissions.RemoveRange(existing);
 
-            var newPermissions = permissions.Select(p => new RolePermission
-            {
-                RoleId = roleId,
-                ModuleName = p.ModuleName,
-                CanView = p.CanView,
-                CanCreate = p.CanCreate,
-                CanEdit = p.CanEdit,
-                CanDelete = p.CanDelete
-            });
+            var newPermissions = permissions
+                .Where(p => !string.IsNullOrWhiteSpace(p.ModuleName))
+                .GroupBy(p => p.ModuleName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .Select(p => new RolePermission
+                {
+                    TenantId = targetTenantId,
+                    RoleId = roleId,
+                    ModuleName = p.ModuleName.Trim(),
+                    CanView = p.CanView,
+                    CanCreate = p.CanCreate,
+                    CanEdit = p.CanEdit,
+                    CanDelete = p.CanDelete
+                });
 
             await _context.RolePermissions.AddRangeAsync(newPermissions);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task SeedDefaultPermissionsForTenantAsync(int tenantId, CancellationToken cancellationToken = default)
+        {
+            if (tenantId <= 0)
+                throw new ArgumentException("TenantId must be positive.", nameof(tenantId));
+
+            // Idempotent guard: never overwrite custom permissions if tenant already has configured rows
+            var alreadyHasPermissions = await _context.RolePermissions
+                .IgnoreQueryFilters()
+                .AnyAsync(p => p.TenantId == tenantId, cancellationToken);
+
+            if (alreadyHasPermissions) return;
+
+            var roles = await _roleManager.Roles
+                .AsNoTracking()
+                .Where(r => r.Name != null)
+                .ToDictionaryAsync(r => r.Name!, r => r.Id, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+            var toAdd = new List<RolePermission>();
+
+            // Admin: full pharmacy management permissions; Roles/Permissions stays restricted to SystemAdmin by default
+            if (roles.TryGetValue("Admin", out var adminRoleId))
+            {
+                foreach (var mod in AllModules)
+                {
+                    bool isRolesModule = mod.Equals("Roles", StringComparison.OrdinalIgnoreCase);
+                    toAdd.Add(new RolePermission
+                    {
+                        TenantId = tenantId,
+                        RoleId = adminRoleId,
+                        ModuleName = mod,
+                        CanView = !isRolesModule,
+                        CanCreate = !isRolesModule,
+                        CanEdit = !isRolesModule,
+                        CanDelete = !isRolesModule
+                    });
+                }
+            }
+
+            // Manager: branch operations + inventory + non-financial reports
+            if (roles.TryGetValue("Manager", out var managerRoleId))
+            {
+                var managerModules = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "Dashboard", "Medicines", "Purchases", "Sales", "Parties",
+                    "Due Collection", "Inventory", "Reports", "Sales Reports",
+                    "Purchase Reports", "Inventory Reports", "Expiry Reports",
+                    "Top Selling Reports", "Low Stock Reports", "Ledger Reports", "Master Data"
+                };
+
+                foreach (var mod in AllModules.Where(m => managerModules.Contains(m)))
+                {
+                    toAdd.Add(new RolePermission
+                    {
+                        TenantId = tenantId,
+                        RoleId = managerRoleId,
+                        ModuleName = mod,
+                        CanView = true,
+                        CanCreate = true,
+                        CanEdit = true,
+                        CanDelete = false
+                    });
+                }
+            }
+
+            // Cashier: POS, customers, due collection, medicine catalog read
+            if (roles.TryGetValue("Cashier", out var cashierRoleId))
+            {
+                var cashierRules = new Dictionary<string, (bool Create, bool Edit)>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Dashboard"] = (false, false),
+                    ["Medicines"] = (false, false),
+                    ["Sales"] = (true, false),
+                    ["Parties"] = (true, false),
+                    ["Due Collection"] = (true, false)
+                };
+
+                foreach (var mod in AllModules.Where(m => cashierRules.ContainsKey(m)))
+                {
+                    var (canCreate, canEdit) = cashierRules[mod];
+                    toAdd.Add(new RolePermission
+                    {
+                        TenantId = tenantId,
+                        RoleId = cashierRoleId,
+                        ModuleName = mod,
+                        CanView = true,
+                        CanCreate = canCreate,
+                        CanEdit = canEdit,
+                        CanDelete = false
+                    });
+                }
+            }
+
+            if (toAdd.Count > 0)
+            {
+                await _context.RolePermissions.AddRangeAsync(toAdd, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
         }
 
         // All system modules — used for SystemAdmin full-access grant
@@ -291,6 +432,7 @@ namespace PharmacyApi.Services
             if (user == null) return Enumerable.Empty<PermissionDto>();
 
             var roles = await _userManager.GetRolesAsync(user);
+            if (!roles.Any()) return Enumerable.Empty<PermissionDto>();
 
             // SystemAdmin gets full access to all modules automatically
             if (roles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
@@ -305,13 +447,27 @@ namespace PharmacyApi.Services
                 }).ToList();
             }
 
+            // Fail-closed: non-SystemAdmin users without a valid TenantId must receive zero permissions
+            if (!user.TenantId.HasValue || user.TenantId.Value <= 0)
+                return Enumerable.Empty<PermissionDto>();
+
+            var targetTenantId = user.TenantId.Value;
+
             var roleIds = await _roleManager.Roles
                 .Where(r => roles.Contains(r.Name!))
                 .Select(r => r.Id)
                 .ToListAsync();
 
+            if (!roleIds.Any()) return Enumerable.Empty<PermissionDto>();
+
+            // ARCHITECTURAL INTENT: GetEffectivePermissionsAsync is invoked both anonymously at /api/Auth/login
+            // (where _ctx.TenantId == null) and inside authenticated filters ([ModulePermission]).
+            // IgnoreQueryFilters() prevents the login-time `TenantId = NULL` query-filter lockout, while explicit
+            // `p.TenantId == targetTenantId` enforces strict tenant isolation. NEVER remove `p.TenantId == targetTenantId`.
             var permissions = await _context.RolePermissions
-                .Where(p => roleIds.Contains(p.RoleId))
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(p => p.TenantId == targetTenantId && roleIds.Contains(p.RoleId))
                 .ToListAsync();
 
             // Group by module and take the maximum permission (OR logic)

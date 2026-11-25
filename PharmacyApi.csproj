@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <UseAppHost>false</UseAppHost>
+    <DefaultItemExcludes>$(DefaultItemExcludes);PharmacyApi.Tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
