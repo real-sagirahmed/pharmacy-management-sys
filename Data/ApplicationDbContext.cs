@@ -236,5 +236,35 @@ namespace PharmacyApi.Data
 
             return await base.SaveChangesAsync(cancellationToken);
         }
+
+        // ARCHITECTURAL INTENT: EnableRetryOnFailure (Program.cs) forbids direct BeginTransactionAsync().
+        // All user-initiated multi-step writes MUST run inside CreateExecutionStrategy().ExecuteAsync(...)
+        // with ChangeTracker.Clear() before each attempt so transient retries never duplicate tracked mutations.
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(
+            Func<CancellationToken, Task<(bool ShouldCommit, TResult Result)>> action,
+            CancellationToken cancellationToken = default)
+        {
+            var strategy = Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                ChangeTracker.Clear();
+                await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
+                try
+                {
+                    var (shouldCommit, result) = await action(cancellationToken);
+                    if (shouldCommit)
+                        await transaction.CommitAsync(cancellationToken);
+                    else
+                        await transaction.RollbackAsync(cancellationToken);
+
+                    return result;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
+            });
+        }
     }
 }

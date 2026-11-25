@@ -108,8 +108,7 @@ namespace PharmacyApi.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            await using var transaction = await _db.Database.BeginTransactionAsync();
-            try
+            return await _db.ExecuteInTransactionAsync<IActionResult>(async ct =>
             {
                 var tenant = new Tenant
                 {
@@ -126,7 +125,7 @@ namespace PharmacyApi.Controllers
                     IsActive          = true
                 };
                 _db.Tenants.Add(tenant);
-                await _db.SaveChangesAsync(); // TenantId generate হবে
+                await _db.SaveChangesAsync(ct); // TenantId generate হবে
 
                 // Default Head Office Branch তৈরি
                 var defaultBranch = new Branch
@@ -140,21 +139,16 @@ namespace PharmacyApi.Controllers
                     IsActive     = true
                 };
                 _db.Branches.Add(defaultBranch);
-                await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync(ct);
 
-                await transaction.CommitAsync();
-                return CreatedAtAction(nameof(GetById), new { id = tenant.TenantId }, new
+                IActionResult result = CreatedAtAction(nameof(GetById), new { id = tenant.TenantId }, new
                 {
                     tenant.TenantId,
                     defaultBranch.BranchId,
                     tenant.PharmacyName
                 });
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+                return (true, result);
+            });
         }
 
         // ── PUT /api/tenants/{id} ─────────────────────────────────────────────

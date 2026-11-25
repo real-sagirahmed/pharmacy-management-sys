@@ -196,29 +196,28 @@ namespace PharmacyApi.Controllers
         [Authorize(Roles = "SystemAdmin,Admin")]
         public async Task<IActionResult> ApproveTransfer(int id)
         {
-            var transfer = _ctx.IsSystemAdmin
-                ? await _db.BranchTransfers.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.TransferId == id)
-                : await _db.BranchTransfers.FirstOrDefaultAsync(t => t.TransferId == id && t.Status == "Pending");
-
-            if (transfer == null) return NotFound();
-            if (transfer.Status != "Pending")
-                return BadRequest($"এই ট্রান্সফার ইতিমধ্যে {transfer.Status} অবস্থায় আছে।");
-
-            await using var tx = await _db.Database.BeginTransactionAsync();
-            try
+            return await _db.ExecuteInTransactionAsync<IActionResult>(async ct =>
             {
+                var transfer = _ctx.IsSystemAdmin
+                    ? await _db.BranchTransfers.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.TransferId == id, ct)
+                    : await _db.BranchTransfers.FirstOrDefaultAsync(t => t.TransferId == id && t.Status == "Pending", ct);
+
+                if (transfer == null) return (false, NotFound());
+                if (transfer.Status != "Pending")
+                    return (false, BadRequest($"এই ট্রান্সফার ইতিমধ্যে {transfer.Status} অবস্থায় আছে।"));
+
                 // Source batch থেকে stock কমানো
                 var sourceBatch = await _db.MedicineBatches
                     .FirstOrDefaultAsync(b =>
                         b.BatchId  == transfer.BatchId &&
                         b.BranchId == transfer.FromBranchId &&
-                        b.TenantId == transfer.TenantId);
+                        b.TenantId == transfer.TenantId, ct);
 
                 if (sourceBatch == null)
-                    return BadRequest("Source batch পাওয়া যায়নি।");
+                    return (false, BadRequest("Source batch পাওয়া যায়নি।"));
 
                 if (sourceBatch.CurrentStock < transfer.Quantity)
-                    return BadRequest($"পর্যাপ্ত স্টক নেই। পাওয়া গেছে: {sourceBatch.CurrentStock} পিস।");
+                    return (false, BadRequest($"পর্যাপ্ত স্টক নেই। পাওয়া গেছে: {sourceBatch.CurrentStock} পিস।"));
 
                 sourceBatch.CurrentStock -= transfer.Quantity;
 
@@ -228,7 +227,7 @@ namespace PharmacyApi.Controllers
                         b.BatchNumber == sourceBatch.BatchNumber &&
                         b.MedicineId  == sourceBatch.MedicineId &&
                         b.BranchId    == transfer.ToBranchId &&
-                        b.TenantId    == transfer.TenantId);
+                        b.TenantId    == transfer.TenantId, ct);
 
                 if (destBatch == null)
                 {
@@ -258,15 +257,9 @@ namespace PharmacyApi.Controllers
                     DateTime.UtcNow,
                     TimeZoneInfo.FindSystemTimeZoneById("Bangladesh Standard Time"));
 
-                await _db.SaveChangesAsync();
-                await tx.CommitAsync();
-                return Ok(new { message = "ট্রান্সফার সম্পন্ন হয়েছে।", transfer.TransferCode });
-            }
-            catch
-            {
-                await tx.RollbackAsync();
-                throw;
-            }
+                await _db.SaveChangesAsync(ct);
+                return (true, Ok(new { message = "ট্রান্সফার সম্পন্ন হয়েছে।", transfer.TransferCode }));
+            });
         }
 
         // ── GET /api/branches/transfer ────────────────────────────────────────
