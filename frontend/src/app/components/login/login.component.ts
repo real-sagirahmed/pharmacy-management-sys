@@ -93,9 +93,8 @@ import { CommonModule } from '@angular/common';
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Signing in…</span>
             </button>
 
-            <!-- Forgot Password is handled in labels, but keeping common check -->
             <div class="auth-footer">
-              Don't have an account? <a routerLink="/register">Create Account</a>
+              Need an account? Contact your pharmacy administrator.
             </div>
           </form>
 

@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login.component';
-import { RegisterComponent } from './components/register/register.component';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
@@ -27,7 +26,9 @@ import { UseForListComponent } from './components/use-for/use-for-list.component
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
+  // ARCHITECTURAL INTENT: Public self-registration is disabled for multi-tenant SaaS security.
+  // Pharmacy onboarding and staff account creation require authenticated SystemAdmin/Admin flows.
+  { path: 'register', redirectTo: '/login', pathMatch: 'full' },
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
   {

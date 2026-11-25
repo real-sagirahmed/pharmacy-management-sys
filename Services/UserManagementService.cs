@@ -23,6 +23,10 @@ namespace PharmacyApi.Services
         Task<IEnumerable<PermissionDto>> GetEffectivePermissionsAsync(string userId);
         Task<IdentityResult> AssignUserRoleAsync(string userId, string newRole);
         Task<bool> IsUserSystemAdminAsync(string userId);
+        Task<(bool Valid, string? ErrorMessage)> ValidateTenantBranchAssignmentAsync(
+            int tenantId,
+            int? branchId,
+            CancellationToken cancellationToken = default);
     }
 
     public class UserManagementService : IUserManagementService
@@ -510,6 +514,39 @@ namespace PharmacyApi.Services
             if (user == null) return false;
             var roles = await _userManager.GetRolesAsync(user);
             return roles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase));
+        }
+
+        public async Task<(bool Valid, string? ErrorMessage)> ValidateTenantBranchAssignmentAsync(
+            int tenantId,
+            int? branchId,
+            CancellationToken cancellationToken = default)
+        {
+            var tenant = await _context.Tenants
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId, cancellationToken);
+
+            if (tenant == null)
+                return (false, "Invalid TenantId.");
+
+            if (!tenant.IsActive)
+                return (false, "Target tenant is inactive.");
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                var branch = await _context.Branches
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.BranchId == branchId.Value && b.TenantId == tenantId, cancellationToken);
+
+                if (branch == null)
+                    return (false, "Invalid BranchId for the specified tenant.");
+
+                if (!branch.IsActive)
+                    return (false, "Target branch is inactive.");
+            }
+
+            return (true, null);
         }
     }
 }

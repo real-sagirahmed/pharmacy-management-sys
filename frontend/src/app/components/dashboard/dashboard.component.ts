@@ -115,7 +115,7 @@ import { TooltipModule } from 'primeng/tooltip';
               
               <div class="avatar-upload-overlay" *ngIf="profileMode === 'view'" (click)="fileInput.click()">
                 <i class="pi pi-camera"></i>
-                <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept="image/*">
+                <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
               </div>
             </div>
             <h2 class="pc-name">{{ user.fullName }}</h2>

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -11,10 +12,22 @@ using System.Text;
 
 namespace PharmacyApi.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
     {
+        private const long MaxProfileImageBytes = 2 * 1024 * 1024;
+        private static readonly string[] AllowedRegistrationRoles = ["Admin", "Manager", "Cashier"];
+        private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".webp"
+        };
+        private static readonly HashSet<string> AllowedImageMimeTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/webp"
+        };
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
@@ -33,8 +46,26 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost("register")]
+        [Authorize(Roles = "SystemAdmin")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
+            // ARCHITECTURAL INTENT: Public self-registration is disabled for multi-tenant SaaS security.
+            // Only SystemAdmin may invoke this endpoint, protected roles (e.g. SystemAdmin) are blocked,
+            // and a valid active TenantId is mandatory to eliminate tenantless orphan accounts.
+            var requestedRole = model.Role?.Trim() ?? string.Empty;
+            var canonicalRole = AllowedRegistrationRoles
+                .FirstOrDefault(r => r.Equals(requestedRole, StringComparison.OrdinalIgnoreCase));
+            if (canonicalRole == null)
+                return BadRequest("Invalid or protected role. Allowed roles: Admin, Manager, Cashier.");
+
+            if (!model.TenantId.HasValue || model.TenantId.Value <= 0)
+                return BadRequest("A valid TenantId is required.");
+
+            var (validAssignment, assignmentError) =
+                await _userService.ValidateTenantBranchAssignmentAsync(model.TenantId.Value, model.BranchId);
+            if (!validAssignment)
+                return BadRequest(assignmentError);
+
             var userExists = await _userManager.FindByNameAsync(model.Username);
             if (userExists != null) return BadRequest("User already exists!");
 
@@ -48,23 +79,31 @@ namespace PharmacyApi.Controllers
                 UserName = model.Username,
                 FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
-                Address = model.Address
+                Address = model.Address,
+                TenantId = model.TenantId.Value,
+                BranchId = model.BranchId is > 0 ? model.BranchId.Value : null,
+                IsActive = true,
+                EmailConfirmed = true
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded) return BadRequest(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            // Add default role if not exists
-            if (!await _roleManager.RoleExistsAsync("Admin")) await _roleManager.CreateAsync(new IdentityRole("Admin"));
-            if (!await _roleManager.RoleExistsAsync("Manager")) await _roleManager.CreateAsync(new IdentityRole("Manager"));
-            if (!await _roleManager.RoleExistsAsync("Cashier")) await _roleManager.CreateAsync(new IdentityRole("Cashier"));
+            if (!await _roleManager.RoleExistsAsync(canonicalRole))
+                await _roleManager.CreateAsync(new IdentityRole(canonicalRole));
 
-            await _userManager.AddToRoleAsync(user, model.Role);
+            var roleResult = await _userManager.AddToRoleAsync(user, canonicalRole);
+            if (!roleResult.Succeeded)
+            {
+                await _userManager.DeleteAsync(user);
+                return BadRequest(string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+            }
 
             return Ok("User created successfully!");
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
             var user = await _userManager.FindByNameAsync(model.Username);
@@ -125,6 +164,7 @@ namespace PharmacyApi.Controllers
             return Unauthorized();
         }
         [HttpPost("forgot-password")]
+        [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordModel model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
@@ -150,6 +190,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost("reset-password")]
+        [AllowAnonymous]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
@@ -171,22 +212,22 @@ namespace PharmacyApi.Controllers
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordModel model)
         {
-            var user = await _userManager.FindByIdAsync(model.UserId);
+            var (callerId, authFailure) = ResolveCallerOrReject(model.UserId);
+            if (authFailure != null) return authFailure;
+
+            var user = await _userManager.FindByIdAsync(callerId!);
             if (user == null)
-            {
                 return NotFound("User not found.");
-            }
 
             var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
             if (result.Succeeded)
-            {
                 return Ok(new { Message = "Password changed successfully." });
-            }
 
             return BadRequest(string.Join(", ", result.Errors.Select(e => e.Description)));
         }
 
         [HttpPost("logout")]
+        [AllowAnonymous]
         public IActionResult Logout()
         {
             Response.Cookies.Delete("auth_token", BuildAuthCookieOptions());
@@ -194,39 +235,110 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPost("upload-profile-picture")]
-        public async Task<IActionResult> UploadProfilePicture([FromForm] IFormFile file, [FromForm] string userId)
+        [RequestSizeLimit(3 * 1024 * 1024)]
+        public async Task<IActionResult> UploadProfilePicture([FromForm] IFormFile? file, [FromForm] string? userId = null)
         {
-            if (file == null || file.Length == 0) return BadRequest("No file uploaded.");
-            
-            var user = await _userManager.FindByIdAsync(userId);
+            var (callerId, authFailure) = ResolveCallerOrReject(userId);
+            if (authFailure != null) return authFailure;
+
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded.");
+
+            if (file.Length > MaxProfileImageBytes)
+                return BadRequest("File size exceeds 2MB limit.");
+
+            var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(ext) || !AllowedImageExtensions.Contains(ext))
+                return BadRequest("Invalid file type. Only JPG, JPEG, PNG, and WebP images are allowed.");
+
+            if (!string.IsNullOrWhiteSpace(file.ContentType) && !AllowedImageMimeTypes.Contains(file.ContentType))
+                return BadRequest("Invalid image content type.");
+
+            if (!await HasValidImageSignatureAsync(file, ext))
+                return BadRequest("Invalid or corrupted image file signature.");
+
+            var user = await _userManager.FindByIdAsync(callerId!);
             if (user == null) return NotFound("User not found.");
 
-            // Create uploads directory if it doesn't exist
-            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "profiles");
-            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+            var webRoot = string.IsNullOrWhiteSpace(_environment.WebRootPath)
+                ? Path.Combine(_environment.ContentRootPath, "wwwroot")
+                : _environment.WebRootPath;
+            var uploadsFolder = Path.Combine(webRoot, "uploads", "profiles");
+            Directory.CreateDirectory(uploadsFolder);
 
-            // Generate unique filename
-            var fileName = $"{userId}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var fileName = $"{Guid.NewGuid()}{ext}";
             var filePath = Path.Combine(uploadsFolder, fileName);
 
-            // Delete old file if exists
-            if (!string.IsNullOrEmpty(user.ProfilePicturePath))
-            {
-                var oldPath = Path.Combine(_environment.WebRootPath, user.ProfilePicturePath.TrimStart('/'));
-                if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
-            }
+            DeleteOldProfileImageSafely(webRoot, uploadsFolder, user.ProfilePicturePath);
 
-            // Save new file
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            await using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream);
             }
 
-            // Update user record
             user.ProfilePicturePath = $"/uploads/profiles/{fileName}";
             await _userManager.UpdateAsync(user);
 
             return Ok(new { profilePicturePath = user.ProfilePicturePath });
+        }
+
+        private (string? CallerId, IActionResult? Failure) ResolveCallerOrReject(string? requestedUserId)
+        {
+            var callerId = User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(callerId))
+                return (null, Unauthorized());
+
+            if (!string.IsNullOrWhiteSpace(requestedUserId) &&
+                !string.Equals(requestedUserId.Trim(), callerId, StringComparison.Ordinal))
+            {
+                return (null, Forbid());
+            }
+
+            return (callerId, null);
+        }
+
+        private static async Task<bool> HasValidImageSignatureAsync(IFormFile file, string ext)
+        {
+            var header = new byte[12];
+            await using var stream = file.OpenReadStream();
+            int totalRead = 0;
+            while (totalRead < header.Length)
+            {
+                int read = await stream.ReadAsync(header.AsMemory(totalRead, header.Length - totalRead));
+                if (read == 0) break;
+                totalRead += read;
+            }
+
+            return ext switch
+            {
+                ".jpg" or ".jpeg" => totalRead >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF,
+                ".png" => totalRead >= 8 &&
+                          header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47 &&
+                          header[4] == 0x0D && header[5] == 0x0A && header[6] == 0x1A && header[7] == 0x0A,
+                ".webp" => totalRead >= 12 &&
+                           header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46 &&
+                           header[8] == 0x57 && header[9] == 0x45 && header[10] == 0x42 && header[11] == 0x50,
+                _ => false
+            };
+        }
+
+        private static void DeleteOldProfileImageSafely(string webRoot, string uploadsFolder, string? profilePicturePath)
+        {
+            if (string.IsNullOrWhiteSpace(profilePicturePath)) return;
+
+            var uploadsRootFull = Path.GetFullPath(uploadsFolder);
+            var prefixWithSep = uploadsRootFull.EndsWith(Path.DirectorySeparatorChar)
+                ? uploadsRootFull
+                : uploadsRootFull + Path.DirectorySeparatorChar;
+
+            var relativeOld = profilePicturePath.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar);
+            var candidateFull = Path.GetFullPath(Path.Combine(webRoot, relativeOld));
+
+            if (candidateFull.StartsWith(prefixWithSep, StringComparison.OrdinalIgnoreCase) &&
+                System.IO.File.Exists(candidateFull))
+            {
+                System.IO.File.Delete(candidateFull);
+            }
         }
 
         private CookieOptions BuildAuthCookieOptions(DateTime? expires = null)
@@ -270,6 +382,8 @@ namespace PharmacyApi.Controllers
 
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
+        public int? TenantId { get; set; }
+        public int? BranchId { get; set; }
         public string Role { get; set; } = "Cashier";
     }
 
@@ -305,8 +419,7 @@ namespace PharmacyApi.Controllers
 
     public class ChangePasswordModel
     {
-        [Required(ErrorMessage = "User ID is required")]
-        public string UserId { get; set; } = string.Empty;
+        public string? UserId { get; set; }
 
         [Required(ErrorMessage = "Old Password is required")]
         public string OldPassword { get; set; } = string.Empty;
