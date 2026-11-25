@@ -9,6 +9,6 @@ namespace PharmacyApi.Repositories
         Task<PurchaseMasterDto?> GetByIdAsync(int id);
         Task<PurchaseMasterDto> CreateAsync(PurchaseMasterDto dto, string username);
         Task<bool> DeleteAsync(int id);
-        Task<string> GetNextGrnCodeAsync();
+        Task<string> GetNextGrnCodeAsync(int? tenantId = null);
     }
 }

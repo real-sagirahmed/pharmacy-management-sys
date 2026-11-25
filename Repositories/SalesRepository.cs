@@ -21,25 +21,34 @@ namespace PharmacyApi.Repositories
         private DateTime BdNow() =>
             TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(_tz));
 
-        // ─── Invoice Code: INV20260315-1 (resets daily) ─────────────────────
-        public async Task<string> GetNextInvoiceCodeAsync()
+        // ─── Invoice Code: INV20260315-1 (resets daily, tenant-wide across branches) ───
+        public Task<string> GetNextInvoiceCodeAsync(int? tenantId = null)
         {
-            var today = BdNow().Date;
+            int resolvedTenantId = SequenceCodeHelper.ResolveTenantId(_ctx, tenantId);
+            return GetNextInvoiceCodeForTenantAsync(resolvedTenantId, BdNow().Date);
+        }
+
+        private async Task<string> GetNextInvoiceCodeForTenantAsync(
+            int tenantId,
+            DateTime today,
+            CancellationToken cancellationToken = default)
+        {
             var prefix = $"INV{today:yyyyMMdd}-";
 
-            var last = await _context.SalesMasters
-                .Where(s => s.InvoiceCode.StartsWith(prefix))
-                .OrderByDescending(s => s.SaleId)
+            // ARCHITECTURAL INTENT: SalesMaster uses a Tier-2 Global Query Filter (TenantId + BranchId),
+            // whereas IX_SalesMasters_TenantId_InvoiceCode enforces uniqueness Tenant-wide across all branches.
+            // IgnoreQueryFilters() bypasses the Branch filter while scoping strictly to resolved tenantId.
+            var recentCodes = await _context.SalesMasters
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(s => s.TenantId == tenantId && s.InvoiceCode.StartsWith(prefix))
+                .OrderByDescending(s => s.InvoiceCode.Length)
+                .ThenByDescending(s => s.InvoiceCode)
                 .Select(s => s.InvoiceCode)
-                .FirstOrDefaultAsync();
+                .Take(50)
+                .ToListAsync(cancellationToken);
 
-            int next = 1;
-            if (!string.IsNullOrEmpty(last))
-            {
-                var parts = last.Split('-');
-                if (parts.Length == 2 && int.TryParse(parts[1], out int num))
-                    next = num + 1;
-            }
+            int next = SequenceCodeHelper.ComputeNextSequenceNumber(recentCodes, prefix);
             return $"{prefix}{next}";
         }
 
@@ -250,30 +259,22 @@ namespace PharmacyApi.Repositories
 
         private async Task<SalesMasterDto> SaveSaleAsync(SalesMasterDto dto, string username, string status)
         {
-            var strategy = _context.Database.CreateExecutionStrategy();
-            return await strategy.ExecuteAsync(async () =>
+            // Due validation: only registered customers can have due
+            if (dto.DueAmount > 0 && !dto.CustomerIsRegistered)
+                throw new InvalidOperationException("Walking Guest / অনিবন্ধিত গ্রাহকের ক্ষেত্রে বকেয়া গ্রহণযোগ্য নয়।");
+
+            return await _context.ExecuteInTransactionAsync(async ct =>
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                try
-                {
-                    var now = BdNow();
-                    var invoiceCode = await GetNextInvoiceCodeAsync();
+                var now = BdNow();
 
-                    // Due validation: only registered customers can have due
-                    if (dto.DueAmount > 0 && !dto.CustomerIsRegistered)
-                        throw new InvalidOperationException("Walking Guest / অনিবন্ধিত গ্রাহকের ক্ষেত্রে বকেয়া গ্রহণযোগ্য নয়।");
+                // Resolve TenantId & BranchId BEFORE acquiring sequence lock & generating InvoiceCode
+                int tenantId = SequenceCodeHelper.ResolveTenantId(_ctx, dto.TenantId);
+                int branchId = await SequenceCodeHelper.ResolveBranchIdAsync(_context, _ctx, tenantId, dto.BranchId, ct);
 
-                    // Resolve TenantId & BranchId
-                    int tenantId = _ctx.TenantId ?? (dto.TenantId.HasValue && dto.TenantId.Value > 0 ? dto.TenantId.Value : 1);
-                    int branchId = dto.BranchId ?? _ctx.BranchId ?? 0;
-                    if (branchId == 0)
-                    {
-                        var ho = await _context.Branches.FirstOrDefaultAsync(b => b.TenantId == tenantId && b.IsHeadOffice);
-                        branchId = ho?.BranchId ?? (await _context.Branches.Where(b => b.TenantId == tenantId).Select(b => b.BranchId).FirstOrDefaultAsync());
-                        if (branchId == 0) branchId = 1;
-                    }
+                await _context.AcquireTransactionAppLockAsync($"SEQ_INV_T{tenantId}", ct);
+                var invoiceCode = await GetNextInvoiceCodeForTenantAsync(tenantId, now.Date, ct);
 
-                    var sale = new SalesMaster
+                var sale = new SalesMaster
                     {
                         InvoiceCode     = invoiceCode,
                         TenantId        = tenantId,
@@ -419,8 +420,7 @@ namespace PharmacyApi.Repositories
                     }
 
                     _context.SalesMasters.Add(sale);
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
+                    await _context.SaveChangesAsync(ct);
 
                     dto.SaleId        = sale.SaleId;
                     dto.InvoiceCode   = invoiceCode;
@@ -429,13 +429,7 @@ namespace PharmacyApi.Repositories
                     dto.SaleTime      = sale.SaleTime;
                     dto.PaymentStatus = sale.PaymentStatus;
                     dto.SaleStatus    = sale.SaleStatus;
-                    return dto;
-                }
-                catch
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
+                    return (true, dto);
             });
         }
 

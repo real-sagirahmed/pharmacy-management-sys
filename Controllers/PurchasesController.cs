@@ -21,9 +21,10 @@ namespace PharmacyApi.Controllers
         // GET: api/purchases/next-grn
         [HttpGet("next-grn")]
         [ModulePermission("Purchases", "view")]
-        public async Task<ActionResult<string>> GetNextGrn()
+        public async Task<ActionResult<string>> GetNextGrn([FromQuery] int? tenantId = null)
         {
-            var code = await _repo.GetNextGrnCodeAsync();
+            int? scopedTenantId = User.IsInRole("SystemAdmin") ? tenantId : null;
+            var code = await _repo.GetNextGrnCodeAsync(scopedTenantId);
             return Ok(new { grnCode = code });
         }
 

@@ -21,23 +21,34 @@ namespace PharmacyApi.Repositories
         private DateTime BdNow() =>
             TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(_tz));
 
-        // ─── GRN Code Auto-Generation ───────────────────────────────────────
-        public async Task<string> GetNextGrnCodeAsync()
+        // ─── GRN Code Auto-Generation (tenant-wide across branches) ──────────
+        public Task<string> GetNextGrnCodeAsync(int? tenantId = null)
         {
-            var last = await _context.PurchaseMasters
-                .Where(p => p.GrnCode.StartsWith("GRN-"))
-                .OrderByDescending(p => p.PurchaseId)
-                .Select(p => p.GrnCode)
-                .FirstOrDefaultAsync();
+            int resolvedTenantId = SequenceCodeHelper.ResolveTenantId(_ctx, tenantId);
+            return GetNextGrnCodeForTenantAsync(resolvedTenantId);
+        }
 
-            int next = 1;
-            if (!string.IsNullOrEmpty(last))
-            {
-                var parts = last.Split('-');
-                if (parts.Length == 2 && int.TryParse(parts[1], out int num))
-                    next = num + 1;
-            }
-            return $"GRN-{next:D5}";
+        private async Task<string> GetNextGrnCodeForTenantAsync(
+            int tenantId,
+            CancellationToken cancellationToken = default)
+        {
+            const string prefix = "GRN-";
+
+            // ARCHITECTURAL INTENT: PurchaseMaster uses a Tier-2 Global Query Filter (TenantId + BranchId),
+            // whereas IX_PurchaseMasters_TenantId_GrnCode enforces uniqueness Tenant-wide across all branches.
+            // IgnoreQueryFilters() bypasses the Branch filter while scoping strictly to resolved tenantId.
+            var recentCodes = await _context.PurchaseMasters
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(p => p.TenantId == tenantId && p.GrnCode.StartsWith(prefix))
+                .OrderByDescending(p => p.GrnCode.Length)
+                .ThenByDescending(p => p.GrnCode)
+                .Select(p => p.GrnCode)
+                .Take(50)
+                .ToListAsync(cancellationToken);
+
+            int next = SequenceCodeHelper.ComputeNextSequenceNumber(recentCodes, prefix);
+            return $"{prefix}{next:D5}";
         }
 
         // ─── Get All (for dropdowns / simple lists) ─────────────────────────
@@ -202,34 +213,26 @@ namespace PharmacyApi.Repositories
         // ─── Create (with transaction & MedicineBatch upsert) ────────────────
         public async Task<PurchaseMasterDto> CreateAsync(PurchaseMasterDto dto, string username)
         {
-            var strategy = _context.Database.CreateExecutionStrategy();
-            return await strategy.ExecuteAsync(async () =>
+            return await _context.ExecuteInTransactionAsync(async ct =>
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                try
+                var now = BdNow();
+
+                // Resolve TenantId & BranchId BEFORE acquiring sequence lock & generating GrnCode
+                int tenantId = SequenceCodeHelper.ResolveTenantId(_ctx, dto.TenantId);
+                int branchId = await SequenceCodeHelper.ResolveBranchIdAsync(_context, _ctx, tenantId, dto.BranchId, ct);
+
+                if (!string.IsNullOrEmpty(dto.InvoiceNumber))
                 {
-                    var now = BdNow();
-                    var grnCode = await GetNextGrnCodeAsync();
+                    var exists = await _context.PurchaseMasters
+                        .AnyAsync(p => p.PartyId == dto.SupplierId && p.InvoiceNumber == dto.InvoiceNumber, ct);
+                    if (exists)
+                        throw new InvalidOperationException($"Invoice Number '{dto.InvoiceNumber}' already exists for this supplier.");
+                }
 
-                    if (!string.IsNullOrEmpty(dto.InvoiceNumber))
-                    {
-                        var exists = await _context.PurchaseMasters
-                            .AnyAsync(p => p.PartyId == dto.SupplierId && p.InvoiceNumber == dto.InvoiceNumber);
-                        if (exists)
-                            throw new InvalidOperationException($"Invoice Number '{dto.InvoiceNumber}' already exists for this supplier.");
-                    }
+                await _context.AcquireTransactionAppLockAsync($"SEQ_GRN_T{tenantId}", ct);
+                var grnCode = await GetNextGrnCodeForTenantAsync(tenantId, ct);
 
-                    // Resolve TenantId & BranchId
-                    int tenantId = _ctx.TenantId ?? (dto.TenantId.HasValue && dto.TenantId.Value > 0 ? dto.TenantId.Value : 1);
-                    int branchId = dto.BranchId ?? _ctx.BranchId ?? 0;
-                    if (branchId == 0)
-                    {
-                        var ho = await _context.Branches.FirstOrDefaultAsync(b => b.TenantId == tenantId && b.IsHeadOffice);
-                        branchId = ho?.BranchId ?? (await _context.Branches.Where(b => b.TenantId == tenantId).Select(b => b.BranchId).FirstOrDefaultAsync());
-                        if (branchId == 0) branchId = 1;
-                    }
-
-                    var purchase = new PurchaseMaster
+                var purchase = new PurchaseMaster
                     {
                         GrnCode       = grnCode,
                         TenantId      = tenantId,
@@ -344,8 +347,7 @@ namespace PharmacyApi.Repositories
                     }
 
                     _context.PurchaseMasters.Add(purchase);
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
+                    await _context.SaveChangesAsync(ct);
 
                     dto.PurchaseId    = purchase.PurchaseId;
                     dto.GrnCode       = purchase.GrnCode;
@@ -353,13 +355,7 @@ namespace PharmacyApi.Repositories
                     dto.BranchId      = purchase.BranchId;
                     dto.DueAmount     = purchase.DueAmount;
                     dto.PaymentStatus = purchase.PaymentStatus;
-                    return dto;
-                }
-                catch
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
+                    return (true, dto);
             });
         }
 

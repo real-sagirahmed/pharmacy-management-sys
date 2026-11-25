@@ -21,9 +21,10 @@ namespace PharmacyApi.Controllers
         // GET: api/Sales/next-invoice-code
         [HttpGet("next-invoice-code")]
         [ModulePermission("Sales", "view")]
-        public async Task<IActionResult> GetNextInvoiceCode()
+        public async Task<IActionResult> GetNextInvoiceCode([FromQuery] int? tenantId = null)
         {
-            var code = await _repo.GetNextInvoiceCodeAsync();
+            int? scopedTenantId = User.IsInRole("SystemAdmin") ? tenantId : null;
+            var code = await _repo.GetNextInvoiceCodeAsync(scopedTenantId);
             return Ok(new { invoiceCode = code });
         }
 

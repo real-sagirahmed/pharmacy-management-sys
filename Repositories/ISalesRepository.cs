@@ -5,7 +5,7 @@ namespace PharmacyApi.Repositories
 {
     public interface ISalesRepository
     {
-        Task<string> GetNextInvoiceCodeAsync();
+        Task<string> GetNextInvoiceCodeAsync(int? tenantId = null);
         Task<IEnumerable<SaleBatchInfoDto>> GetBatchesForMedicineAsync(int medicineId);
         Task<PagedResult<SalesMasterDto>> GetPagedAsync(SaleSearchParameters parameters);
         Task<SalesMasterDto?> GetByIdAsync(int id);

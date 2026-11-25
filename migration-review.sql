@@ -2725,3 +2725,60 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261125125907_AddUniquePurchaseGrnCodeIndex'
+)
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM [PurchaseMasters]
+        GROUP BY [TenantId], [GrnCode]
+        HAVING COUNT(*) > 1
+    )
+    BEGIN
+        ;WITH DupGrns AS (
+            SELECT [PurchaseId],
+                   [GrnCode],
+                   ROW_NUMBER() OVER (PARTITION BY [TenantId], [GrnCode] ORDER BY [PurchaseId]) AS [RowNum]
+            FROM [PurchaseMasters]
+        )
+        UPDATE p
+        SET p.[GrnCode] = LEFT(
+                            d.[GrnCode],
+                            CASE WHEN 19 - LEN(CAST(d.[PurchaseId] AS nvarchar(10))) > 0
+                                 THEN 19 - LEN(CAST(d.[PurchaseId] AS nvarchar(10)))
+                                 ELSE 0
+                            END) + '-' + CAST(d.[PurchaseId] AS nvarchar(10))
+        FROM [PurchaseMasters] p
+        INNER JOIN DupGrns d ON p.[PurchaseId] = d.[PurchaseId]
+        WHERE d.[RowNum] > 1;
+    END
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261125125907_AddUniquePurchaseGrnCodeIndex'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_PurchaseMasters_TenantId_GrnCode] ON [PurchaseMasters] ([TenantId], [GrnCode]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261125125907_AddUniquePurchaseGrnCodeIndex'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261125125907_AddUniquePurchaseGrnCodeIndex', N'8.0.0');
+END;
+GO
+
+COMMIT;
+GO
+

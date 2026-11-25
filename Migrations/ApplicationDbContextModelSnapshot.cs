@@ -912,6 +912,9 @@ namespace PharmacyApi.Migrations
 
                     b.HasIndex("PartyId");
 
+                    b.HasIndex("TenantId", "GrnCode")
+                        .IsUnique();
+
                     b.ToTable("PurchaseMasters");
                 });
 

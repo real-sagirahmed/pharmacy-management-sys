@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using PharmacyApi.Models;
 using PharmacyApi.Services;
 
@@ -131,6 +132,9 @@ namespace PharmacyApi.Data
 
             // SalesMaster: InvoiceCode unique per Tenant
             builder.Entity<SalesMaster>().HasIndex(s => new { s.TenantId, s.InvoiceCode }).IsUnique();
+
+            // PurchaseMaster: GrnCode unique per Tenant (prevents multi-branch GRN collisions)
+            builder.Entity<PurchaseMaster>().HasIndex(p => new { p.TenantId, p.GrnCode }).IsUnique();
 
             // Party: Code unique per Tenant
             builder.Entity<Party>().HasIndex(p => new { p.TenantId, p.Code }).IsUnique();
@@ -265,6 +269,47 @@ namespace PharmacyApi.Data
                     throw;
                 }
             });
+        }
+
+        /// <summary>
+        /// Acquires an exclusive transaction-scoped SQL Server application lock before generating
+        /// tenant-wide sequential codes (InvoiceCode, GrnCode), preventing multi-branch and multi-counter
+        /// duplicate-key race conditions while remaining a safe no-op on non-SQL Server test providers.
+        /// </summary>
+        public async Task AcquireTransactionAppLockAsync(string resourceKey, CancellationToken cancellationToken = default)
+        {
+            // ARCHITECTURAL INTENT: Sequential tenant-wide codes share a per-tenant unique index across all branches.
+            // Serializing on @LockOwner='Transaction' at the beginning of ExecuteInTransactionAsync locks only the
+            // target sequence resource within that tenant and auto-releases cleanly on commit or rollback.
+            if (Database.CurrentTransaction == null ||
+                !string.Equals(Database.ProviderName, "Microsoft.EntityFrameworkCore.SqlServer", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var connection = Database.GetDbConnection();
+            await using var cmd = connection.CreateCommand();
+            cmd.Transaction = Database.CurrentTransaction.GetDbTransaction();
+            cmd.CommandText = @"
+                DECLARE @res int;
+                EXEC @res = sp_getapplock
+                    @Resource = @lockName,
+                    @LockMode = 'Exclusive',
+                    @LockOwner = 'Transaction',
+                    @LockTimeout = 10000;
+                SELECT @res;";
+
+            var param = cmd.CreateParameter();
+            param.ParameterName = "@lockName";
+            param.Value = resourceKey;
+            cmd.Parameters.Add(param);
+
+            var scalar = await cmd.ExecuteScalarAsync(cancellationToken);
+            int lockResult = Convert.ToInt32(scalar);
+            if (lockResult < 0)
+            {
+                throw new InvalidOperationException($"Could not acquire sequence lock '{resourceKey}' (sp_getapplock result: {lockResult}).");
+            }
         }
     }
 }
