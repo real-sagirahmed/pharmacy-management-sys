@@ -236,7 +236,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
         <div *ngIf="selectedPurchase" class="pay-form">
           <div class="pay-summary">
             <div class="pay-sum-item"><span>Grand Total</span><strong>৳{{ selectedPurchase.grandTotal | number:'1.2-2' }}</strong></div>
-            <div class="pay-sum-item"><span>Paid</span><strong style="color:#0d9488">৳{{ selectedPurchase.paidAmount | number:'1.2-2' }}</strong></div>
+            <div class="pay-sum-item"><span>Paid</span><strong style="color:var(--brand)">৳{{ selectedPurchase.paidAmount | number:'1.2-2' }}</strong></div>
             <div class="pay-sum-item"><span>Balance Due</span><strong style="color:#dc2626">৳{{ selectedPurchase.dueAmount | number:'1.2-2' }}</strong></div>
           </div>
 
@@ -311,7 +311,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
 
     .btn-primary {
       display: flex; align-items: center; gap: 8px;
-      background: #0d9488; color: #fff;
+      background: var(--brand); color: #fff;
       border: none; border-radius: 10px;
       padding: 9px 18px;
       font-size: .875rem; font-weight: 600;
@@ -319,7 +319,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
       font-family: 'Inter', sans-serif;
       white-space: nowrap;
     }
-    .btn-primary:hover { background: #0f766e; }
+    .btn-primary:hover { background: var(--brand-hover); }
 
     .table-toolbar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; gap: 12px; flex-wrap: wrap; }
     
@@ -330,13 +330,13 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
       font-size: 13px !important; font-family: 'Inter', sans-serif; outline: none; 
       transition: border-color .15s; background: #f8fafc; height: 34px;
     }
-    .search-input:focus { border-color: #0d9488; background: #fff; }
+    .search-input:focus { border-color: var(--brand); background: #fff; }
     .search-clear { position: absolute; right: 10px; background: none; border: none; color: #94a3b8; cursor: pointer; }
 
     .result-count { font-size: .8rem; color: #475569; font-weight: 600; }
     .summary-row { display: flex; gap: 10px; }
     .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 600; }
-    .chip-teal { background: #ccfbf1; color: #0f766e; }
+    .chip-teal { background: var(--brand-soft); color: var(--brand); }
 
     .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
     .table-responsive { overflow-x: auto; width: 100%; }
@@ -344,13 +344,13 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     /* Table Header Styling */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
       background-color: #f1f5f9 !important;
-      color: #0d9488 !important;
+      color: var(--brand) !important;
       font-weight: 800 !important;
       font-size: 0.75rem !important;
       text-transform: uppercase !important;
       letter-spacing: 0.7px !important;
       padding: 10px 12px !important;
-      border-bottom: 2.5px solid #0d9488 !important;
+      border-bottom: 2.5px solid var(--brand) !important;
     }
     
     ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
@@ -384,10 +384,10 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     ::ng-deep .premium-dialog .p-dialog-header { background: #fff; border-bottom: 1px solid #f1f5f9; padding: 14px 20px; border-radius: 16px 16px 0 0; }
     ::ng-deep .dialog-header-custom { display: flex; align-items: center; gap: 12px; }
     ::ng-deep .header-icon-hex {
-      width: 36px; height: 36px; background: #0d9488; color: #fff;
+      width: 36px; height: 36px; background: var(--brand); color: #fff;
       display: flex; align-items: center; justify-content: center;
       border-radius: 10px; font-size: 1rem;
-      box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+      box-shadow: 0 4px 10px var(--brand-glow);
       flex-shrink: 0;
     }
     ::ng-deep .dialog-title-text { font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; }
@@ -398,15 +398,15 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     .det-item { display: flex; flex-direction: column; gap: 2px; background: #f8fafc; border-radius: 8px; padding: 8px 12px; }
     .det-item span { font-size: .68rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
     .det-item strong { font-size: .85rem; color: #0f172a; }
-    .det-item.grand { background: #ccfbf1; }
-    .det-item.grand strong { color: #0d9488; font-size: 1rem; }
+    .det-item.grand { background: var(--brand-soft); }
+    .det-item.grand strong { color: var(--brand); font-size: 1rem; }
 
     .detail-section { border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 5px; }
-    .det-heading { font-size: .7rem; font-weight: 700; color: #0d9488; text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .det-heading { font-size: .7rem; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
     .det-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
     .det-table th { background: #f1f5f9; color: #334155; font-weight: 800; padding: 8px 10px; text-align: left; font-size: .7rem; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
     .det-table td { padding: 6px 8px; border-bottom: 1px solid #f8fafc; }
-    .batch-mono { font-family: monospace; color: #0d9488; font-size: .75rem; }
+    .batch-mono { font-family: monospace; color: var(--brand); font-size: .75rem; }
     .pay-badge { background: #eff6ff; color: #3b82f6; padding: 2px 8px; border-radius: 6px; font-size: .72rem; font-weight: 700; }
     .font-bold { font-weight: 700; }
 
@@ -420,11 +420,11 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     
     .btn-save {
       display: flex; align-items: center; gap: 8px; padding: 8px 20px;
-      background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;
+      background: linear-gradient(135deg, var(--brand), var(--brand-hover)); color: #fff;
       border: none; border-radius: 10px; font-weight: 700; font-size: .8rem;
-      cursor: pointer; transition: all .2s; box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+      cursor: pointer; transition: all .2s; box-shadow: 0 4px 10px var(--brand-glow);
     }
-    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25); opacity: 0.95; }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 14px var(--brand-glow); opacity: 0.95; }
 
     .animate-fadein-up { animation: fadeIn .5s ease-out; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -452,16 +452,16 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     .pay-row-top { display: grid; grid-template-columns: 120px 1fr 34px; gap: 8px; }
     .pay-row-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
     .pay-sub-input { width: 100%; border: 1.5px solid #f1f5f9; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; color: #0f172a; outline: none; }
-    .pay-sub-input:focus { border-color: #0d9488; }
+    .pay-sub-input:focus { border-color: var(--brand); }
     .btn-row-del { width: 34px; height: 34px; background: #fff1f2; color: #f43f5e; border: none; border-radius: 6px; cursor: pointer; }
     .pay-footer-stats { margin-top: 10px; border-top: 2px dashed #f1f5f9; padding-top: 10px; }
     .pay-method-select { width: 100% !important; font-size: 0.8rem; border-radius: 6px; }
-    .pay-amount-input { width: 100%; font-weight: 700; font-size: 1rem; color: #0d9488; }
+    .pay-amount-input { width: 100%; font-weight: 700; font-size: 1rem; color: var(--brand); }
     .justify-between { justify-content: space-between; }
     .items-center { align-items: center; }
     .font-black { font-weight: 900; }
     .text-xl { font-size: 1.25rem; }
-    .text-teal { color: #0d9488; }
+    .text-teal { color: var(--brand); }
     .remarks-text { font-style: italic; color: #94a3b8; font-size: 0.65rem; margin-top: 2px; }
     .det-table tfoot td { padding: 8px; border-top: 2px solid #f1f5f9; }
   `]

@@ -92,42 +92,42 @@ import { ReportService } from '../../services/report.service';
     </div>
   `,
   styles: [`
-    .page-wrap { display: flex; flex-direction: column; background: #f8fafc; min-height: calc(100vh - 70px); }
+    .page-wrap { display: flex; flex-direction: column; background: var(--bg-canvas, #f8fafc); min-height: calc(100vh - 70px); }
     
     .header-section { 
-      padding: 16px 24px; background: #fff; border-bottom: 1px solid #e2e8f0; 
+      padding: 16px 24px; background: var(--bg-card, #fff); border-bottom: 1px solid var(--border-subtle, #e2e8f0); 
       position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
-    .page-title { font-size: 1.1rem !important; margin: 0; font-weight: 800; color: #0d9488; }
-    .page-sub { margin: 0; color: #64748b; font-weight: 500; font-size: 0.8rem; }
+    .page-title { font-size: 1.1rem !important; margin: 0; font-weight: 800; color: var(--brand, #007070); }
+    .page-sub { margin: 0; color: var(--text-muted, #64748b); font-weight: 500; font-size: 0.8rem; }
     
     .dashboard-grid { overflow-y: auto; }
     
     /* KPI Cards */
-    .kpi-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px; position: relative; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+    .kpi-card { background: var(--bg-card, #fff); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px; position: relative; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
     .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08); }
     .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; border-radius: 12px 0 0 12px; }
-    .kpi-teal::before   { background: #0d9488; }
+    .kpi-teal::before   { background: var(--brand, #007070); }
     .kpi-indigo::before { background: #6366f1; }
-    .kpi-emerald::before{ background: #10b981; }
+    .kpi-emerald::before{ background: var(--success, #047857); }
     
     .kpi-icon-wrap { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; transition: transform 0.2s; }
     .kpi-card:hover .kpi-icon-wrap { transform: scale(1.05); }
-    .kpi-teal-icon   { background: #ccfbf1; color: #0d9488; }
+    .kpi-teal-icon   { background: var(--brand-soft, #E6F4F4); color: var(--brand, #007070); }
     .kpi-indigo-icon { background: #e0e7ff; color: #4f46e5; }
-    .kpi-emerald-icon{ background: #d1fae5; color: #059669; }
+    .kpi-emerald-icon{ background: #d1fae5; color: #047857; }
     
     .kpi-info { flex: 1; display: flex; flex-direction: column; }
-    .kpi-label { font-size: 0.75rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
-    .kpi-value { font-size: 1.4rem; font-weight: 800; color: #1e293b; }
+    .kpi-label { font-size: 0.75rem; font-weight: 800; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+    .kpi-value { font-size: 1.4rem; font-weight: 800; color: var(--text-heading, #1e293b); }
     .kpi-trend { font-size: 0.7rem; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
-    .trend-up { color: #10b981; }
-    .trend-down { color: #ef4444; }
+    .trend-up { color: var(--success, #047857); }
+    .trend-down { color: var(--danger, #b91c1c); }
 
     /* Chart Cards */
     .chart-row { display: flex; gap: 16px; min-height: 280px; }
-    .chart-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
-    .chart-title { font-size: 0.9rem; font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1.5px solid #f1f5f9; }
+    .chart-card { background: var(--bg-card, #fff); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 16px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+    .chart-title { font-size: 0.9rem; font-weight: 900; color: var(--text-heading, #1e293b); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1.5px solid var(--border-subtle, #f1f5f9); }
     .chart-container { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: center; }
     .center-chart { display: flex; justify-content: center; align-items: center; }
 
@@ -236,9 +236,9 @@ export class VisualDashboardComponent implements OnInit {
           data: data.map(d => d.totalQuantity),
           backgroundColor: data.map(d => {
              const opacity = Math.max(0.4, d.totalQuantity / maxQty);
-             return `rgba(13, 148, 136, ${opacity})`; // Teal with varying opacity
+             return `rgba(0, 112, 112, ${opacity})`; // S7 Teal with varying opacity
           }),
-          hoverBackgroundColor: '#0f766e',
+          hoverBackgroundColor: '#005858',
           borderRadius: 6,
           barPercentage: 0.6
         }]
@@ -252,7 +252,7 @@ export class VisualDashboardComponent implements OnInit {
         labels: top5.map(d => d.itemName),
         datasets: [{
           data: top5.map(d => d.totalRevenue),
-          backgroundColor: ['#0d9488', '#f59e0b', '#10b981', '#6366f1', '#ec4899']
+          backgroundColor: ['#007070', '#b45309', '#047857', '#0369a1', '#8b5cf6']
         }]
       };
     });

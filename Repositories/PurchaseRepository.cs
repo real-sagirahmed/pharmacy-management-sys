@@ -2,17 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using PharmacyApi.Data;
 using PharmacyApi.DTOs;
 using PharmacyApi.Models;
+using PharmacyApi.Services;
 
 namespace PharmacyApi.Repositories
 {
     public class PurchaseRepository : IPurchaseRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly ITenantContextService _ctx;
         private static readonly string _tz = "Bangladesh Standard Time";
 
-        public PurchaseRepository(ApplicationDbContext context)
+        public PurchaseRepository(ApplicationDbContext context, ITenantContextService ctx)
         {
             _context = context;
+            _ctx = ctx;
         }
 
         private DateTime BdNow() =>
@@ -47,6 +50,8 @@ namespace PharmacyApi.Repositories
                 {
                     PurchaseId    = p.PurchaseId,
                     GrnCode       = p.GrnCode,
+                    TenantId      = p.TenantId,
+                    BranchId      = p.BranchId,
                     SupplierId    = p.PartyId,
                     SupplierName  = p.Party != null ? p.Party.FullName : string.Empty,
                     SupplierPhone = p.Party != null ? p.Party.Cell : string.Empty,
@@ -103,6 +108,8 @@ namespace PharmacyApi.Repositories
                 {
                     PurchaseId    = p.PurchaseId,
                     GrnCode       = p.GrnCode,
+                    TenantId      = p.TenantId,
+                    BranchId      = p.BranchId,
                     SupplierId    = p.PartyId,
                     SupplierName  = p.Party != null ? p.Party.FullName : string.Empty,
                     SupplierPhone = p.Party != null ? p.Party.Cell : string.Empty,
@@ -144,6 +151,8 @@ namespace PharmacyApi.Repositories
             {
                 PurchaseId    = p.PurchaseId,
                 GrnCode       = p.GrnCode,
+                TenantId      = p.TenantId,
+                BranchId      = p.BranchId,
                 SupplierId    = p.PartyId,
                 SupplierName  = p.Party?.FullName,
                 SupplierPhone = p.Party?.Cell,
@@ -190,7 +199,7 @@ namespace PharmacyApi.Repositories
             };
         }
 
-        // ─── Create (with transaction) ───────────────────────────────────────
+        // ─── Create (with transaction & MedicineBatch upsert) ────────────────
         public async Task<PurchaseMasterDto> CreateAsync(PurchaseMasterDto dto, string username)
         {
             var strategy = _context.Database.CreateExecutionStrategy();
@@ -210,9 +219,21 @@ namespace PharmacyApi.Repositories
                             throw new InvalidOperationException($"Invoice Number '{dto.InvoiceNumber}' already exists for this supplier.");
                     }
 
+                    // Resolve TenantId & BranchId
+                    int tenantId = _ctx.TenantId ?? (dto.TenantId.HasValue && dto.TenantId.Value > 0 ? dto.TenantId.Value : 1);
+                    int branchId = dto.BranchId ?? _ctx.BranchId ?? 0;
+                    if (branchId == 0)
+                    {
+                        var ho = await _context.Branches.FirstOrDefaultAsync(b => b.TenantId == tenantId && b.IsHeadOffice);
+                        branchId = ho?.BranchId ?? (await _context.Branches.Where(b => b.TenantId == tenantId).Select(b => b.BranchId).FirstOrDefaultAsync());
+                        if (branchId == 0) branchId = 1;
+                    }
+
                     var purchase = new PurchaseMaster
                     {
                         GrnCode       = grnCode,
+                        TenantId      = tenantId,
+                        BranchId      = branchId,
                         PartyId       = dto.SupplierId,
                         InvoiceNumber = dto.InvoiceNumber,
                         InvoiceDate   = dto.InvoiceDate,
@@ -223,7 +244,8 @@ namespace PharmacyApi.Repositories
                         Adjustment    = dto.Adjustment,
                         GrandTotal    = dto.GrandTotal,
                         PaidAmount    = dto.PaidAmount,
-                        CreatedBy     = username
+                        CreatedBy     = username,
+                        CreatedAt     = now
                     };
 
                     // Calculate DueAmount once from authoritative values
@@ -257,6 +279,43 @@ namespace PharmacyApi.Repositories
                         };
                         purchase.PurchaseDetails.Add(detail);
 
+                        // ─── SaaS MedicineBatch Upsert (Branch-level batch stock) ───
+                        var batchNumber = string.IsNullOrWhiteSpace(item.BatchNumber) ? "DEFAULT" : item.BatchNumber.Trim();
+                        var batch = await _context.MedicineBatches
+                            .FirstOrDefaultAsync(b => b.TenantId == tenantId &&
+                                                      b.BranchId == branchId &&
+                                                      b.MedicineId == item.MedicineId &&
+                                                      b.BatchNumber == batchNumber);
+
+                        if (batch != null)
+                        {
+                            batch.CurrentStock += item.Quantity;
+                            if (item.ExpiryDate.HasValue) batch.ExpiryDate = item.ExpiryDate.Value;
+                            batch.PurchasePrice = item.UnitCost;
+                            if (item.SalePrice > 0) batch.SalePrice = item.SalePrice;
+                            batch.Status = "Active"; // Reactivate if was zero
+                        }
+                        else
+                        {
+                            batch = new MedicineBatch
+                            {
+                                TenantId      = tenantId,
+                                BranchId      = branchId,
+                                MedicineId    = item.MedicineId,
+                                BatchNumber   = batchNumber,
+                                ExpiryDate    = item.ExpiryDate ?? now.AddYears(1),
+                                CurrentStock  = item.Quantity,
+                                PurchasePrice = item.UnitCost,
+                                SalePrice     = item.SalePrice > 0 ? item.SalePrice : item.UnitCost,
+                                Status        = "Active",
+                                ReceivedAt    = now,
+                                CreatedAt     = now,
+                                CreatedBy     = username
+                            };
+                            _context.MedicineBatches.Add(batch);
+                        }
+
+                        // Update tenant-wide medicine catalog stock summary
                         var medicine = await _context.Medicines.FindAsync(item.MedicineId);
                         if (medicine != null)
                         {
@@ -290,6 +349,8 @@ namespace PharmacyApi.Repositories
 
                     dto.PurchaseId    = purchase.PurchaseId;
                     dto.GrnCode       = purchase.GrnCode;
+                    dto.TenantId      = purchase.TenantId;
+                    dto.BranchId      = purchase.BranchId;
                     dto.DueAmount     = purchase.DueAmount;
                     dto.PaymentStatus = purchase.PaymentStatus;
                     return dto;
@@ -302,7 +363,7 @@ namespace PharmacyApi.Repositories
             });
         }
 
-        // ─── Delete (with stock reversal) ────────────────────────────────────
+        // ─── Delete (with stock & MedicineBatch reversal) ───────────────────
         public async Task<bool> DeleteAsync(int id)
         {
             var p = await _context.PurchaseMasters
@@ -325,12 +386,22 @@ namespace PharmacyApi.Repositories
                     }
 
                     foreach (var item in p.PurchaseDetails)
-
                     {
+                        var batchNumber = string.IsNullOrWhiteSpace(item.BatchNumber) ? "DEFAULT" : item.BatchNumber.Trim();
+                        var batch = await _context.MedicineBatches
+                            .FirstOrDefaultAsync(b => b.TenantId == p.TenantId &&
+                                                      b.BranchId == p.BranchId &&
+                                                      b.MedicineId == item.MedicineId &&
+                                                      b.BatchNumber == batchNumber);
+                        if (batch != null)
+                        {
+                            batch.CurrentStock = Math.Max(0, batch.CurrentStock - item.Quantity);
+                        }
+
                         var medicine = await _context.Medicines.FindAsync(item.MedicineId);
                         if (medicine != null)
                         {
-                            medicine.StockQuantity -= item.Quantity;
+                            medicine.StockQuantity = Math.Max(0, medicine.StockQuantity - item.Quantity);
                             _context.Entry(medicine).State = EntityState.Modified;
                         }
                     }

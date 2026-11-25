@@ -47,6 +47,10 @@ namespace PharmacyApi.Models
         [StringLength(20)]
         public string SaleStatus { get; set; } = "Completed";
 
+        // ─── SaaS: Tenant + Branch (কোন ফার্মেসির কোন শাখায় বিক্রি হয়েছে)
+        public int TenantId { get; set; }
+        public int BranchId { get; set; }
+
         public virtual ICollection<SalesDetail> SalesDetails { get; set; } = new List<SalesDetail>();
         public virtual ICollection<SalesPayment> SalesPayments { get; set; } = new List<SalesPayment>();
 

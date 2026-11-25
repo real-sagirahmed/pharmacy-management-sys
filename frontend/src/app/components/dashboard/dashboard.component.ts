@@ -11,6 +11,8 @@ import { GlobalSearchComponent } from '../shared/global-search/global-search.com
 
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../services/user.service';
+import { ThemeService } from '../../services/theme.service';
+import { TenantConfigService } from '../../services/tenant-config.service';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 
@@ -32,7 +34,7 @@ import { TooltipModule } from 'primeng/tooltip';
           <h2 class="text-2xl font-bold text-slate-800">Account Initialized</h2>
           <p class="text-slate-600 max-w-sm mt-2">
             Your account is active, but your role permissions haven't been configured yet. 
-            Please contact the <span class="font-bold text-teal-600">SystemAdmin</span> to grant you access.
+            Please contact the <span class="font-bold" style="color: var(--brand)">SystemAdmin</span> to grant you access.
           </p>
           <button class="logout-btn mt-6 w-auto px-8" (click)="logout()">
             <i class="pi pi-sign-out"></i> Log Out
@@ -47,11 +49,11 @@ import { TooltipModule } from 'primeng/tooltip';
             <i class="pi pi-bars"></i>
           </button>
           <div class="brand-icon" [class.centered]="!sidebarOpen() && !isMobile()">
-            <img src="/logo.png" alt="s7 Logo" class="logo-img">
+            <img [src]="tenantConfig.logoUrl()" alt="Logo" class="logo-img">
           </div>
           <div class="brand-text" *ngIf="sidebarOpen() || isMobile()">
-            <span class="brand-name">s7 Drug House</span>
-            <span class="brand-sub" *ngIf="!isMobile()">Pharmacy System</span>
+            <span class="brand-name">{{ tenantConfig.pharmacyName() }}</span>
+            <span class="brand-sub" *ngIf="!isMobile()">{{ tenantConfig.tagline() }}</span>
           </div>
 
         </div>
@@ -64,6 +66,25 @@ import { TooltipModule } from 'primeng/tooltip';
             <span class="btn-text">Search...</span>
             <span class="btn-key">CtrlK</span>
           </button>
+
+          <!-- Theme Switcher (s7-light / s7-dark) -->
+          <button class="theme-toggle-btn" (click)="themeService.toggleTheme()" [pTooltip]="themeService.isDark() ? 'Switch to s7-Light' : 'Switch to s7-Dark'" tooltipPosition="bottom">
+            <i class="pi" [class.pi-sun]="themeService.isDark()" [class.pi-moon]="!themeService.isDark()"></i>
+          </button>
+
+          <!-- Branch Selector / Indicator -->
+          <div class="branch-pill" *ngIf="tenantConfig.selectedBranch() as currentBranch">
+            <i class="pi pi-building text-amber-500"></i>
+            <span class="branch-name" *ngIf="tenantConfig.availableBranches().length <= 1">{{ currentBranch.branchName }}</span>
+            <select *ngIf="tenantConfig.availableBranches().length > 1"
+                    [ngModel]="currentBranch.branchId"
+                    (ngModelChange)="onBranchChange($event)"
+                    class="branch-select">
+              <option *ngFor="let b of tenantConfig.availableBranches()" [value]="b.branchId">
+                {{ b.branchName }} {{ b.isHeadOffice ? '★' : '' }}
+              </option>
+            </select>
+          </div>
 
           <div class="header-clock">
             <span class="clock-time">{{ currentClock }}</span>
@@ -244,8 +265,8 @@ import { TooltipModule } from 'primeng/tooltip';
               </div>
               <div class="sub-nav">
                 <a class="nav-item sub-item" *ngIf="hasAnyReportPermission()" routerLink="/dashboard/analytics" routerLinkActive="nav-active" appTooltip="Visual Data Charts" [tooltipEnabled]="!sidebarOpen()">
-                  <i class="pi pi-chart-bar nav-icon-dot text-teal-400"></i>
-                  <span class="nav-label text-xs font-bold text-teal-500">Visual Dashboard</span>
+                  <i class="pi pi-chart-bar nav-icon-dot" style="color: var(--brand)"></i>
+                  <span class="nav-label text-xs font-bold" style="color: var(--brand)">Visual Dashboard</span>
                 </a>
                 <a class="nav-item sub-item" *ngIf="canViewReport('Sales Reports')" routerLink="/dashboard/reports/sales-summary" routerLinkActive="nav-active" appTooltip="Daily Sales Records" [tooltipEnabled]="!sidebarOpen()">
                   <i class="pi pi-file-export nav-icon-dot"></i>
@@ -470,51 +491,78 @@ import { TooltipModule } from 'primeng/tooltip';
       width: 100vw;
       overflow: hidden;
       font-family: 'Inter', sans-serif;
-      background: #f1f5f9;
+      background: var(--s7-section, #f8fafc);
     }
 
     /* ─── Header ─── */
     .app-header {
       height: 64px;
       min-height: 64px;
-      background: #1e293b; /* Softer Navy instead of Jet Black */
+      background: #0B1015; /* S7 Dark Section */
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 20px;
       z-index: 1002; /* Must be ABOVE sidebar-backdrop and sidebar */
-      box-shadow: 0 1px 0 rgba(255,255,255,.06);
+      box-shadow: 0 1px 0 rgba(255,255,255,.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .header-left  { display: flex; align-items: center; gap: 14px; }
     .header-right { display: flex; align-items: center; gap: 14px; }
 
     .sidebar-toggle {
       background: rgba(255,255,255,.08);
-      border: none;
+      border: 1px solid rgba(255,255,255,.12);
       color: #94a3b8;
       width: 36px;
       height: 36px;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1rem;
-      transition: background .15s, color .15s;
+      transition: background .15s, color .15s, border-color .15s;
     }
-    .sidebar-toggle:hover { background: rgba(255,255,255,.14); color: #fff; }
+    .sidebar-toggle:hover { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.25); }
 
     .brand-icon {
       width: 42px; height: 42px;
       display: flex; align-items: center; justify-content: center;
       transition: all 0.3s ease;
+      filter: drop-shadow(0 4px 12px var(--brand-glow));
     }
     .brand-icon.centered { margin: 8px auto 4px; width: 44px; height: 44px; }
     .logo-img { width: 100%; height: 100%; object-fit: contain; }
 
     .brand-text { display: flex; flex-direction: column; line-height: 1.2; transition: opacity 0.3s; }
-    .brand-name { font-size: .95rem; font-weight: 700; color: #f8fafc; letter-spacing: -.01em; }
+    .brand-name { font-size: .95rem; font-weight: 800; color: #ffffff; letter-spacing: -.01em; }
     .brand-sub  { font-size: .7rem;  color: #94a3b8; }
+
+    .branch-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: #e2e8f0;
+    }
+    .branch-select {
+      background: transparent;
+      color: #f8fafc;
+      border: none;
+      outline: none;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .branch-select option {
+      background: #1e293b;
+      color: #f8fafc;
+    }
 
     .header-clock {
       display: flex;
@@ -522,7 +570,7 @@ import { TooltipModule } from 'primeng/tooltip';
       align-items: flex-end;
       line-height: 1.25;
       padding: 0 4px;
-      border-left: 1px solid rgba(255,255,255,0.07);
+      border-left: 1px solid rgba(255,255,255,0.08);
       padding-left: 14px;
     }
     .clock-time {
@@ -541,6 +589,28 @@ import { TooltipModule } from 'primeng/tooltip';
     }
     @media (max-width: 768px) { .header-clock { display: none; } }
 
+    /* Theme Toggle Button */
+    .theme-toggle-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #f8fafc;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+    .theme-toggle-btn:hover {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #ffffff;
+      box-shadow: 0 0 12px var(--brand-glow);
+      transform: translateY(-1px);
+    }
 
     .user-chip {
       display: flex; align-items: center; gap: 10px;
@@ -551,7 +621,7 @@ import { TooltipModule } from 'primeng/tooltip';
     }
     .user-avatar {
       width: 30px; height: 30px;
-      background: linear-gradient(135deg, #0d9488, #0f766e);
+      background: linear-gradient(135deg, #007070, #005858);
       border-radius: 8px;
       color: #fff;
       font-size: .8rem;
@@ -562,19 +632,19 @@ import { TooltipModule } from 'primeng/tooltip';
     .user-chip { cursor: pointer; transition: all 0.2s ease; }
     .user-chip:hover { background: rgba(255,255,255,.1); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: rgba(255,255,255,0.2); }
     .user-name  { font-size: .8rem; font-weight: 600; color: #f1f5f9; }
-    .user-role  { font-size: .68rem; color: #0d9488; font-weight: 500; }
+    .user-role  { font-size: .68rem; color: #008A8A; font-weight: 600; }
     .avatar-img-tiny { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
 
     .logout-btn {
-      background: rgba(239, 68, 68, 0.05); /* Soft Red */
-      border: 1px solid rgba(239, 68, 68, 0.2);
-      color: #ef4444;
+      background: rgba(185, 28, 28, 0.1); /* S7 Danger Soft */
+      border: 1px solid rgba(185, 28, 28, 0.25);
+      color: #F87171;
       width: 38px; height: 38px;
       border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; transition: all 0.25s; font-size: 1.1rem;
     }
-    .logout-btn:hover { background: #ef4444; color: #fff; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); transform: translateY(-1px); }
+    .logout-btn:hover { background: var(--s7-danger); color: #fff; border-color: var(--s7-danger); box-shadow: 0 4px 12px rgba(185, 28, 28, 0.35); transform: translateY(-1px); }
 
     @media (max-width: 640px) {
       .user-info { display: none; }
@@ -585,42 +655,42 @@ import { TooltipModule } from 'primeng/tooltip';
 
     /* ─── Profile Details Card Profile ─── */
     ::ng-deep .profile-dialog-card {
-      background: rgba(15, 23, 42, 0.95) !important;
+      background: rgba(18, 24, 32, 0.98) !important; /* S7 Dark Card */
       -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
       border-radius: 20px !important;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5) !important;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7) !important;
       overflow: hidden;
     }
     .profile-card { display: flex; flex-direction: column; color: #f8fafc; padding: 2rem 1.5rem; text-align: center; }
-    .pc-header { display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
-    .pc-avatar { width: 80px; height: 80px; background: linear-gradient(135deg, #0d9488, #0f766e); border-radius: 50%; color: #fff; font-size: 2.5rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; box-shadow: 0 8px 16px rgba(13, 148, 136, 0.3); border: 2px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; }
+    .pc-header { display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+    .pc-avatar { width: 80px; height: 80px; background: linear-gradient(135deg, #007070, #005858); border-radius: 50%; color: #fff; font-size: 2.5rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; box-shadow: 0 8px 16px var(--brand-glow); border: 2px solid rgba(255,255,255,0.15); position: relative; overflow: hidden; }
     .pc-avatar-editable { cursor: pointer; }
     .avatar-img-full { width: 100%; height: 100%; object-fit: cover; }
     .avatar-upload-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; font-size: 1.5rem; }
     .pc-avatar:hover .avatar-upload-overlay { opacity: 1; }
-    .pc-name { font-size: 1.25rem; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+    .pc-name { font-size: 1.25rem; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; color: #FFFFFF; }
     .pc-email { font-size: 0.85rem; color: #94a3b8; margin: 0; }
     .pc-body { display: flex; flex-direction: column; gap: 1rem; text-align: left; margin-bottom: 2rem; }
-    .pc-info-row { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 12px 16px; border-radius: 12px; }
-    .pc-label { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pc-info-row { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 12px 16px; border-radius: 12px; }
+    .pc-label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
     .pc-value { font-size: 0.9rem; font-weight: 600; color: #e2e8f0; }
-    .pc-badge { background: rgba(13, 148, 136, 0.15); color: #2dd4bf; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(13, 148, 136, 0.3); }
-    .status-active { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+    .pc-badge { background: rgba(0, 112, 112, 0.2); color: #008A8A; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(0, 112, 112, 0.35); }
+    .status-active { background: rgba(16, 185, 129, 0.15); color: #10B981; border-color: rgba(16, 185, 129, 0.3); }
     
     .pc-form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
     .pc-form-group label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
-    .form-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 12px; color: #f1f5f9; font-size: 0.9rem; transition: border-color 0.2s; outline: none; width: 100%; box-sizing: border-box; }
-    .form-input:focus { border-color: #0d9488; }
+    .form-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 12px; color: #f1f5f9; font-size: 0.9rem; transition: border-color 0.2s; outline: none; width: 100%; box-sizing: border-box; }
+    .form-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-glow); }
     
     .pc-footer { display: flex; gap: 8px; justify-content: center; width: 100%; }
     .pc-action-btn { flex: 1; padding: 10px 0; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; font-size: 0.85rem; }
-    .edit-btn { background: rgba(13, 148, 136, 0.15); color: #2dd4bf; border: 1px solid rgba(13, 148, 136, 0.3); }
-    .edit-btn:hover { background: rgba(13, 148, 136, 0.25); }
+    .edit-btn { background: rgba(0, 112, 112, 0.2); color: #008A8A; border: 1px solid rgba(0, 112, 112, 0.35); }
+    .edit-btn:hover { background: rgba(0, 112, 112, 0.35); color: #ffffff; }
     .pwd-btn { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
     .pwd-btn:hover { background: rgba(245, 158, 11, 0.25); }
-    .save-btn { background: #0d9488; color: #fff; }
-    .save-btn:hover { background: #0f766e; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); }
+    .save-btn { background: var(--brand); color: #fff; }
+    .save-btn:hover { background: var(--brand-hover); box-shadow: 0 4px 12px var(--brand-glow); }
     
     .pc-close-btn { background: rgba(255,255,255,0.05); color: #f1f5f9; border: 1px solid rgba(255,255,255,0.1); }
     .pc-close-btn:hover { background: rgba(255,255,255,0.1); }
@@ -636,15 +706,13 @@ import { TooltipModule } from 'primeng/tooltip';
     .app-sidebar {
       width: 250px;
       min-width: 250px;
-      background: rgba(30, 41, 59, 0.95);
-      -webkit-backdrop-filter: blur(16px);
-      backdrop-filter: blur(16px);
+      background: #0B1015; /* S7 Dark Section */
       display: flex;
       flex-direction: column;
       height: 100%;
       overflow: hidden;
       z-index: 1000;
-      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
       transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1), transform .3s cubic-bezier(.4,0,.2,1);
     }
     
@@ -661,7 +729,7 @@ import { TooltipModule } from 'primeng/tooltip';
       left: 0;
       height: calc(100vh - 64px);
       z-index: 1001; /* Above backdrop but below header */
-      box-shadow: 20px 0 50px rgba(0,0,0,0.2);
+      box-shadow: 20px 0 50px rgba(0,0,0,0.4);
     }
     
     /* Hide sidebar completely on mobile when collapsed */
@@ -672,9 +740,9 @@ import { TooltipModule } from 'primeng/tooltip';
     .sidebar-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.4); 
-      -webkit-backdrop-filter: blur(3px);
-      backdrop-filter: blur(3px);
+      background: rgba(5, 5, 5, 0.75); 
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
       z-index: 999;
       animation: fadeIn 0.2s ease-out;
       cursor: pointer;
@@ -695,22 +763,22 @@ import { TooltipModule } from 'primeng/tooltip';
     .sidebar-nav::-webkit-scrollbar { width: 4px; }
     .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
     .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
-    .sidebar-nav::-webkit-scrollbar-thumb:hover { background: #0d9488; }
+    .sidebar-nav::-webkit-scrollbar-thumb:hover { background: var(--brand); }
 
     /* ─── Sidebar Footer: always pinned at bottom ─── */
     .sidebar-footer {
       flex-shrink: 0;
       padding: 16px 12px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      background: rgba(30, 41, 59, 0.95);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      background: #0B1015;
       z-index: 10;
     }
 
     .nav-section-label {
       font-size: .64rem;
-      font-weight: 700;
-      color: #475569;
-      letter-spacing: .12em;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: .14em;
       padding: 10px 14px 6px;
       white-space: nowrap;
       text-transform: uppercase;
@@ -719,8 +787,8 @@ import { TooltipModule } from 'primeng/tooltip';
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
-      margin: 0 10px;
+      padding: 11px 16px;
+      margin: 0 8px;
       border-radius: 12px;
       color: #94a3b8;
       font-size: .875rem;
@@ -731,12 +799,12 @@ import { TooltipModule } from 'primeng/tooltip';
       white-space: nowrap;
       position: relative;
     }
-    .nav-item:hover { background: rgba(255,255,255,0.06); color: #f1f5f9; }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: #ffffff; }
     .nav-active {
-      background: rgba(13, 148, 136, 0.15) !important;
-      color: #5eead4 !important;
-      font-weight: 600;
-      box-shadow: inset 0 0 12px rgba(13, 148, 136, 0.1);
+      background: var(--brand) !important;
+      color: #FFFFFF !important;
+      font-weight: 700;
+      box-shadow: 0 4px 14px var(--brand-glow);
     }
     .nav-active::after {
       content: '';
@@ -745,13 +813,13 @@ import { TooltipModule } from 'primeng/tooltip';
       top: 20%;
       height: 60%;
       width: 3px;
-      background: #0d9488;
+      background: #FFFFFF;
       border-radius: 0 4px 4px 0;
-      box-shadow: 0 0 10px #0d9488;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
     }
     
-    .nav-active .nav-icon { color: #2dd4bf !important; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.4)); }
-    .nav-icon { font-size: 1.15rem; flex-shrink: 0; transition: transform 0.2s, color 0.2s; color: #cbd5e1; }
+    .nav-active .nav-icon { color: #FFFFFF !important; transform: scale(1.08); filter: drop-shadow(0 0 8px rgba(0, 112, 112, 0.4)); }
+    .nav-icon { font-size: 1.15rem; flex-shrink: 0; transition: transform 0.2s, color 0.2s; color: #94a3b8; }
     .nav-label { flex: 1; transition: opacity 0.3s; white-space: nowrap; font-weight: 500; }
     .app-shell.sidebar-collapsed:not(.is-mobile) .nav-label { opacity: 0; visibility: hidden; width: 0; }
     .app-shell.sidebar-collapsed:not(.is-mobile) .nav-item { padding: 12px 14px; justify-content: center; margin: 2px 8px; }
@@ -762,12 +830,12 @@ import { TooltipModule } from 'primeng/tooltip';
     /* ─── Grouped Nav ─── */
     .nav-group { display: flex; flex-direction: column; margin-bottom: 2px; }
     .group-header { position: relative; }
-    .group-arrow { font-size: 0.65rem; transition: transform 0.35s; opacity: 0.4; margin-left: auto; }
+    .group-arrow { font-size: 0.65rem; transition: transform 0.35s; opacity: 0.5; margin-left: auto; }
     .group-open .group-header { color: #f1f5f9; background: rgba(255,255,255,0.03); }
-    .group-open .group-arrow { transform: rotate(180deg); opacity: 0.8; color: #0d9488; }
+    .group-open .group-arrow { transform: rotate(180deg); opacity: 0.9; color: #008A8A; }
     
-    .group-active .group-header { color: #5eead4; background: rgba(13, 148, 136, 0.05); }
-    .group-active .group-header .nav-icon { color: #5eead4 !important; transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(94, 234, 212, 0.3)); }
+    .group-active .group-header { color: #FFFFFF; background: rgba(0, 112, 112, 0.15); }
+    .group-active .group-header .nav-icon { color: var(--brand) !important; transform: scale(1.08); filter: drop-shadow(0 0 5px var(--brand-glow)); }
     
     .app-shell.sidebar-collapsed:not(.is-mobile) .group-header { padding: 12px 14px; justify-content: center; }
     
@@ -776,7 +844,7 @@ import { TooltipModule } from 'primeng/tooltip';
       overflow: hidden;
       transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
       opacity: 0;
-      background: rgba(0,0,0,0.15);
+      background: rgba(0,0,0,0.25);
       margin: 0 8px;
       border-radius: 0 0 12px 12px;
     }
@@ -785,7 +853,7 @@ import { TooltipModule } from 'primeng/tooltip';
     /* Hierarchy Differentiation */
     .nav-icon-dot { font-size: 0.85rem; opacity: 0.5; color: #94a3b8; transition: all 0.2s ease; }
     .sub-item:hover .nav-icon-dot { opacity: 1; transform: scale(1.1); color: #f1f5f9; }
-    .sub-item.nav-active .nav-icon-dot { color: #5eead4; opacity: 1; font-size: 0.95rem; filter: drop-shadow(0 0 5px rgba(94, 234, 212, 0.3)); }
+    .sub-item.nav-active .nav-icon-dot { color: #008A8A; opacity: 1; font-size: 0.95rem; filter: drop-shadow(0 0 5px rgba(0, 138, 138, 0.5)); }
     
     /* Smart Sub-menu in Collapsed Mode */
     .app-shell.sidebar-collapsed:not(.is-mobile) .sub-nav { 
@@ -899,8 +967,8 @@ import { TooltipModule } from 'primeng/tooltip';
     .dashboard-home { display: flex; flex-direction: column; gap: 28px; padding: 28px; }
 
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; }
-    .page-title  { font-size: 1.6rem; font-weight: 800; color: #0f172a; margin: 0 0 4px; letter-spacing: -.02em; }
-    .page-sub    { font-size: .875rem; color: #64748b; margin: 0; }
+    .page-title  { font-size: 1.6rem; font-weight: 800; color: var(--s7-heading); margin: 0 0 4px; letter-spacing: -.02em; }
+    .page-sub    { font-size: .875rem; color: var(--s7-muted); margin: 0; }
 
     /* KPI Grid */
     .kpi-grid {
@@ -909,8 +977,8 @@ import { TooltipModule } from 'primeng/tooltip';
       gap: 16px;
     }
     .kpi-card {
-      background: #fff;
-      border: 1px solid #e2e8f0;
+      background: var(--s7-card);
+      border: 1px solid var(--s7-border);
       border-radius: 16px;
       padding: 20px 22px;
       display: flex;
@@ -928,15 +996,15 @@ import { TooltipModule } from 'primeng/tooltip';
       width: 4px; height: 100%;
       border-radius: 16px 0 0 16px;
     }
-    .kpi-teal::before   { background: #0d9488; }
-    .kpi-amber::before  { background: #f59e0b; }
-    .kpi-emerald::before{ background: #10b981; }
-    .kpi-indigo::before { background: #6366f1; }
-    .kpi-card:hover { box-shadow: 0 8px 24px -4px rgba(0,0,0,.1); transform: translateY(-2px); }
-    .kpi-card:hover.kpi-teal   { border-color: #0d9488; }
-    .kpi-card:hover.kpi-amber  { border-color: #f59e0b; }
-    .kpi-card:hover.kpi-emerald{ border-color: #10b981; }
-    .kpi-card:hover.kpi-indigo { border-color: #6366f1; }
+    .kpi-teal::before   { background: var(--brand); }
+    .kpi-amber::before  { background: var(--s7-warning); }
+    .kpi-emerald::before{ background: var(--s7-success); }
+    .kpi-indigo::before { background: var(--s7-info); }
+    .kpi-card:hover { box-shadow: 0 8px 24px -4px rgba(0,0,0,.15); transform: translateY(-2px); }
+    .kpi-card:hover.kpi-teal   { border-color: var(--brand); }
+    .kpi-card:hover.kpi-amber  { border-color: var(--s7-warning); }
+    .kpi-card:hover.kpi-emerald{ border-color: var(--s7-success); }
+    .kpi-card:hover.kpi-indigo { border-color: var(--s7-info); }
 
     .kpi-icon-wrap {
       width: 52px; height: 52px;
@@ -945,35 +1013,35 @@ import { TooltipModule } from 'primeng/tooltip';
       font-size: 1.4rem;
       flex-shrink: 0;
     }
-    .kpi-teal-icon   { background: #ccfbf1; color: #0d9488; }
-    .kpi-amber-icon  { background: #fef3c7; color: #d97706; }
-    .kpi-emerald-icon{ background: #d1fae5; color: #059669; }
-    .kpi-indigo-icon { background: #e0e7ff; color: #4f46e5; }
+    .kpi-teal-icon   { background: var(--brand-soft); color: var(--brand); }
+    .kpi-amber-icon  { background: var(--s7-warning-bg); color: var(--s7-warning); }
+    .kpi-emerald-icon{ background: var(--s7-success-bg); color: var(--s7-success); }
+    .kpi-indigo-icon { background: var(--s7-info-bg); color: var(--s7-info); }
 
     .kpi-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-    .kpi-label { font-size: .72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
-    .kpi-value { font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
-    .kpi-meta  { font-size: .72rem; color: #94a3b8; }
+    .kpi-label { font-size: .72rem; font-weight: 700; color: var(--s7-muted); text-transform: uppercase; letter-spacing: .05em; }
+    .kpi-value { font-size: 1.5rem; font-weight: 800; color: var(--s7-heading); line-height: 1.1; }
+    .kpi-meta  { font-size: .72rem; color: var(--s7-muted); }
 
     /* Global Search Button */
     .global-search-btn {
       display: flex;
       align-items: center;
       gap: 12px;
-      background: rgba(15, 23, 42, 0.04);
-      border: 1px solid rgba(15, 23, 42, 0.1);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       padding: 8px 16px;
       border-radius: 24px;
       cursor: pointer;
-      margin-right: 1.5rem;
+      margin-right: 0.5rem;
       transition: all 0.25s ease;
-      color: #64748b;
+      color: #94a3b8;
     }
     .global-search-btn:hover {
-      background: rgba(15, 23, 42, 0.08);
-      border-color: rgba(15, 23, 42, 0.2);
-      color: #0f172a;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     .global-search-btn .pi-search {
       font-size: 1.1rem;
@@ -984,19 +1052,19 @@ import { TooltipModule } from 'primeng/tooltip';
       letter-spacing: -0.2px;
     }
     .btn-key {
-      background: #fff;
-      border: 1px solid #cbd5e1;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       padding: 2px 8px;
       border-radius: 6px;
       font-size: 0.7rem;
       font-weight: 700;
-      color: #475569;
-      box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+      color: #f1f5f9;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
     
     @media (max-width: 640px) {
       .global-search-btn {
-        margin-right: 0.5rem;
+        margin-right: 0.25rem;
         padding: 8px;
         border-radius: 50%;
         gap: 0;
@@ -1013,7 +1081,7 @@ import { TooltipModule } from 'primeng/tooltip';
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(255,255,255,0.95);
+      background: rgba(5, 5, 5, 0.85);
       backdrop-filter: blur(8px);
       z-index: 9999;
       display: flex;
@@ -1023,11 +1091,11 @@ import { TooltipModule } from 'primeng/tooltip';
       padding: 2rem;
     }
     .no-perm-card {
-      background: white;
+      background: var(--s7-card);
       padding: 3rem;
       border-radius: 24px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-      border: 1px solid #e2e8f0;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      border: 1px solid var(--s7-border);
       max-width: 450px;
     }
     .animate-fade-in {
@@ -1038,18 +1106,18 @@ import { TooltipModule } from 'primeng/tooltip';
       to { opacity: 1; transform: translateY(0); }
     }
     .kpi-arrow { color: #cbd5e1; font-size: .85rem; transition: color .2s; }
-    .kpi-card:hover .kpi-arrow { color: #94a3b8; }
+    .kpi-card:hover .kpi-arrow { color: var(--brand); }
 
     /* Action Grid */
-    .section-title { font-size: .8rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .07em; }
+    .section-title { font-size: .8rem; font-weight: 800; color: var(--s7-muted); text-transform: uppercase; letter-spacing: .08em; }
     .action-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
       gap: 14px;
     }
     .action-tile {
-      background: #fff;
-      border: 1px solid #e2e8f0;
+      background: var(--s7-card);
+      border: 1px solid var(--s7-border);
       border-radius: 14px;
       padding: 22px 16px;
       display: flex;
@@ -1059,14 +1127,14 @@ import { TooltipModule } from 'primeng/tooltip';
       cursor: pointer;
       transition: all .2s;
       font-size: .875rem;
-      font-weight: 600;
-      color: #334155;
+      font-weight: 700;
+      color: var(--s7-heading);
       text-align: center;
     }
     .action-tile:hover {
-      box-shadow: 0 4px 16px -4px rgba(0,0,0,.12);
+      box-shadow: 0 8px 24px -4px var(--brand-glow);
       transform: translateY(-2px);
-      border-color: #94a3b8;
+      border-color: var(--brand);
     }
     .action-icon {
       width: 52px; height: 52px;
@@ -1077,9 +1145,10 @@ import { TooltipModule } from 'primeng/tooltip';
       transition: transform .2s;
     }
     .action-tile:hover .action-icon { transform: scale(1.08); }
-    .teal-bg   { background: linear-gradient(135deg, #0d9488, #0f766e); }
-    .indigo-bg { background: linear-gradient(135deg, #6366f1, #4f46e5); }
-    .emerald-bg{ background: linear-gradient(135deg, #10b981, #059669); }
+    .teal-bg   { background: linear-gradient(135deg, var(--brand), var(--brand-hover)); }
+    .indigo-bg { background: linear-gradient(135deg, #0284c7, #0369a1); }
+    .emerald-bg{ background: linear-gradient(135deg, #059669, #047857); }
+    .purple-bg { background: linear-gradient(135deg, #008A8A, #005858); }
     .purple-bg { background: linear-gradient(135deg, #a855f7, #7c3aed); }
   `]
 })
@@ -1117,7 +1186,9 @@ export class DashboardComponent implements OnInit {
     private salesService: SalesService,
     private reportService: ReportService,
     private datePipe: DatePipe,
-    private userService: UserService
+    private userService: UserService,
+    public themeService: ThemeService,
+    public tenantConfig: TenantConfigService
   ) { }
 
 
@@ -1126,6 +1197,7 @@ export class DashboardComponent implements OnInit {
     window.addEventListener('resize', () => this.checkMobile());
     
     this.user = this.authService.currentUserValue;
+    this.tenantConfig.loadConfig().subscribe();
 
     this.updateTime();
     setInterval(() => this.updateTime(), 1000);
@@ -1321,7 +1393,17 @@ export class DashboardComponent implements OnInit {
 
   logout() {
     this.authService.logout();
+    this.tenantConfig.clearConfig();
     this.router.navigate(['/login']);
+  }
+
+  onBranchChange(branchId: any) {
+    const id = Number(branchId);
+    const branch = this.tenantConfig.availableBranches().find(b => b.branchId === id);
+    if (branch) {
+      this.tenantConfig.switchBranch(branch);
+      window.location.reload();
+    }
   }
 
   onFileSelected(event: any) {
@@ -1355,4 +1437,4 @@ export class DashboardComponent implements OnInit {
     this.isMobile.set(mobile);
     if (mobile) this.sidebarOpen.set(false);
   }
-}
+}

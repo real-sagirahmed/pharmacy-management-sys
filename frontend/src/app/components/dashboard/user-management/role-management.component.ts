@@ -138,7 +138,7 @@ import { TagModule } from 'primeng/tag';
                   <div class="flex items-center gap-3 w-full">
                       <div class="flex items-center gap-2">
                          <span class="text-[10px] font-extrabold text-slate-700 uppercase tracking-widest whitespace-nowrap">Permissions:</span>
-                         <span class="text-xs font-black text-teal-700 uppercase whitespace-nowrap">{{ selectedRole.name }}</span>
+                         <span class="text-xs font-black uppercase whitespace-nowrap" style="color: var(--brand)">{{ selectedRole.name }}</span>
                       </div>
                     <div class="search-wrap compact-search-inline">
                       <i class="pi pi-search search-icon-sm"></i>
@@ -253,7 +253,7 @@ import { TagModule } from 'primeng/tag';
       position: sticky; top: 0; z-index: 100;
     }
     .back-btn { color: #94a3b8 !important; }
-    .back-btn:hover { color: #0d9488 !important; background: #f0fdfa !important; }
+    .back-btn:hover { color: var(--brand) !important; background: var(--brand-soft) !important; }
     
     .page-title { font-size: 1.05rem !important; margin: 0; font-weight: 800; color: #1e293b; line-height: 1.2; }
     .page-sub { margin: 0; color: #94a3b8; font-weight: 500; font-size: 0.75rem; }
@@ -287,12 +287,12 @@ import { TagModule } from 'primeng/tag';
       display: flex; align-items: center; justify-content: space-between; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       background: #fafafa;
     }
-    .role-row:hover { background: #fff; border-color: #0d948840; transform: translateX(4px); box-shadow: 0 4px 12px -2px rgba(13, 148, 136, 0.08); }
-    .selected-role { background: #f0fdfa !important; border-color: #0d9488 !important; box-shadow: 0 4px 12px -2px rgba(13, 148, 136, 0.15) !important; }
+    .role-row:hover { background: #fff; border-color: var(--brand-glow); transform: translateX(4px); box-shadow: 0 4px 12px -2px var(--brand-glow); }
+    .selected-role { background: var(--brand-soft) !important; border-color: var(--brand) !important; box-shadow: 0 4px 12px -2px var(--brand-glow) !important; }
     .role-name { font-weight: 800; font-size: 0.95rem; color: #1e293b; }
-    .selected-role .role-name { color: #0d9488; }
+    .selected-role .role-name { color: var(--brand); }
     .role-stats { color: #64748b; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
-    .selected-role .role-stats { color: #0d9488aa; }
+    .selected-role .role-stats { color: var(--brand); opacity: 0.8; }
 
     /* Matrix Table UI */
     .matrix-header { display: flex; justify-content: space-between; align-items: flex-end; }
@@ -301,25 +301,25 @@ import { TagModule } from 'primeng/tag';
     ::ng-deep .matrix-table .p-datatable-tbody > tr:hover { background: #fcfcfc !important; }
     
     ::ng-deep .matrix-table .p-datatable-thead > tr > th { 
-      background: #f1f5f9 !important; color: #0d9488 !important; font-size: 0.75rem !important; 
-      border-bottom: 2.5px solid #0d9488 !important; padding: 12px 12px !important; 
+      background: #f1f5f9 !important; color: var(--brand) !important; font-size: 0.75rem !important; 
+      border-bottom: 2.5px solid var(--brand) !important; padding: 12px 12px !important; 
       text-transform: uppercase; letter-spacing: 0.8px !important; font-weight: 900;
       position: sticky; top: 0; z-index: 5;
     }
     
     .module-icon { color: #94a3b8; font-size: 1rem; width: 24px; opacity: 0.7; }
     .text-muted { color: #94a3b8; font-weight: 500; }
-    .text-primary { color: #0d9488; font-weight: 800; }
+    .text-primary { color: var(--brand); font-weight: 800; }
     
     .bulk-set-btn, .row-set-btn { 
       background: #f1f5f9; border: 1.5px solid #e2e8f0; cursor: pointer; color: #94a3b8; transition: all 0.2s; 
       padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center;
     }
     .bulk-set-btn i, .row-set-btn i { font-size: 0.6rem; font-weight: 900; }
-    .bulk-set-btn:hover { background: #0d9488; color: #fff; border-color: #0d9488; }
+    .bulk-set-btn:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
     .row-set-btn { background: #fff; opacity: 0.6; }
-    .row-set-btn:hover { color: #0d9488; opacity: 1; background: #f0fdfa; border-color: #0d9488; }
-    .all-set { color: #fff !important; opacity: 1 !important; background: #0d9488 !important; border-color: #0d9488 !important; }
+    .row-set-btn:hover { color: var(--brand); opacity: 1; background: var(--brand-soft); border-color: var(--brand); }
+    .all-set { color: #fff !important; opacity: 1 !important; background: var(--brand) !important; border-color: var(--brand) !important; }
     
     .top-actions-bar { background: #fff; border-bottom: 1px solid #e2e8f0; }
 
@@ -328,26 +328,26 @@ import { TagModule } from 'primeng/tag';
     .compact-search-inline { width: 100px; position: relative; display: flex; align-items: center; }
     .search-icon-sm { position: absolute; left: 8px; color: #94a3b8; font-size: 0.7rem; pointer-events: none; }
     .search-field-sm { width: 100%; padding: 4px 8px 4px 26px !important; border-radius: 6px !important; border: 1px solid #e2e8f0 !important; background: #f8fafc !important; font-size: 0.75rem !important; height: 26px !important; }
-    .search-field-sm:focus { background: #fff !important; border-color: #0d9488 !important; }
+    .search-field-sm:focus { background: #fff !important; border-color: var(--brand) !important; }
     
     .unified-header-row th { 
       background: #ffffff !important; 
       position: sticky !important; top: 0 !important; z-index: 1000 !important;
-      border-bottom: 2px solid #0d948830 !important;
+      border-bottom: 2px solid var(--brand-glow) !important;
       padding: 6px 10px !important;
       box-shadow: 0 4px 12px -4px rgba(0,0,0,0.1);
     }
 
     ::ng-deep .p-checkbox .p-checkbox-box { border-radius: 6px; border-width: 2px; transition: all 0.2s; }
-    ::ng-deep .p-checkbox .p-checkbox-box.p-highlight { background: #0d9488 !important; border-color: #0d9488 !important; }
-    ::ng-deep .p-checkbox:not(.p-checkbox-disabled) .p-checkbox-box:hover { border-color: #0d9488 !important; }
+    ::ng-deep .p-checkbox .p-checkbox-box.p-highlight { background: var(--brand) !important; border-color: var(--brand) !important; }
+    ::ng-deep .p-checkbox:not(.p-checkbox-disabled) .p-checkbox-box:hover { border-color: var(--brand) !important; }
 
     /* Matrix Table UI - Sticky Header Fix */
     .matrix-table { border-radius: 0; }
     ::ng-deep .matrix-table .p-datatable-wrapper { padding: 0 1.5rem 1rem 1.5rem; background: #fff; border-radius: 0 0 16px 16px; min-height: 100%; border-top: 1px solid #f1f5f9; }
     ::ng-deep .matrix-table .p-datatable-thead > tr > th { 
-      background: #f1f5f9 !important; color: #0d9488 !important; font-size: 0.75rem !important; 
-      border-bottom: 2.5px solid #0d9488 !important; padding: 10px 10px !important; 
+      background: #f1f5f9 !important; color: var(--brand) !important; font-size: 0.75rem !important; 
+      border-bottom: 2.5px solid var(--brand) !important; padding: 10px 10px !important; 
       text-transform: uppercase; letter-spacing: 0.8px !important; font-weight: 900;
       position: sticky !important; top: 40px !important; z-index: 100 !important;
       box-shadow: 0 4px 6px -4px rgba(0,0,0,0.1);

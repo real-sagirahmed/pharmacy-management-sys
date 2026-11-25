@@ -29,20 +29,33 @@ namespace PharmacyApi.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _context;
+        private readonly ITenantContextService _ctx;
 
         public UserManagementService(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            ITenantContextService ctx)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _context = context;
+            _ctx = ctx;
         }
 
         public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
         {
-            var users = await _userManager.Users.ToListAsync();
+            var query = _userManager.Users.AsQueryable();
+            if (!_ctx.IsSystemAdmin && _ctx.TenantId.HasValue)
+            {
+                query = query.Where(u => u.TenantId == _ctx.TenantId.Value);
+                if (_ctx.BranchId.HasValue)
+                {
+                    query = query.Where(u => u.BranchId == null || u.BranchId == _ctx.BranchId.Value);
+                }
+            }
+
+            var users = await query.ToListAsync();
             var userList = new List<UserDto>();
 
             foreach (var user in users)
@@ -58,6 +71,8 @@ namespace PharmacyApi.Services
                     PhoneNumber = user.PhoneNumber,
                     Address = user.Address,
                     ProfilePicturePath = user.ProfilePicturePath,
+                    TenantId = user.TenantId,
+                    BranchId = user.BranchId,
                     Roles = roles
                 });
             }
@@ -66,6 +81,9 @@ namespace PharmacyApi.Services
 
         public async Task<IdentityResult> CreateUserAsync(CreateUserDto model)
         {
+            var tenantId = _ctx.TenantId ?? (model.TenantId.HasValue && model.TenantId.Value > 0 ? model.TenantId : null);
+            var branchId = _ctx.BranchId ?? (model.BranchId.HasValue && model.BranchId.Value > 0 ? model.BranchId : null);
+
             var user = new ApplicationUser
             {
                 UserName = model.UserName,
@@ -73,6 +91,8 @@ namespace PharmacyApi.Services
                 FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
                 Address = model.Address,
+                TenantId = tenantId,
+                BranchId = branchId,
                 IsActive = true
             };
 
@@ -190,6 +210,10 @@ namespace PharmacyApi.Services
             user.FullName = model.FullName;
             user.PhoneNumber = model.PhoneNumber;
             user.Address = model.Address;
+            if (model.BranchId.HasValue)
+            {
+                user.BranchId = model.BranchId.Value > 0 ? model.BranchId.Value : null;
+            }
 
             // Update Email if changed
             if (!string.Equals(user.Email, model.Email, StringComparison.OrdinalIgnoreCase))

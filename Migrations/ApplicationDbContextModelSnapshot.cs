@@ -167,6 +167,9 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -215,6 +218,9 @@ namespace PharmacyApi.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
 
@@ -233,6 +239,116 @@ namespace PharmacyApi.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("PharmacyApi.Models.Branch", b =>
+                {
+                    b.Property<int>("BranchId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BranchId"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("BranchName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DrugLicenseNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsHeadOffice")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("BranchId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Branches");
+                });
+
+            modelBuilder.Entity("PharmacyApi.Models.BranchTransfer", b =>
+                {
+                    b.Property<int>("TransferId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TransferId"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("BatchId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BatchNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("FromBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MedicineId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RequestedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToBranchId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransferCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("TransferDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("TransferId");
+
+                    b.HasIndex("MedicineId");
+
+                    b.ToTable("BranchTransfers");
                 });
 
             modelBuilder.Entity("PharmacyApi.Models.Category", b =>
@@ -260,12 +376,15 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("CategoryId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("Categories");
@@ -296,12 +415,15 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("CommonStrengthId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("CommonStrengths");
@@ -332,12 +454,15 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("DosageFormId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("DosageForms");
@@ -368,12 +493,15 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("GenericId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("Generics");
@@ -404,12 +532,15 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("ManufacturerId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("Manufacturers");
@@ -483,6 +614,9 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<string>("UOM")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -501,13 +635,74 @@ namespace PharmacyApi.Migrations
 
                     b.HasKey("MedicineId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("Medicines");
+                });
+
+            modelBuilder.Entity("PharmacyApi.Models.MedicineBatch", b =>
+                {
+                    b.Property<int>("BatchId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BatchId"));
+
+                    b.Property<string>("BatchNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("CurrentStock")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MedicineId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseDetailId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PurchasePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("SalePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("BatchId");
+
+                    b.HasIndex("MedicineId");
+
+                    b.ToTable("MedicineBatches");
                 });
 
             modelBuilder.Entity("PharmacyApi.Models.Party", b =>
@@ -549,9 +744,12 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("PartyId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
                     b.ToTable("Parties");
@@ -644,6 +842,9 @@ namespace PharmacyApi.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -689,6 +890,9 @@ namespace PharmacyApi.Migrations
                     b.Property<decimal>("SubTotal")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("TotalDiscount")
                         .HasPrecision(18, 2)
@@ -782,6 +986,9 @@ namespace PharmacyApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.ToTable("RolePermissions");
@@ -874,6 +1081,9 @@ namespace PharmacyApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SaleId"));
 
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("ChangeAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -942,6 +1152,9 @@ namespace PharmacyApi.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("TotalDiscount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -958,10 +1171,10 @@ namespace PharmacyApi.Migrations
 
                     b.HasKey("SaleId");
 
-                    b.HasIndex("InvoiceCode")
-                        .IsUnique();
-
                     b.HasIndex("PartyId");
+
+                    b.HasIndex("TenantId", "InvoiceCode")
+                        .IsUnique();
 
                     b.ToTable("SalesMasters");
                 });
@@ -1050,6 +1263,9 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -1090,15 +1306,82 @@ namespace PharmacyApi.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("TaxId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("Taxes");
+                });
+
+            modelBuilder.Entity("PharmacyApi.Models.Tenant", b =>
+                {
+                    b.Property<int>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TenantId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DrugLicenseNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("HeadOfficeAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("InvoiceFooter")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LogoPath")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("PharmacyName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PrimaryColor")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Slogan")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("SubscriptionExpiry")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SubscriptionPlan")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("Tenants");
                 });
 
             modelBuilder.Entity("PharmacyApi.Models.Uom", b =>
@@ -1126,12 +1409,15 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("UomId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("Uoms");
@@ -1162,13 +1448,10 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("UseForId");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("Name")
-                        .IsUnique();
 
                     b.ToTable("UseFors");
                 });
@@ -1222,6 +1505,39 @@ namespace PharmacyApi.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PharmacyApi.Models.Branch", b =>
+                {
+                    b.HasOne("PharmacyApi.Models.Tenant", "Tenant")
+                        .WithMany("Branches")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("PharmacyApi.Models.BranchTransfer", b =>
+                {
+                    b.HasOne("PharmacyApi.Models.Medicine", "Medicine")
+                        .WithMany()
+                        .HasForeignKey("MedicineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Medicine");
+                });
+
+            modelBuilder.Entity("PharmacyApi.Models.MedicineBatch", b =>
+                {
+                    b.HasOne("PharmacyApi.Models.Medicine", "Medicine")
+                        .WithMany()
+                        .HasForeignKey("MedicineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Medicine");
                 });
 
             modelBuilder.Entity("PharmacyApi.Models.PurchaseDetail", b =>
@@ -1328,6 +1644,11 @@ namespace PharmacyApi.Migrations
                     b.Navigation("SalesDetails");
 
                     b.Navigation("SalesPayments");
+                });
+
+            modelBuilder.Entity("PharmacyApi.Models.Tenant", b =>
+                {
+                    b.Navigation("Branches");
                 });
 #pragma warning restore 612, 618
         }

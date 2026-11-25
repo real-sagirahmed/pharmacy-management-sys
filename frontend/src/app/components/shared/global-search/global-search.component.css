@@ -6,12 +6,12 @@
 }
 
 .search-palette {
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(18, 24, 32, 0.96);
   backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
   border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 112, 112, 0.1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -74,9 +74,9 @@
 }
 
 .active-filter {
-  background: rgba(20, 184, 166, 0.15);
-  color: #14b8a6;
-  border-color: rgba(20, 184, 166, 0.3);
+  background: var(--brand-glow, rgba(0, 112, 112, 0.2));
+  color: var(--brand, #007070);
+  border-color: var(--brand, #007070);
 }
 
 .close-btn:hover {
@@ -225,8 +225,8 @@
 }
 
 .result-item:hover {
-  background: rgba(20, 184, 166, 0.08); /* Transparent Teal */
-  border-color: rgba(20, 184, 166, 0.3);
+  background: var(--brand-glow, rgba(0, 112, 112, 0.12)); /* S7 Brand Glow */
+  border-color: rgba(0, 112, 112, 0.35);
   transform: translateX(6px);
 }
 
@@ -237,7 +237,7 @@
 
 .goto-icon {
   margin-left: 1rem;
-  color: #14b8a6;
+  color: var(--brand, #007070);
   opacity: 0;
   transform: translateX(-10px);
   transition: all 0.25s ease;

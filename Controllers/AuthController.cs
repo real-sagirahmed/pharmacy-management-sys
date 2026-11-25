@@ -77,7 +77,13 @@ namespace PharmacyApi.Controllers
                     new Claim(ClaimTypes.Name, user.UserName!),
                     new Claim(ClaimTypes.NameIdentifier, user.Id),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim("FullName", user.FullName)
+                    new Claim("FullName", user.FullName),
+                    // ─── SaaS Claims (Tenant + Branch Identity) ───────────────
+                    // ARCHITECTURAL INTENT: TenantId ও BranchId JWT-তে embed হয়।
+                    // TenantContextService এই claims থেকে context resolve করে।
+                    // empty string = null/not assigned (SystemAdmin-এর ক্ষেত্রে)।
+                    new Claim("TenantId", user.TenantId?.ToString() ?? ""),
+                    new Claim("BranchId", user.BranchId?.ToString() ?? "")
                 };
 
                 foreach (var userRole in userRoles)
@@ -116,7 +122,10 @@ namespace PharmacyApi.Controllers
                     profilePicturePath = user.ProfilePicturePath,
                     roles = userRoles,
                     fullName = user.FullName,
-                    permissions = permissions
+                    permissions = permissions,
+                    // ─── SaaS: Tenant + Branch info ───
+                    tenantId  = user.TenantId,
+                    branchId  = user.BranchId
                 });
             }
             return Unauthorized();

@@ -316,14 +316,14 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     
     .summary-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 700; }
-    .chip-teal { background: #ccfbf1; color: #0f766e; } .chip-green { background: #dcfce7; color: #15803d; } .chip-slate { background: #f1f5f9; color: #1e293b; } .chip-purple { background: #ede9fe; color: #6d28d9; }
+    .chip-teal { background: var(--brand-soft); color: var(--brand); } .chip-green { background: #dcfce7; color: #15803d; } .chip-slate { background: #f1f5f9; color: #1e293b; } .chip-purple { background: #ede9fe; color: #6d28d9; }
     .chip-emerald { background: #dcfce7; color: #065f46; } .chip-rose { background: #fee2e2; color: #991b1b; }
     
     .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0 0 16px 16px; overflow: hidden; display: flex; flex-direction: column; }
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1; max-width: 400px; }
     .search-icon { position: absolute; left: 12px; color: #94a3b8; font-size: .875rem; pointer-events: none; }
     .search-input { width: 100%; padding: 9px 36px; height: 34px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px !important; font-family: 'Inter', sans-serif; outline: none; transition: border-color .15s; background: #f8fafc; color: #0f172a; }
-    .search-input:focus { border-color: #0d9488; background: #fff; }
+    .search-input:focus { border-color: var(--brand); background: #fff; }
     .search-clear { position: absolute; right: 10px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: .875rem; }
     .result-count { font-size: .8rem; color: #94a3b8; }
     
@@ -335,13 +335,13 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     /* Table Header Styling */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
       background-color: #f1f5f9 !important; 
-      color: #0d9488 !important; 
+      color: var(--brand) !important; 
       font-weight: 900 !important; 
       font-size: 0.75rem !important; 
       text-transform: uppercase !important; 
       letter-spacing: 0.8px !important; 
       padding: 12px 12px !important; 
-      border-bottom: 2.5px solid #0d9488 !important;
+      border-bottom: 2.5px solid var(--brand) !important;
     }
     ::ng-deep .p-datatable .p-datatable-tbody > tr > td { padding: 8px 12px !important; border-bottom: 1px solid #edf2f7; }
     
@@ -365,7 +365,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     }
     .role-admin     { background: #ede9fe; color: #7c3aed; border: 1px solid #ddd6fe; }
     .role-manager   { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
-    .role-pharmacist{ background: #ccfbf1; color: #0f766e; border: 1px solid #99f6e4; }
+    .role-pharmacist{ background: var(--brand-soft); color: var(--brand); border: 1px solid var(--brand); }
     .role-cashier   { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
     .role-default   { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
     .role-sysadmin  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
@@ -389,7 +389,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
       font-size: .75rem; font-family: 'Inter', sans-serif; color: #334155; font-weight: 600;
       background: #f8fafc; outline: none; cursor: pointer; transition: border-color .15s;
     }
-    .role-select:focus { border-color: #0d9488; background: #fff; }
+    .role-select:focus { border-color: var(--brand); background: #fff; }
     
     .action-btns { display: flex; gap: 4px; }
     .act-btn { width: 30px; height: 30px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .1s; }
@@ -405,7 +405,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 
     /* ─── Premium Dialog Component ─── */
     ::ng-deep .user-dialog .p-dialog-header {
-      background: #f8fafc; border-bottom: 3px solid #0d9488; padding: 1.25rem 1.5rem;
+      background: #f8fafc; border-bottom: 3px solid var(--brand); padding: 1.25rem 1.5rem;
     }
     ::ng-deep .user-dialog .p-dialog-title { font-weight: 800; color: #1e293b; font-size: 1.2rem; }
     ::ng-deep .user-dialog .p-dialog-content { padding: 0 1.5rem 1.5rem 1.5rem !important; background: #ffffff; }
@@ -423,7 +423,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     }
     ::ng-deep .user-dialog .p-inputtext:focus,
     ::ng-deep .user-dialog .p-dropdown:focus-within {
-      border-color: #0d9488 !important; box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15) !important; background: #fff;
+      border-color: var(--brand) !important; box-shadow: 0 0 0 4px var(--brand-glow) !important; background: #fff;
     }
     ::ng-deep .p-input-icon-left i { color: #64748b; }
     ::ng-deep .p-input-icon-left .p-inputtext { padding-left: 2.5rem !important; }
@@ -458,7 +458,7 @@ export class UserManagementComponent implements OnInit {
     );
   });
 
-  private avatarColors = ['#0d9488','#6366f1','#f59e0b','#10b981','#ec4899','#3b82f6','#a855f7'];
+  private avatarColors = ['#007070','#6366f1','#f59e0b','#10b981','#ec4899','#3b82f6','#a855f7'];
 
   constructor(
     private userService: UserService, 

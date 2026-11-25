@@ -23,5 +23,8 @@ namespace PharmacyApi.Models
         public string? Remarks { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        // ─── SaaS: Tenant-level master data
+        public int TenantId { get; set; }
     }
 }

@@ -3,7 +3,8 @@ name: Deploy to MonsterASP.NET
 on:
   push:
     branches:
-      - main
+      - main     # → Production (MonsterASP main site)
+      - develop  # → Staging (MonsterASP staging, যদি পরে কনফিগার করা হয়)
 
 jobs:
   build-and-deploy:

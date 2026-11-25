@@ -53,6 +53,11 @@ namespace PharmacyApi.Models
 
         public bool IsActive { get; set; } = true;
 
+        // ─── SaaS: Tenant-level (Medicine Catalog is Tenant-shared, not Branch-specific)
+        // ARCHITECTURAL INTENT: Medicine master data is shared across all branches of a Tenant.
+        // Adding BranchId here would cause catalog duplication — do NOT add BranchId to Medicine.
+        public int TenantId { get; set; }
+
         // Audit Fields
         public DateTime CreatedAt { get; set; }
         [StringLength(100)]

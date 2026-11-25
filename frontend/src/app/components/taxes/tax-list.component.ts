@@ -168,23 +168,23 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     
-    .btn-primary { display: flex; align-items: center; gap: 8px; background: #0d9488; color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: .875rem; font-weight: 600; cursor: pointer; transition: background .15s; font-family: 'Inter', sans-serif; white-space: nowrap; }
-    .btn-primary:hover:not(:disabled) { background: #0f766e; } .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-primary { display: flex; align-items: center; gap: 8px; background: var(--brand); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: .875rem; font-weight: 600; cursor: pointer; transition: background .15s; font-family: 'Inter', sans-serif; white-space: nowrap; }
+    .btn-primary:hover:not(:disabled) { background: var(--brand-hover); } .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
     
-    .btn-save { display: flex; align-items: center; gap: 8px; background: #0d9488; color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: .875rem; font-weight: 600; cursor: pointer; transition: background .15s; font-family: 'Inter', sans-serif; }
-    .btn-save:hover:not(:disabled) { background: #0f766e; } .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-save { display: flex; align-items: center; gap: 8px; background: var(--brand); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: .875rem; font-weight: 600; cursor: pointer; transition: background .15s; font-family: 'Inter', sans-serif; }
+    .btn-save:hover:not(:disabled) { background: var(--brand-hover); } .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-cancel { display: flex; align-items: center; gap: 8px; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 18px; font-size: .875rem; font-weight: 600; cursor: pointer; transition: all .15s; font-family: 'Inter', sans-serif; }
     .btn-cancel:hover { background: #e2e8f0; }
     
     .summary-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 600; }
-    .chip-teal { background: #ccfbf1; color: #0f766e; } .chip-green { background: #dcfce7; color: #15803d; } .chip-slate { background: #f1f5f9; color: #475569; }
+    .chip-teal { background: var(--brand-soft); color: var(--brand); } .chip-green { background: #dcfce7; color: #15803d; } .chip-slate { background: #f1f5f9; color: #475569; }
     
     .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0 0 16px 16px; overflow: hidden; display: flex; flex-direction: column; }
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1; max-width: 400px; }
     .search-icon { position: absolute; left: 12px; color: #94a3b8; font-size: .875rem; pointer-events: none; }
     .search-input { width: 100%; padding: 9px 36px; height: 34px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px !important; font-family: 'Inter', sans-serif; outline: none; transition: border-color .15s; background: #f8fafc; color: #0f172a; }
-    .search-input:focus { border-color: #0d9488; background: #fff; }
+    .search-input:focus { border-color: var(--brand); background: #fff; }
     .search-clear { position: absolute; right: 10px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: .875rem; }
     .result-count { font-size: .8rem; color: #475569; font-weight: 600; }
     
@@ -197,7 +197,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     
     /* Table Header Styling */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-      background-color: #f1f5f9 !important; color: #0d9488 !important; font-weight: 800 !important; font-size: 0.75rem !important; text-transform: uppercase !important; letter-spacing: 0.7px !important; padding: 10px 12px !important; border-bottom: 2.5px solid #0d9488 !important;
+      background-color: #f1f5f9 !important; color: var(--brand) !important; font-weight: 800 !important; font-size: 0.75rem !important; text-transform: uppercase !important; letter-spacing: 0.7px !important; padding: 10px 12px !important; border-bottom: 2.5px solid var(--brand) !important;
     }
     ::ng-deep .p-datatable .p-datatable-tbody > tr > td { padding: 8px 12px !important; border-bottom: 1px solid #edf2f7; }
     
@@ -205,10 +205,10 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     .status-toggle-btn { display: inline-flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; padding: 0; font-family: 'Inter', sans-serif; }
     .toggle-track { position: relative; width: 36px; height: 20px; background: #cbd5e1; border-radius: 99px; transition: background .25s; flex-shrink: 0; }
     .toggle-thumb { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .25s; }
-    .status-toggle-btn.active .toggle-track { background: #0d9488; }
+    .status-toggle-btn.active .toggle-track { background: var(--brand); }
     .status-toggle-btn.active .toggle-thumb { transform: translateX(16px); }
     .toggle-label { font-size: .72rem; font-weight: 600; color: #64748b; }
-    .status-toggle-btn.active .toggle-label { color: #0d9488; }
+    .status-toggle-btn.active .toggle-label { color: var(--brand); }
     
     .action-btns { display: flex; gap: 4px; }
     .act-btn { width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .1s; }
@@ -225,7 +225,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     .form-group label { font-size: .8rem; font-weight: 700; color: #1e293b; }
     .form-group input, .form-group ::ng-deep .p-inputnumber { width: 100%; }
     ::ng-deep .p-inputnumber-input { width: 100% !important; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 9px 12px; }
-    ::ng-deep .p-inputnumber-input:focus { border-color: #0d9488; }
+    ::ng-deep .p-inputnumber-input:focus { border-color: var(--brand); }
     .field-readonly { background: #f8fafc !important; color: #64748b; font-weight: 500; }
     .err { color: #dc2626; font-size: .75rem; }
     

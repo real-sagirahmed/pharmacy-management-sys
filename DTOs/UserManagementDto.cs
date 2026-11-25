@@ -12,6 +12,8 @@ namespace PharmacyApi.DTOs
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
         public string? ProfilePicturePath { get; set; }
+        public int? TenantId { get; set; }
+        public int? BranchId { get; set; }
         public IList<string> Roles { get; set; } = new List<string>();
     }
 
@@ -29,6 +31,8 @@ namespace PharmacyApi.DTOs
         public string Password { get; set; } = string.Empty;
         [Required]
         public string Role { get; set; } = string.Empty;
+        public int? TenantId { get; set; }
+        public int? BranchId { get; set; }
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
     }
@@ -44,6 +48,7 @@ namespace PharmacyApi.DTOs
         public string Email { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
+        public int? BranchId { get; set; }
         public string? Password { get; set; }
     }
 

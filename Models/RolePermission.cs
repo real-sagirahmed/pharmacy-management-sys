@@ -20,6 +20,9 @@ namespace PharmacyApi.Models
         public bool CanEdit { get; set; } = false;
         public bool CanDelete { get; set; } = false;
 
+        // ─── SaaS: Tenant-level permission config
+        public int TenantId { get; set; }
+
         // Navigation property (Optional, since IdentityRole is managed by Identity)
     }
 }

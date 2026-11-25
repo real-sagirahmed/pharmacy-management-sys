@@ -84,6 +84,11 @@ namespace PharmacyApi.DTOs
         public int PurchaseId { get; set; }
         public string GrnCode { get; set; } = string.Empty;
 
+        // SaaS Tenant + Branch
+        public int? TenantId { get; set; }
+        public int? BranchId { get; set; }
+        public string? BranchName { get; set; }
+
         [Required]
         public int SupplierId { get; set; }
         public string? SupplierName { get; set; }
@@ -216,6 +221,11 @@ namespace PharmacyApi.DTOs
     {
         public int SaleId { get; set; }
         public string InvoiceCode { get; set; } = string.Empty;
+
+        // SaaS Tenant + Branch
+        public int? TenantId { get; set; }
+        public int? BranchId { get; set; }
+        public string? BranchName { get; set; }
 
         // Party
         public int? PartyId { get; set; }
