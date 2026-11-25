@@ -186,8 +186,9 @@ using (var scope = app.Services.CreateScope())
             }
             else
             {
-                // If user exists but lacks role, assign it
-                await userManager.AddToRoleAsync(existingUser, "SystemAdmin");
+                // If user exists but lacks role, assign it safely
+                if (!await userManager.IsInRoleAsync(existingUser, "SystemAdmin"))
+                    await userManager.AddToRoleAsync(existingUser, "SystemAdmin");
             }
         }
         // ─────────────────────────────────────────────────────────────────────
@@ -199,16 +200,8 @@ using (var scope = app.Services.CreateScope())
             await userMgmtService.SeedDefaultPermissionsForTenantAsync(1);
         }
 
-        // Promote first user to Admin if no Admin exists
-        var admins = await userManager.GetUsersInRoleAsync("Admin");
-        if (!admins.Any())
-        {
-            var firstUser = await context.Users.OrderBy(u => u.Id).FirstOrDefaultAsync();
-            if (firstUser != null)
-            {
-                await userManager.AddToRoleAsync(firstUser, "Admin");
-            }
-        }
+        // Promote first legacy Tenant user to Admin if no Admin exists (never SystemAdmin)
+        await UserManagementService.PromoteLegacyTenantAdminIfMissingAsync(userManager, context);
     }
     catch (Exception ex)
     {

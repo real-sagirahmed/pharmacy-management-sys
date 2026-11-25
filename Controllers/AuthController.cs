@@ -110,6 +110,11 @@ namespace PharmacyApi.Controllers
             if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
             {
                 var userRoles = await _userManager.GetRolesAsync(user);
+                var (allowed, denialReason) = await _userService.ValidateUserLoginEligibilityAsync(user, userRoles);
+                if (!allowed)
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { message = denialReason });
+                }
 
                 var authClaims = new List<Claim>
                 {
@@ -177,7 +182,7 @@ namespace PharmacyApi.Controllers
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             
             // In a real application, send this token via email.
-            var frontendUrl = _configuration["Cors:AllowedOrigins"] ?? "http://localhost:4200";
+            var frontendUrl = ResolveFrontendBaseUrl();
             var resetLink = $"{frontendUrl}/reset-password?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(user.Email!)}";
 
             await _emailService.SendEmailAsync(user.Email!, "Reset Your Password", 
@@ -361,6 +366,31 @@ namespace PharmacyApi.Controllers
             }
 
             return options;
+        }
+
+        private string ResolveFrontendBaseUrl()
+        {
+            // ARCHITECTURAL INTENT: Cors:AllowedOrigins is a JSON array in appsettings.json and deploy.yml;
+            // reading _configuration["Cors:AllowedOrigins"] as a scalar returned null and leaked localhost links in production.
+            var explicitUrl = _configuration["FrontendUrl"];
+            if (!string.IsNullOrWhiteSpace(explicitUrl))
+                return explicitUrl.Trim().TrimEnd('/');
+
+            var origins = (_configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+                .Where(o => !string.IsNullOrWhiteSpace(o))
+                .Select(o => o.Trim().TrimEnd('/'))
+                .ToList();
+
+            if (origins.Count > 0)
+            {
+                bool preferLoopback = _environment.IsDevelopment();
+                var matched = origins.FirstOrDefault(o =>
+                    Uri.TryCreate(o, UriKind.Absolute, out var uri) && uri.IsLoopback == preferLoopback);
+
+                return matched ?? origins[0];
+            }
+
+            return "http://localhost:4200";
         }
     }
 

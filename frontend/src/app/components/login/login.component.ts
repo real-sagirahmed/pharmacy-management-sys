@@ -244,7 +244,10 @@ export class LoginComponent {
     const { username, password } = this.loginForm.value;
     this.authService.login(username, password).subscribe({
       next: () => this.router.navigate(['/dashboard']),
-      error: () => { this.error = 'Invalid credentials. Please try again.'; this.loading = false; }
+      error: (err) => {
+        this.error = err?.error?.message || (err?.status === 403 ? 'Access denied. Please contact your administrator.' : 'Invalid credentials. Please try again.');
+        this.loading = false;
+      }
     });
   }
 }

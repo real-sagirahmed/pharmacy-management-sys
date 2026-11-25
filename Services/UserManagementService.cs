@@ -27,6 +27,10 @@ namespace PharmacyApi.Services
             int tenantId,
             int? branchId,
             CancellationToken cancellationToken = default);
+        Task<(bool Allowed, string? DenialReason)> ValidateUserLoginEligibilityAsync(
+            ApplicationUser user,
+            IList<string> roles,
+            CancellationToken cancellationToken = default);
     }
 
     public class UserManagementService : IUserManagementService
@@ -521,10 +525,7 @@ namespace PharmacyApi.Services
             int? branchId,
             CancellationToken cancellationToken = default)
         {
-            var tenant = await _context.Tenants
-                .IgnoreQueryFilters()
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.TenantId == tenantId, cancellationToken);
+            var (tenant, branch) = await FetchTenantAndBranchAsync(tenantId, branchId, cancellationToken);
 
             if (tenant == null)
                 return (false, "Invalid TenantId.");
@@ -534,11 +535,6 @@ namespace PharmacyApi.Services
 
             if (branchId.HasValue && branchId.Value > 0)
             {
-                var branch = await _context.Branches
-                    .IgnoreQueryFilters()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(b => b.BranchId == branchId.Value && b.TenantId == tenantId, cancellationToken);
-
                 if (branch == null)
                     return (false, "Invalid BranchId for the specified tenant.");
 
@@ -547,6 +543,91 @@ namespace PharmacyApi.Services
             }
 
             return (true, null);
+        }
+
+        public async Task<(bool Allowed, string? DenialReason)> ValidateUserLoginEligibilityAsync(
+            ApplicationUser user,
+            IList<string> roles,
+            CancellationToken cancellationToken = default)
+        {
+            if (!user.IsActive)
+                return (false, "Your account has been deactivated. Please contact your administrator.");
+
+            // SystemAdmin operates at platform level and must not be locked out by tenant/branch state.
+            if (roles.Any(r => r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase)))
+                return (true, null);
+
+            if (!user.TenantId.HasValue || user.TenantId.Value <= 0)
+                return (false, "Account is not assigned to an active pharmacy.");
+
+            var (tenant, branch) = await FetchTenantAndBranchAsync(user.TenantId.Value, user.BranchId, cancellationToken);
+
+            if (tenant == null || !tenant.IsActive)
+                return (false, "Your pharmacy account is inactive or suspended. Please contact support.");
+
+            if (tenant.SubscriptionExpiry.HasValue)
+            {
+                var bdToday = TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.UtcNow,
+                    TimeZoneInfo.FindSystemTimeZoneById("Bangladesh Standard Time")).Date;
+
+                if (tenant.SubscriptionExpiry.Value.Date < bdToday)
+                    return (false, "Your pharmacy subscription has expired. Please renew to continue.");
+            }
+
+            if (user.BranchId.HasValue && user.BranchId.Value > 0 && (branch == null || !branch.IsActive))
+                return (false, "Your assigned branch is currently inactive. Please contact your pharmacy admin.");
+
+            return (true, null);
+        }
+
+        public static async Task PromoteLegacyTenantAdminIfMissingAsync(
+            UserManager<ApplicationUser> userManager,
+            ApplicationDbContext context,
+            CancellationToken cancellationToken = default)
+        {
+            // ARCHITECTURAL INTENT: Never promote a platform SystemAdmin (TenantId == null)
+            // into the Tenant-scoped Admin role on startup. Only promote legacy Tenant-assigned users.
+            var admins = await userManager.GetUsersInRoleAsync("Admin");
+            if (admins.Any())
+                return;
+
+            var candidates = await context.Users
+                .IgnoreQueryFilters()
+                .Where(u => u.TenantId != null)
+                .OrderBy(u => u.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var candidate in candidates)
+            {
+                if (!await userManager.IsInRoleAsync(candidate, "SystemAdmin"))
+                {
+                    await userManager.AddToRoleAsync(candidate, "Admin");
+                    break;
+                }
+            }
+        }
+
+        private async Task<(Tenant? Tenant, Branch? Branch)> FetchTenantAndBranchAsync(
+            int tenantId,
+            int? branchId,
+            CancellationToken cancellationToken)
+        {
+            var tenant = await _context.Tenants
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId, cancellationToken);
+
+            Branch? branch = null;
+            if (tenant != null && branchId.HasValue && branchId.Value > 0)
+            {
+                branch = await _context.Branches
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.BranchId == branchId.Value && b.TenantId == tenantId, cancellationToken);
+            }
+
+            return (tenant, branch);
         }
     }
 }
