@@ -104,13 +104,7 @@ namespace PharmacyApi.Controllers
                 var permissions = await _userService.GetEffectivePermissionsAsync(user.Id);
                 var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
-                Response.Cookies.Append("auth_token", tokenString, new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = true, // monsterasp.net has SSL
-                    SameSite = SameSiteMode.Strict,
-                    Expires = token.ValidTo
-                });
+                Response.Cookies.Append("auth_token", tokenString, BuildAuthCookieOptions(token.ValidTo));
 
                 return Ok(new
                 {
@@ -195,7 +189,7 @@ namespace PharmacyApi.Controllers
         [HttpPost("logout")]
         public IActionResult Logout()
         {
-            Response.Cookies.Delete("auth_token");
+            Response.Cookies.Delete("auth_token", BuildAuthCookieOptions());
             return Ok(new { Message = "Logged out successfully" });
         }
 
@@ -233,6 +227,28 @@ namespace PharmacyApi.Controllers
             await _userManager.UpdateAsync(user);
 
             return Ok(new { profilePicturePath = user.ProfilePicturePath });
+        }
+
+        private CookieOptions BuildAuthCookieOptions(DateTime? expires = null)
+        {
+            // ARCHITECTURAL INTENT: Force Secure=true in all non-Development environments (even behind
+            // reverse proxies where Request.IsHttps can be false without ForwardedHeaders), while still
+            // allowing local HTTP development (http://localhost:5171) without dropping auth cookies.
+            bool requireSecure = !_environment.IsDevelopment() || (HttpContext?.Request.IsHttps ?? false);
+
+            var options = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = requireSecure,
+                SameSite = SameSiteMode.Strict
+            };
+
+            if (expires.HasValue)
+            {
+                options.Expires = expires.Value;
+            }
+
+            return options;
         }
     }
 

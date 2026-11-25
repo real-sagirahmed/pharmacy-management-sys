@@ -3,8 +3,10 @@ name: Deploy to MonsterASP.NET
 on:
   push:
     branches:
+      # ARCHITECTURAL INTENT: Production FTP deploys to /wwwroot/ must only trigger on main.
+      # Do NOT re-add develop here until a dedicated staging FTP server/directory is configured.
       - main     # → Production (MonsterASP main site)
-      - develop  # → Staging (MonsterASP staging, যদি পরে কনফিগার করা হয়)
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -57,7 +59,7 @@ jobs:
             "AllowedHosts": "*",
             "Cors": {
               "AllowedOrigins": [
-                "http://pharmacymsys.runasp.net",
+                "https://pharmacymsys.runasp.net",
                 "http://localhost:4200"
               ]
             },
