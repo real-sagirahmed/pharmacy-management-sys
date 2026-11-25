@@ -244,7 +244,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     
     .btn-primary {
       display: flex; align-items: center; gap: 8px;
-      background: #0d9488; color: #fff;
+      background: var(--brand); color: #fff;
       border: none; border-radius: 10px;
       padding: 10px 18px;
       font-size: .875rem; font-weight: 600;
@@ -252,20 +252,20 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
       font-family: 'Inter', sans-serif;
       white-space: nowrap;
     }
-    .btn-primary:hover:not(:disabled) { background: #0f766e; }
+    .btn-primary:hover:not(:disabled) { background: var(--brand-hover); }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
     .table-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; gap: 12px; flex-wrap: wrap; }
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1; max-width: 400px; }
     .search-icon { position: absolute; left: 12px; color: #94a3b8; font-size: .875rem; pointer-events: none; }
     .search-input { width: 100%; padding: 9px 36px; height: 34px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px !important; font-family: 'Inter', sans-serif; outline: none; transition: border-color .15s; background: #f8fafc; color: #0f172a; }
-    .search-input:focus { border-color: #0d9488; background: #fff; }
+    .search-input:focus { border-color: var(--brand); background: #fff; }
     .search-clear { position: absolute; right: 10px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: .875rem; }
     .result-count { font-size: .8rem; color: #475569; font-weight: 600; }
 
     .summary-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 600; }
-    .chip-teal   { background: #ccfbf1; color: #0f766e; }
+    .chip-teal   { background: var(--brand-soft); color: var(--brand); }
     .chip-blue   { background: #dbeafe; color: #1e40af; }
     .chip-amber  { background: #fef3c7; color: #92400e; }
 
@@ -275,13 +275,13 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     /* Table Header Styling */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
       background-color: #f1f5f9 !important;
-      color: #0d9488 !important;
+      color: var(--brand) !important;
       font-weight: 900 !important;
       font-size: 0.75rem !important;
       text-transform: uppercase !important;
       letter-spacing: 0.7px !important;
       padding: 10px 12px !important;
-      border-bottom: 2.5px solid #0d9488 !important;
+      border-bottom: 2.5px solid var(--brand) !important;
     }
     
     ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
@@ -299,10 +299,10 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     .status-toggle-btn { display: inline-flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; padding: 0; font-family: 'Inter', sans-serif; }
     .toggle-track { position: relative; width: 36px; height: 20px; background: #cbd5e1; border-radius: 99px; transition: background .25s; flex-shrink: 0; }
     .toggle-thumb { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .25s; }
-    .status-toggle-btn.active .toggle-track { background: #0d9488; }
+    .status-toggle-btn.active .toggle-track { background: var(--brand); }
     .status-toggle-btn.active .toggle-thumb { transform: translateX(16px); }
     .toggle-label { font-size: .72rem; font-weight: 600; color: #64748b; }
-    .status-toggle-btn.active .toggle-label { color: #0d9488; }
+    .status-toggle-btn.active .toggle-label { color: var(--brand); }
     .status-toggle-btn:disabled { cursor: not-allowed; opacity: 0.6; }
 
     .action-btns { display: flex; gap: 4px; }
@@ -317,10 +317,10 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     
     ::ng-deep .dialog-header-custom { display: flex; align-items: center; gap: 12px; }
     ::ng-deep .header-icon-hex {
-      width: 36px; height: 36px; background: #0d9488; color: #fff;
+      width: 36px; height: 36px; background: var(--brand); color: #fff;
       display: flex; align-items: center; justify-content: center;
       border-radius: 10px; font-size: 1rem;
-      box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+      box-shadow: 0 4px 10px var(--brand-glow);
       flex-shrink: 0;
     }
     ::ng-deep .dialog-title-text { font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; }
@@ -350,7 +350,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
       font-size: .8rem; font-family: 'Inter', sans-serif; transition: all .2s; outline: none;
       width: 100%; box-sizing: border-box;
     }
-    ::ng-deep .premium-input:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1); background: #fff; }
+    ::ng-deep .premium-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-glow); background: #fff; }
     ::ng-deep .readonly-input { background: #f8fafc; color: #64748b; cursor: not-allowed; }
     
     ::ng-deep .premium-select { border-radius: 10px; font-size: .8rem; }
@@ -361,7 +361,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
 
     ::ng-deep .status-field { display: flex; flex-direction: row; align-items: center; justify-content: space-between; margin-top: 4px; }
     ::ng-deep .status-toggle-wrap { display: flex; align-items: center; gap: 10px; font-size: .8rem; font-weight: 600; color: #94a3b8; }
-    ::ng-deep .active-txt { color: #0d9488; }
+    ::ng-deep .active-txt { color: var(--brand); }
 
     /* Custom Toggle */
     ::ng-deep .premium-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
@@ -374,7 +374,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
       position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
       background-color: white; transition: .3s; border-radius: 50%;
     }
-    ::ng-deep input:checked + .slider-premium { background-color: #0d9488; }
+    ::ng-deep input:checked + .slider-premium { background-color: var(--brand); }
     ::ng-deep input:checked + .slider-premium:before { transform: translateX(18px); }
 
     .animate-fadein-up { animation: fadeIn .5s ease-out; }
@@ -391,11 +391,11 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     
     ::ng-deep .btn-save {
       display: flex; align-items: center; gap: 8px; padding: 8px 20px;
-      background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;
+      background: linear-gradient(135deg, var(--brand), var(--brand-hover)); color: #fff;
       border: none; border-radius: 10px; font-weight: 700; font-size: .8rem;
-      cursor: pointer; transition: all .2s; box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+      cursor: pointer; transition: all .2s; box-shadow: 0 4px 10px var(--brand-glow);
     }
-    ::ng-deep .btn-save:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25); opacity: 0.95; }
+    ::ng-deep .btn-save:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 14px var(--brand-glow); opacity: 0.95; }
     ::ng-deep .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
 
     ::ng-deep .p-dialog-mask { 

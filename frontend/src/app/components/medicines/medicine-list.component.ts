@@ -554,7 +554,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     .det-item { display: flex; flex-direction: column; gap: 2px; background: #f8fafc; border-radius: 8px; padding: 8px 12px; }
     .det-item span { font-size: .68rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
     .det-item strong { font-size: .85rem; color: #0f172a; }
-    .text-teal { color: #0d9488; }
+    .text-teal { color: var(--brand); }
     .text-danger { color: #ef4444; font-weight: 600; }
 
     /* ─── Stock Badges ─── */
@@ -572,7 +572,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     .batch-table th { background: #f8fafc; padding: 8px; text-align: left; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
     .batch-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
     .batch-table tr:last-child td { border-bottom: none; }
-    .batch-no { font-family: monospace; color: #0d9488; font-weight: 600; }
+    .batch-no { font-family: monospace; color: var(--brand); font-weight: 600; }
     .font-bold { font-weight: 700; }
     .text-right { text-align: right; }
 
@@ -594,19 +594,19 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
       background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2);
       transition: transform .25s;
     }
-    .status-toggle-btn.active .toggle-track { background: #0d9488; }
+    .status-toggle-btn.active .toggle-track { background: var(--brand); }
     .status-toggle-btn.active .toggle-thumb { transform: translateX(16px); }
     .toggle-label {
       font-size: .72rem; font-weight: 600;
       color: #64748b;
     }
-    .status-toggle-btn.active .toggle-label { color: #0d9488; }
+    .status-toggle-btn.active .toggle-label { color: var(--brand); }
     :host { display: block; width: 100%; }
     .page-wrap { display: flex; flex-direction: column; width: 100%; }
 
     .btn-primary {
       display: flex; align-items: center; gap: 8px;
-      background: #0d9488; color: #fff;
+      background: var(--brand); color: #fff;
       border: none; border-radius: 10px;
       padding: 9px 18px;
       font-size: .875rem; font-weight: 600;
@@ -614,7 +614,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
       font-family: 'Inter', sans-serif;
       white-space: nowrap;
     }
-    .btn-primary:hover:not(:disabled) { background: #0f766e; }
+    .btn-primary:hover:not(:disabled) { background: var(--brand-hover); }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
     .btn-secondary {
@@ -628,7 +628,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
 
     .summary-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 600; }
-    .chip-teal   { background: #ccfbf1; color: #0f766e; }
+    .chip-teal   { background: var(--brand-soft); color: var(--brand); }
     .chip-green  { background: #dcfce7; color: #15803d; }
 
     .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; margin-top: 8px; }
@@ -646,7 +646,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1; max-width: 400px; }
     .search-icon { position: absolute; left: 12px; color: #94a3b8; font-size: .875rem; pointer-events: none; }
     .search-input { width: 100%; padding: 9px 36px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .875rem; font-family: 'Inter', sans-serif; outline: none; transition: border-color .15s; background: #f8fafc; color: #0f172a; }
-    .search-input:focus { border-color: #0d9488; background: #fff; }
+    .search-input:focus { border-color: var(--brand); background: #fff; }
     .search-clear { position: absolute; right: 10px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: .875rem; }
     .result-count { font-size: .8rem; color: #334155; font-weight: 700; }
 
@@ -693,13 +693,13 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     /* Table Header Styling - Matching Procurement Records */
     ::ng-deep .p-datatable .p-datatable-thead > tr > th {
       background-color: #f1f5f9 !important;
-      color: #0d9488 !important;
+      color: var(--brand) !important;
       font-weight: 800 !important;
       font-size: 0.75rem !important;
       text-transform: uppercase !important;
       letter-spacing: 0.7px !important;
       padding: 10px 12px !important;
-      border-bottom: 2.5px solid #0d9488 !important;
+      border-bottom: 2.5px solid var(--brand) !important;
     }
     
     ::ng-deep .p-datatable .p-datatable-tbody > tr {
@@ -716,10 +716,10 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
 
     ::ng-deep .dialog-header-custom { display: flex; align-items: center; gap: 12px; }
     ::ng-deep .header-icon-hex {
-      width: 36px; height: 36px; background: #0d9488; color: #fff;
+      width: 36px; height: 36px; background: var(--brand); color: #fff;
       display: flex; align-items: center; justify-content: center;
       border-radius: 10px; font-size: 1rem;
-      box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+      box-shadow: 0 4px 10px var(--brand-glow);
       flex-shrink: 0;
     }
     ::ng-deep .dialog-title-text { font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; }
@@ -750,7 +750,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
       font-size: .8rem; font-family: 'Inter', sans-serif; transition: all .2s; outline: none;
       width: 100%; box-sizing: border-box;
     }
-    ::ng-deep .premium-input:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1); background: #fff; }
+    ::ng-deep .premium-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-glow); background: #fff; }
     ::ng-deep .readonly-input { background: #f8fafc; color: #64748b; cursor: not-allowed; }
     
     ::ng-deep .premium-select { border-radius: 10px; font-size: .8rem; }
@@ -766,7 +766,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
 
     ::ng-deep .status-field { display: flex; flex-direction: row; align-items: center; justify-content: space-between; margin-top: 4px; }
     ::ng-deep .status-toggle-wrap { display: flex; align-items: center; gap: 10px; font-size: .8rem; font-weight: 600; color: #94a3b8; }
-    ::ng-deep .active-txt { color: #0d9488; }
+    ::ng-deep .active-txt { color: var(--brand); }
 
     /* Custom Toggle */
     ::ng-deep .premium-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
@@ -779,7 +779,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
       position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
       background-color: white; transition: .3s; border-radius: 50%;
     }
-    ::ng-deep input:checked + .slider-premium { background-color: #0d9488; }
+    ::ng-deep input:checked + .slider-premium { background-color: var(--brand); }
     ::ng-deep input:checked + .slider-premium:before { transform: translateX(18px); }
 
     .incomplete-icon {
@@ -798,11 +798,11 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
 
     /* Quick Add UI */
     ::ng-deep .quick-add-link {
-      font-size: .65rem; color: #0d9488; font-weight: 600;
+      font-size: .65rem; color: var(--brand); font-weight: 600;
       text-decoration: none; display: flex; align-items: center; gap: 4px;
       margin-top: 4px; align-self: flex-start; transition: color .15s;
     }
-    ::ng-deep .quick-add-link:hover { color: #0f766e; text-decoration: underline; }
+    ::ng-deep .quick-add-link:hover { color: var(--brand-hover); text-decoration: underline; }
     
     ::ng-deep .quick-add-dialog .p-dialog-header { padding: 12px 16px; font-size: 1rem; border-bottom: 1px solid #f1f5f9; }
     ::ng-deep .quick-add-dialog .p-dialog-content { padding: 0 !important; }
@@ -819,11 +819,11 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     
     ::ng-deep .btn-save {
       display: flex; align-items: center; gap: 8px; padding: 8px 20px;
-      background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;
+      background: linear-gradient(135deg, var(--brand), var(--brand-hover)); color: #fff;
       border: none; border-radius: 10px; font-weight: 700; font-size: .8rem;
-      cursor: pointer; transition: all .2s; box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+      cursor: pointer; transition: all .2s; box-shadow: 0 4px 10px var(--brand-glow);
     }
-    ::ng-deep .btn-save:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25); opacity: 0.95; }
+    ::ng-deep .btn-save:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 14px var(--brand-glow); opacity: 0.95; }
     ::ng-deep .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
 
     /* Centering and Overlay Fix (Clean approach) */

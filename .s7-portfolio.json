@@ -1,7 +1,51 @@
 {
-  "case_study": "এই প্রোজেক্টে আমি ক্লিন আর্কিটেকচার এবং রিপোজিটরি প্যাটার্ন ব্যবহার করেছি যাতে কোড মেইনটেইনেবল হয়।",
+  "name": "pharmacy-management-sys",
+  "url": "https://github.com/real-sagirahmed/pharmacy-management-sys",
+  "live_demo": "https://pharmacymsys.runasp.net",
+  "name_en": "Pharmacy Management System",
+  "name_bn": "ফার্মেসি ম্যানেজমেন্ট সিস্টেম",
+  "description_en": "A comprehensive enterprise-grade solution for managing pharmacy operations, including inventory, sales, and reporting using ASP.NET Core and Angular.",
+  "description_bn": "ASP.NET Core এবং Angular ব্যবহার করে তৈরি একটি পূর্ণাঙ্গ ফার্মেসি ম্যানেজমেন্ট সিস্টেম, যা ইনভেন্টরি, সেলস এবং রিপোর্টিং নিখুঁতভাবে পরিচালনা করে।",
+  "image": "img/projects/pharmacy-sys.jpg",
+  "preview_video": "img/projects/pharmacyVid.mp4",
+  "video": "https://www.youtube.com/watch?v=hpwOlwJm6-E&t=37s",
+  "stack": [
+    "dotnet",
+    "angular",
+    "sqlserver",
+    "efcore",
+    "csharp"
+  ],
+  "case_study": {
+    "challenge_en": "Managing a complex inventory with real-time stock updates and generating accurate sales reports from large datasets.",
+    "challenge_bn": "রিয়েল-টাইম স্টক আপডেট এবং বিশাল ডাটাবেস থেকে নির্ভুল সেলস রিপোর্ট তৈরি করা ছিল একটি বড় চ্যালেঞ্জ।",
+    "solution_en": "Implemented SQL Stored Procedures for high-performance reporting and used Repository Pattern with Dependency Injection for a clean, maintainable architecture.",
+    "solution_bn": "হাই-পারফরম্যান্স রিপোর্টিংয়ের জন্য SQL Stored Procedures এবং ক্লিন আর্কিটেকচারের জন্য Dependency Injection-সহ Repository Pattern ব্যবহার করা হয়েছে।",
+    "key_features_en": [
+      "Dynamic Inventory & Stock Management",
+      "Sales Tracking & Automated Billing",
+      "Advanced Reporting with SQL Stored Procedures",
+      "Clean Architecture with SOLID Principles",
+      "Responsive UI with Angular & Bootstrap"
+    ],
+    "key_features_bn": [
+      "ডাইনামিক ইনভেন্টরি এবং স্টক ম্যানেজমেন্ট",
+      "সেলস ট্র্যাকিং এবং অটোমেটেড বিলিং",
+      "SQL Stored Procedures-এর মাধ্যমে উন্নত রিপোর্টিং",
+      "SOLID প্রিন্সিপাল ভিত্তিক ক্লিন আর্কিটেকচার",
+      "Angular এবং Bootstrap ব্যবহার করে রেসপন্সিভ ইন্টারফেস"
+    ]
+  },
   "showcase_files": [
-    "Services/EmailService.cs",
-    "Controllers/ManufacturersController.cs"
+    {
+      "file": "Program.cs",
+      "explanation_en": "Main entry point showing Dependency Injection and Identity configuration.",
+      "explanation_bn": "ডিপেন্ডেন্সি ইনজেকশন এবং আইডেন্টিটি কনফিগারেশন সংবলিত মেইন এন্ট্রি পয়েন্ট।"
+    },
+    {
+      "file": "Controllers/SalesController.cs",
+      "explanation_en": "Core logic for handling pharmacy sales transactions.",
+      "explanation_bn": "ফার্মেসি সেলস ট্রানজ্যাকশন পরিচালনার মূল লজিক।"
+    }
   ]
 }

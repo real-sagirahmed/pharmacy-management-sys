@@ -93,7 +93,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
               <th class="text-right" style="min-width: 120px">Subtotal</th>
               <th class="text-right" style="min-width: 100px">Discount</th>
               <th class="text-right" style="min-width: 100px">Tax</th>
-              <th class="text-right font-bold text-teal-700" style="min-width: 130px" [appTooltip]="'Total amount including VAT and after discounts'">Grand Total</th>
+              <th class="text-right font-bold" style="min-width: 130px; color: var(--brand)" [appTooltip]="'Total amount including VAT and after discounts'">Grand Total</th>
               <th class="text-right" *ngIf="isAdmin()" style="min-width: 120px" [appTooltip]="'Estimated profit: Sale Price - Purchase Cost'">Profit</th>
             </tr>
           </ng-template>
@@ -105,7 +105,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
               <td class="text-right">{{ s.subTotal | number:'1.2-2' }}</td>
               <td class="text-right text-red-500">{{ s.totalDiscount | number:'1.2-2' }}</td>
               <td class="text-right">{{ s.totalTax | number:'1.2-2' }}</td>
-              <td class="text-right font-bold text-teal-700">{{ s.grandTotal | number:'1.2-2' }}</td>
+              <td class="text-right font-bold" style="color: var(--brand)">{{ s.grandTotal | number:'1.2-2' }}</td>
               <td class="text-right text-emerald-600 font-bold" *ngIf="isAdmin()">{{ s.profit | number:'1.2-2' }}</td>
             </tr>
           </ng-template>
@@ -115,7 +115,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
               <td class="text-right font-bold bg-slate-50">{{ sum(data(), 'subTotal') | number:'1.2-2' }}</td>
               <td class="text-right font-bold text-red-500 bg-slate-50">{{ sum(data(), 'totalDiscount') | number:'1.2-2' }}</td>
               <td class="text-right font-bold bg-slate-50">{{ sum(data(), 'totalTax') | number:'1.2-2' }}</td>
-              <td class="text-right font-bold text-teal-800 bg-teal-50">{{ sum(data(), 'grandTotal') | number:'1.2-2' }}</td>
+              <td class="text-right font-bold" style="color: var(--brand); background: var(--brand-soft)">{{ sum(data(), 'grandTotal') | number:'1.2-2' }}</td>
               <td class="text-right font-bold text-emerald-800 bg-emerald-50" *ngIf="isAdmin()">{{ sum(data(), 'profit') | number:'1.2-2' }}</td>
             </tr>
           </ng-template>
@@ -257,7 +257,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
           <ng-template pTemplate="body" let-t let-i="rowIndex">
             <tr class="smart-row">
               <td class="font-bold text-slate-400">{{ i + 1 }}</td>
-              <td class="font-bold text-teal-700" pFrozenColumn>{{ t.medicineName }}</td>
+              <td class="font-bold" style="color: var(--brand)" pFrozenColumn>{{ t.medicineName }}</td>
               <td class="text-center font-black text-lg">{{ t.totalQuantitySold }}</td>
               <td class="text-center">{{ t.transactionCount }}</td>
               <td class="text-right font-mono text-emerald-700 font-bold">{{ t.totalRevenue | number:'1.2-2' }}</td>
@@ -431,9 +431,9 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
                         <span class="text-slate-600 font-semibold">Cost of Goods Sold (COGS)</span>
                         <span class="text-2xl font-black text-red-600">({{ data().totalCostOfGoodsSold | number:'1.2-2' }})</span>
                     </div>
-                    <div class="pl-row flex justify-between items-center py-6 mt-4 bg-teal-50 px-6 rounded-xl border border-teal-100">
-                        <span class="text-teal-800 font-extrabold text-lg uppercase tracking-wider">Gross Profit</span>
-                        <span class="text-4xl font-black text-teal-700">{{ data().grossProfit | number:'1.2-2' }}</span>
+                    <div class="pl-row flex justify-between items-center py-6 mt-4 px-6 rounded-xl border" style="background: var(--brand-soft); border-color: rgba(0, 112, 112, 0.2)">
+                        <span class="font-extrabold text-lg uppercase tracking-wider" style="color: var(--brand)">Gross Profit</span>
+                        <span class="text-4xl font-black" style="color: var(--brand)">{{ data().grossProfit | number:'1.2-2' }}</span>
                     </div>
                     <div class="text-center mt-4">
                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">Note: Expenses are not yet included in this calculation.</p>
@@ -461,7 +461,7 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     
     .quick-filters { align-items: center; display: flex; gap: 0.5rem; margin-left: 0.5rem; border-left: 1px solid #e2e8f0; padding-left: 1.5rem;}
     .quick-btn { color: #334155; font-weight: 700; font-size: 0.85rem; padding: 0.35rem 0.75rem; border-radius: 6px; transition: all 0.2s ease; border: 1px solid transparent; }
-    .quick-btn:hover { background: #ffffff; color: #0d9488; border-color: #0d9488; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .quick-btn:hover { background: #ffffff; color: var(--brand); border-color: var(--brand); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
     ::ng-deep .p-calendar .p-inputtext, ::ng-deep .p-dropdown .p-dropdown-label { min-width: 140px; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 0.9rem;}
     ::ng-deep .p-calendar .p-inputtext { padding: 0.5rem 0.75rem; }
@@ -477,15 +477,15 @@ import { TooltipDirective } from '../../directives/tooltip.directive';
     ::ng-deep .smart-table .p-datatable-wrapper { max-height: 550px; }
     ::ng-deep .smart-table .p-datatable-thead > tr > th {
       position: sticky; top: 0; z-index: 10; background: #f1f5f9 !important; 
-      box-shadow: inset 0 -2.5px 0 #0d9488;
-      padding: 0.875rem 1rem; font-size: 0.8rem; text-transform: uppercase; font-weight: 800; color: #0d9488;
+      box-shadow: inset 0 -2.5px 0 var(--brand);
+      padding: 0.875rem 1rem; font-size: 0.8rem; text-transform: uppercase; font-weight: 800; color: var(--brand);
       letter-spacing: 0.7px !important; border: none; white-space: nowrap;
     }
     ::ng-deep .smart-table .p-datatable-tbody > tr > td {
         padding: 0.875rem 1rem; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 0.9rem; font-weight: 500;
     }
     ::ng-deep .smart-table .p-datatable-tfoot > tr > td {
-        padding: 1rem; border-top: 2.5px solid #0d9488; font-size: 0.95rem; font-weight: 900; color: #1e293b; background: #f8fafc !important;
+        padding: 1rem; border-top: 2.5px solid var(--brand); font-size: 0.95rem; font-weight: 900; color: #1e293b; background: #f8fafc !important;
     }
     ::ng-deep .smart-table .p-datatable-frozen-tbody > tr > td { background: #ffffff; }
     

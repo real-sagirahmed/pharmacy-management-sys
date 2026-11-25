@@ -26,8 +26,7 @@ namespace PharmacyApi.Models
         public DateTime PurchaseDate { get; set; }
 
         // Financial Summary
-        public decimal SubTotal { get; set; }
-        public decimal TotalDiscount { get; set; }
+        public decimal SubTotal { get; set; }        public decimal TotalDiscount { get; set; }
         public decimal TotalTax { get; set; }
         public decimal Adjustment { get; set; }
         public decimal GrandTotal { get; set; }
@@ -38,6 +37,10 @@ namespace PharmacyApi.Models
 
         [StringLength(20)]
         public string PaymentStatus { get; set; } = "Due"; // Paid / Partial / Due
+
+        // ─── SaaS: Tenant + Branch (কোন ফার্মেসির কোন শাখায় কেনা হয়েছে)
+        public int TenantId  { get; set; }
+        public int BranchId  { get; set; }
 
         public virtual ICollection<PurchaseDetail> PurchaseDetails { get; set; } = new List<PurchaseDetail>();
         public virtual ICollection<PurchasePayment> PurchasePayments { get; set; } = new List<PurchasePayment>();

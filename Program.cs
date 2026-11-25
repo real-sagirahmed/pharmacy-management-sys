@@ -10,11 +10,16 @@ using PharmacyApi.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// ─── SaaS: Tenant Context (HTTP Request থেকে TenantId ও BranchId রেজোলিউশন) ───
+// ARCHITECTURAL INTENT: IHttpContextAccessor ও ITenantContextService সর্বদা Scoped।
+// Singleton হলে request-এর মাঝখানে tenant context leak হবে — কখনো Singleton করবেন না।
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantContextService, TenantContextService>();
 
 // ─── Master Data Repositories (DI Registration) ───
 builder.Services.AddScoped<IPartyRepository, PartyRepository>();

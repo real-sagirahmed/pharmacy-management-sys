@@ -15,9 +15,12 @@ import { AuthService } from '../../services/auth.service';
         <div class="visual-content">
           <div class="glass-brand">
             <div class="brand-icon">
-              <i class="pi pi-th-large"></i>
+              <img src="/s7-logo-mark.svg" alt="s7 Logo" style="width: 38px; height: 38px;">
             </div>
-            <h1 class="brand-name">Pharmacy System</h1>
+            <div>
+              <h1 class="brand-name">s7 Drug House</h1>
+              <p style="font-size: 0.95rem; color: #94a3b8; margin: 0;">Universal Pharmacy System</p>
+            </div>
           </div>
           <div class="visual-text">
             <h2>Recover Your Account.</h2>
@@ -61,7 +64,7 @@ import { AuthService } from '../../services/auth.service';
             </div>
 
             <!-- Submit -->
-            <button type="submit" [disabled]="loading" class="submit-btn" style="background:#f59e0b">
+            <button type="submit" [disabled]="loading" class="submit-btn">
               <span *ngIf="!loading">Send Reset Link <i class="pi pi-send ml-2"></i></span>
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Sending…</span>
             </button>
@@ -84,17 +87,17 @@ import { AuthService } from '../../services/auth.service';
     /* Left Side: Visual */
     .login-visual {
       flex: 1.2; position: relative; display: flex; align-items: center; justify-content: center;
-      background: #0f172a; color: #fff; overflow: hidden;
+      background: #050505; color: #fff; overflow: hidden;
     }
     .visual-bg {
       position: absolute; top:0; left:0; width:100%; height:100%;
-      background: linear-gradient(135deg, #f59e0b 0%, #7c2d12 100%);
-      opacity: 0.9; z-index: 1;
+      background: linear-gradient(135deg, #007070 0%, #050505 100%);
+      opacity: 0.95; z-index: 1;
     }
     .visual-bg::after {
       content: ''; position: absolute; top:0; left:0; width:100%; height:100%;
       background-image: url('https://www.transparenttextures.com/patterns/cubes.png');
-      opacity: 0.1;
+      opacity: 0.08;
     }
 
     .visual-content { position: relative; z-index: 2; width: 80%; max-width: 500px; display: flex; flex-direction: column; gap: 40px; }
@@ -103,57 +106,59 @@ import { AuthService } from '../../services/auth.service';
     .brand-icon {
       width: 56px; height: 56px; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.2); border-radius: 16px;
-      display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #fde68a;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 24px var(--brand-glow);
     }
     .brand-name { font-size: 2.2rem; font-weight: 800; color: #fff; margin:0; }
 
     .visual-text h2 { font-size: 2.8rem; font-weight: 900; line-height: 1.1; margin: 0 0 16px; }
-    .visual-text p  { font-size: 1.1rem; color: #fde68a; line-height: 1.6; margin:0; }
+    .visual-text p  { font-size: 1.1rem; color: #94a3b8; line-height: 1.6; margin:0; }
 
     /* Right Side: Form */
-    .login-form-side { flex: 1; min-width: 450px; background: #fff; display: flex; align-items: center; justify-content: center; padding: 40px; }
+    .login-form-side { flex: 1; min-width: 450px; background: var(--s7-card); display: flex; align-items: center; justify-content: center; padding: 40px; }
     .form-container { width: 100%; max-width: 400px; }
 
     .form-header { margin-bottom: 32px; }
-    .form-title { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; }
-    .form-sub   { font-size: 0.95rem; color: #334155; font-weight: 500; margin: 0; }
+    .form-title { font-size: 2rem; font-weight: 800; color: var(--s7-heading); margin: 0 0 8px; }
+    .form-sub   { font-size: 0.95rem; color: var(--s7-muted); font-weight: 500; margin: 0; }
 
     .auth-form { display: flex; flex-direction: column; gap: 20px; }
     .form-field { display: flex; flex-direction: column; gap: 8px; }
-    .field-label { font-size: .875rem; font-weight: 700; color: #1e293b; }
+    .field-label { font-size: .875rem; font-weight: 700; color: var(--s7-heading); }
 
     .field-input-wrap { position: relative; }
-    .field-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1rem; }
+    .field-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--s7-muted); font-size: 1rem; }
     .field-input {
       width: 100%; padding: 12px 14px 12px 42px;
-      background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px;
+      background: var(--s7-section); border: 1.5px solid var(--s7-border); border-radius: 12px;
       font-size: .95rem; font-family: 'Inter', sans-serif;
-      transition: all .2s; outline: none; color: #0f172a;
+      transition: all .2s; outline: none; color: var(--s7-heading);
     }
-    .field-input:focus { border-color: #f59e0b; background: #fff; box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1); }
+    .field-input:focus { border-color: var(--brand); background: var(--s7-card); box-shadow: 0 0 0 4px var(--brand-glow); }
 
     .error-pill, .success-pill {
       display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; font-size: .875rem; font-weight: 600;
     }
-    .error-pill { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
-    .success-pill { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
+    .error-pill { background: var(--s7-danger-bg); color: var(--s7-danger); border-left: 4px solid var(--s7-danger); }
+    .success-pill { background: var(--s7-success-bg); color: var(--s7-success); border-left: 4px solid var(--s7-success); }
 
-    .field-error { font-size: 0.75rem; color: #ef4444; font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .field-error { font-size: 0.75rem; color: var(--s7-danger); font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
     .field-error::before { content: '●'; font-size: 8px; }
 
     .submit-btn {
       width: 100%; padding: 14px; margin-top: 10px;
-      background: #f59e0b; color: #fff; border: none; border-radius: 12px;
+      background: var(--brand); color: #fff; border: none; border-radius: 12px;
       font-size: 1rem; font-weight: 700; cursor: pointer; transition: all .2s;
+      box-shadow: 0 4px 14px var(--brand-glow);
     }
-    .submit-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .submit-btn:hover:not(:disabled) { background: var(--brand-hover); transform: translateY(-1px); box-shadow: 0 8px 20px var(--brand-glow); }
     .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-    .auth-footer { text-align: center; font-size: .9rem; color: #334155; font-weight: 500; margin-top: 12px; }
-    .auth-footer a { color: #f59e0b; font-weight: 700; text-decoration: none; margin-left: 4px; }
-    .auth-footer a:hover { text-decoration: underline; }
+    .auth-footer { text-align: center; font-size: .9rem; color: var(--s7-muted); font-weight: 500; margin-top: 12px; }
+    .auth-footer a { color: var(--brand); font-weight: 700; text-decoration: none; margin-left: 4px; }
+    .auth-footer a:hover { color: var(--brand-hover); text-decoration: underline; }
 
-    .copyright { font-size: .75rem; color: #94a3b8; margin: 40px 0 0; }
+    .copyright { font-size: .75rem; color: var(--s7-muted); margin: 40px 0 0; }
 
     @media (max-width: 900px) {
       .login-visual { display: none; }

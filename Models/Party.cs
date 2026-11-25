@@ -33,5 +33,10 @@ namespace PharmacyApi.Models
         public string? Address { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        // ─── SaaS: Tenant-level (Supplier/Customer shared across branches of same Tenant)
+        // ARCHITECTURAL INTENT: Parties are Tenant-scoped, not Branch-scoped.
+        // A supplier serves the entire pharmacy group, not just one branch.
+        public int TenantId { get; set; }
     }
 }

@@ -15,9 +15,12 @@ import { AuthService } from '../../services/auth.service';
         <div class="visual-content">
           <div class="glass-brand">
             <div class="brand-icon">
-              <i class="pi pi-th-large"></i>
+              <img src="/s7-logo-mark.svg" alt="s7 Logo" style="width: 38px; height: 38px;">
             </div>
-            <h1 class="brand-name">Pharmacy System</h1>
+            <div>
+              <h1 class="brand-name">s7 Drug House</h1>
+              <p style="font-size: 0.95rem; color: #94a3b8; margin: 0;">Universal Pharmacy System</p>
+            </div>
           </div>
           <div class="visual-text">
             <h2>Join Our Platform Today.</h2>
@@ -126,7 +129,7 @@ import { AuthService } from '../../services/auth.service';
             </div>
 
             <!-- Submit -->
-            <button type="submit" [disabled]="loading" class="submit-btn" style="background:#0d9488">
+            <button type="submit" [disabled]="loading" class="submit-btn" style="background:var(--brand)">
               <span *ngIf="!loading">Create Account <i class="pi pi-user-plus ml-2"></i></span>
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Registering…</span>
             </button>
@@ -149,17 +152,17 @@ import { AuthService } from '../../services/auth.service';
     /* Left Side: Visual */
     .login-visual {
       flex: 1.2; position: relative; display: flex; align-items: center; justify-content: center;
-      background: #0f172a; color: #fff; overflow: hidden;
+      background: #050505; color: #fff; overflow: hidden;
     }
     .visual-bg {
       position: absolute; top:0; left:0; width:100%; height:100%;
-      background: linear-gradient(135deg, #4f46e5 0%, #1e1b4b 100%);
-      opacity: 0.9; z-index: 1;
+      background: linear-gradient(135deg, #007070 0%, #050505 100%);
+      opacity: 0.95; z-index: 1;
     }
     .visual-bg::after {
       content: ''; position: absolute; top:0; left:0; width:100%; height:100%;
       background-image: url('https://www.transparenttextures.com/patterns/cubes.png');
-      opacity: 0.1;
+      opacity: 0.08;
     }
 
     .visual-content { position: relative; z-index: 2; width: 80%; max-width: 500px; display: flex; flex-direction: column; gap: 40px; }
@@ -168,65 +171,68 @@ import { AuthService } from '../../services/auth.service';
     .brand-icon {
       width: 56px; height: 56px; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.2); border-radius: 16px;
-      display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #a5b4fc;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 24px var(--brand-glow);
     }
     .brand-name { font-size: 2.2rem; font-weight: 800; color: #fff; margin:0; }
 
     .visual-text h2 { font-size: 2.8rem; font-weight: 900; line-height: 1.1; margin: 0 0 16px; }
-    .visual-text p  { font-size: 1.1rem; color: #a5b4fc; line-height: 1.6; margin:0; }
+    .visual-text p  { font-size: 1.1rem; color: #94a3b8; line-height: 1.6; margin:0; }
 
     .stats-float { display: flex; gap: 16px; }
     .stat-item {
-      display: flex; align-items: center; gap: 8px; font-size: .875rem; font-weight: 600;
-      color: #fff; background: rgba(255, 255, 255, 0.1);
-      padding: 8px 16px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex; align-items: center; gap: 8px; font-size: .875rem; font-weight: 700;
+      color: #fff; background: rgba(0, 112, 112, 0.35);
+      padding: 8px 18px; border-radius: 99px; border: 1px solid rgba(0, 112, 112, 0.5);
+      box-shadow: 0 4px 12px var(--brand-glow);
     }
 
     /* Right Side: Form */
-    .login-form-side { flex: 1.1; min-width: 450px; background: #fff; display: flex; align-items: center; justify-content: center; padding: 40px; }
+    .login-form-side { flex: 1.1; min-width: 450px; background: var(--s7-card); display: flex; align-items: center; justify-content: center; padding: 40px; }
     .form-container { width: 100%; max-width: 440px; }
 
     .form-header { margin-bottom: 24px; }
-    .form-title { font-size: 1.8rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; }
-    .form-sub   { font-size: 0.9rem; color: #64748b; margin: 0; }
+    .form-title { font-size: 1.8rem; font-weight: 800; color: var(--s7-heading); margin: 0 0 8px; }
+    .form-sub   { font-size: 0.9rem; color: var(--s7-muted); margin: 0; }
 
     .auth-form { display: flex; flex-direction: column; gap: 16px; }
     .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .form-field { display: flex; flex-direction: column; gap: 6px; }
-    .field-label { font-size: .8rem; font-weight: 600; color: #475569; }
+    .field-label { font-size: .8rem; font-weight: 700; color: var(--s7-heading); }
 
     .field-input-wrap { position: relative; }
-    .field-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: .9rem; }
+    .field-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--s7-muted); font-size: .9rem; }
     .field-input {
       width: 100%; padding: 11px 14px 11px 40px;
-      background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px;
+      background: var(--s7-section); border: 1.5px solid var(--s7-border); border-radius: 10px;
       font-size: .9rem; font-family: 'Inter', sans-serif;
-      transition: all .2s; outline: none; color: #0f172a;
+      transition: all .2s; outline: none; color: var(--s7-heading);
     }
-    .field-input:focus { border-color: #4f46e5; background: #fff; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+    .field-input:focus { border-color: var(--brand); background: var(--s7-card); box-shadow: 0 0 0 4px var(--brand-glow); }
 
     .error-pill, .success-pill {
       display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; font-size: .85rem; font-weight: 600;
     }
-    .error-pill { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
-    .success-pill { background: #f0fdf4; color: #166534; border-left: 4px solid #22c55e; }
+    .error-pill { background: var(--s7-danger-bg); color: var(--s7-danger); border-left: 4px solid var(--s7-danger); }
+    .success-pill { background: var(--s7-success-bg); color: var(--s7-success); border-left: 4px solid var(--s7-success); }
 
-    .field-error { font-size: 0.75rem; color: #ef4444; font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .field-error { font-size: 0.75rem; color: var(--s7-danger); font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
     .field-error::before { content: '●'; font-size: 8px; }
 
     .submit-btn {
       width: 100%; padding: 14px; margin-top: 8px;
-      background: #4f46e5; color: #fff; border: none; border-radius: 12px;
+      background: var(--brand); color: #fff; border: none; border-radius: 12px;
       font-size: 1rem; font-weight: 700; cursor: pointer; transition: all .2s;
+      box-shadow: 0 4px 14px var(--brand-glow);
     }
-    .submit-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .submit-btn:hover:not(:disabled) { background: var(--brand-hover); transform: translateY(-1px); box-shadow: 0 8px 20px var(--brand-glow); }
     .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-    .auth-footer { text-align: center; font-size: .875rem; color: #64748b; margin-top: 10px; }
-    .auth-footer a { color: #4f46e5; font-weight: 700; text-decoration: none; margin-left: 4px; }
-    .auth-footer a:hover { text-decoration: underline; }
+    .auth-footer { text-align: center; font-size: .875rem; color: var(--s7-muted); margin-top: 10px; }
+    .auth-footer a { color: var(--brand); font-weight: 700; text-decoration: none; margin-left: 4px; }
+    .auth-footer a:hover { color: var(--brand-hover); text-decoration: underline; }
 
-    .copyright { font-size: .75rem; color: #94a3b8; margin: 30px 0 0; }
+    .copyright { font-size: .75rem; color: var(--s7-muted); margin: 30px 0 0; }
 
     @media (max-width: 900px) {
       .login-visual { display: none; }

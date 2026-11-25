@@ -2,17 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using PharmacyApi.Data;
 using PharmacyApi.DTOs;
 using PharmacyApi.Models;
+using PharmacyApi.Services;
 
 namespace PharmacyApi.Repositories
 {
     public class SalesRepository : ISalesRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly ITenantContextService _ctx;
         private static readonly string _tz = "Bangladesh Standard Time";
 
-        public SalesRepository(ApplicationDbContext context)
+        public SalesRepository(ApplicationDbContext context, ITenantContextService ctx)
         {
             _context = context;
+            _ctx = ctx;
         }
 
         private DateTime BdNow() =>
@@ -40,92 +43,46 @@ namespace PharmacyApi.Repositories
             return $"{prefix}{next}";
         }
 
-        // ─── FEFO Batch List for a Medicine ─────────────────────────────────
+        // ─── FEFO Batch List for a Medicine (Branch-aware via MedicineBatches) ───
         public async Task<IEnumerable<SaleBatchInfoDto>> GetBatchesForMedicineAsync(int medicineId)
         {
             var today = BdNow().Date;
             var nearExpiryThreshold = today.AddDays(90);
 
-            var medicine = await _context.Medicines.AsNoTracking()
-                .FirstOrDefaultAsync(m => m.MedicineId == medicineId);
-            
-            if (medicine == null) return Enumerable.Empty<SaleBatchInfoDto>();
-
-            // 1. Collect all "Inputs" (Opening Stock + Purchases)
-            var allBatches = new List<SaleBatchInfoDto>();
-
-            // Add Opening Stock (from Medicine table)
-            if (medicine.StockQuantity > 0 || !string.IsNullOrEmpty(medicine.Batch))
-            {
-                allBatches.Add(new SaleBatchInfoDto
+            // Directly query branch-isolated MedicineBatches
+            var batches = await _context.MedicineBatches
+                .AsNoTracking()
+                .Where(b => b.MedicineId == medicineId && b.CurrentStock > 0)
+                .OrderBy(b => b.ExpiryDate)
+                .Select(b => new SaleBatchInfoDto
                 {
-                    BatchNumber = string.IsNullOrEmpty(medicine.Batch) ? "OPENING" : medicine.Batch,
-                    ExpiryDate = medicine.ExpiryDate,
-                    AvailableQty = medicine.StockQuantity,
-                    SalePrice = medicine.SalePrice,
-                    IsNearExpiry = medicine.ExpiryDate.HasValue && medicine.ExpiryDate.Value.Date <= nearExpiryThreshold
-                });
-            }
-
-            // Add Purchases (from PurchaseDetails table)
-            // Note: Since Medicine.StockQuantity is the current total, we need to be careful.
-            // Actually, the system updates Medicine.StockQuantity on every Purchase and Sale.
-            // So Medicine.StockQuantity = (Sum of all Purchases + Opening) - (Sum of all Sales).
-            // To find the *Current* stock per batch, we need tracked sales per batch.
-
-            var purchases = await _context.PurchaseDetails
-                .Where(pd => pd.MedicineId == medicineId)
-                .Select(pd => new SaleBatchInfoDto
-                {
-                    BatchNumber = pd.BatchNumber,
-                    ExpiryDate = pd.ExpiryDate,
-                    AvailableQty = pd.Quantity,
-                    SalePrice = pd.SalePrice,
-                    IsNearExpiry = pd.ExpiryDate.HasValue && pd.ExpiryDate.Value.Date <= nearExpiryThreshold
+                    BatchNumber  = b.BatchNumber,
+                    ExpiryDate   = b.ExpiryDate,
+                    AvailableQty = b.CurrentStock,
+                    SalePrice    = b.SalePrice,
+                    IsNearExpiry = b.ExpiryDate <= nearExpiryThreshold
                 })
                 .ToListAsync();
 
-            allBatches.AddRange(purchases);
-
-            // 2. Group by Batch + Expiry to avoid doubling the same batch from multiple purchases
-            var groupedBatches = allBatches
-                .GroupBy(b => new { 
-                    Batch = (b.BatchNumber ?? "N/A").Trim().ToUpper(), 
-                    Expiry = b.ExpiryDate?.Date 
-                })
-                .Select(g => new SaleBatchInfoDto
-                {
-                    BatchNumber = g.Key.Batch,
-                    ExpiryDate = g.Key.Expiry,
-                    AvailableQty = g.Sum(x => x.AvailableQty),
-                    SalePrice = g.Max(x => x.SalePrice),
-                    IsNearExpiry = g.Any(x => x.IsNearExpiry)
-                })
-                .OrderBy(b => b.ExpiryDate ?? DateTime.MaxValue)
-                .ToList();
-
-            // 3. Subtract ALL Sales (FEFO) - This is the most accurate way since sales aren't always 
-            // strictly tied to the batch they were sold from in legacy logic, or to handle the opening stock.
-            var totalSales = await _context.SalesDetails
-                .Where(sd => sd.MedicineId == medicineId && sd.SalesMaster!.SaleStatus == "Completed")
-                .SumAsync(sd => sd.Quantity);
-
-            int remainingToSubtract = totalSales;
-            var result = new List<SaleBatchInfoDto>();
-
-            foreach (var b in groupedBatches)
+            // Fallback for legacy medicines without MedicineBatch entry
+            if (!batches.Any())
             {
-                int subtractFromThisBatch = Math.Min(b.AvailableQty, remainingToSubtract);
-                b.AvailableQty -= subtractFromThisBatch;
-                remainingToSubtract -= subtractFromThisBatch;
-
-                if (b.AvailableQty > 0)
+                var med = await _context.Medicines.AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.MedicineId == medicineId);
+                if (med != null && med.StockQuantity > 0)
                 {
-                    result.Add(b);
+                    batches.Add(new SaleBatchInfoDto
+                    {
+                        BatchNumber  = string.IsNullOrEmpty(med.Batch) ? "DEFAULT" : med.Batch,
+                        ExpiryDate   = med.ExpiryDate,
+                        AvailableQty = med.StockQuantity,
+                        SalePrice    = med.SalePrice,
+                        IsNearExpiry = med.ExpiryDate.HasValue && med.ExpiryDate.Value.Date <= nearExpiryThreshold
+                    });
                 }
             }
 
-            return result;
+            return batches;
         }
 
         // ─── Paged Sale List ─────────────────────────────────────────────────
@@ -177,34 +134,36 @@ namespace PharmacyApi.Repositories
                 .Take(parameters.PageSize)
                 .Select(x => new SalesMasterDto
                 {
-                    SaleId = x.SaleId,
-                    InvoiceCode = x.InvoiceCode,
-                    PartyId = x.PartyId,
-                    CustomerName = x.CustomerName,
-                    CustomerPhone = x.CustomerPhone,
-                    CustomerIsRegistered = x.Party != null, // In Party table, all are registered
-                    SaleDate = x.SaleDate,
-                    SaleTime = x.SaleTime,
-                    SubTotal = x.SubTotal,
-                    TotalDiscount = x.TotalDiscount,
-                    TotalTax = x.TotalTax,
-                    SpecialDiscount = x.SpecialDiscount,
-                    GrandTotal = x.GrandTotal,
-                    PaidAmount = x.PaidAmount,
-                    ChangeAmount = x.ChangeAmount,
-                    DueAmount = x.DueAmount,
-                    PaymentMethod = x.PaymentMethod,
-                    PaymentStatus = x.PaymentStatus,
-                    SaleStatus = x.SaleStatus,
-                    CreatedBy = _context.Users.Where(u => u.UserName == x.CreatedBy).Select(u => u.FullName).FirstOrDefault() ?? x.CreatedBy
+                    SaleId               = x.SaleId,
+                    InvoiceCode          = x.InvoiceCode,
+                    TenantId             = x.TenantId,
+                    BranchId             = x.BranchId,
+                    PartyId              = x.PartyId,
+                    CustomerName         = x.CustomerName,
+                    CustomerPhone        = x.CustomerPhone,
+                    CustomerIsRegistered = x.Party != null,
+                    SaleDate             = x.SaleDate,
+                    SaleTime             = x.SaleTime,
+                    SubTotal             = x.SubTotal,
+                    TotalDiscount        = x.TotalDiscount,
+                    TotalTax             = x.TotalTax,
+                    SpecialDiscount      = x.SpecialDiscount,
+                    GrandTotal           = x.GrandTotal,
+                    PaidAmount           = x.PaidAmount,
+                    ChangeAmount         = x.ChangeAmount,
+                    DueAmount            = x.DueAmount,
+                    PaymentMethod        = x.PaymentMethod,
+                    PaymentStatus        = x.PaymentStatus,
+                    SaleStatus           = x.SaleStatus,
+                    CreatedBy            = _context.Users.Where(u => u.UserName == x.CreatedBy).Select(u => u.FullName).FirstOrDefault() ?? x.CreatedBy
                 }).ToListAsync();
 
             return new PagedResult<SalesMasterDto>
             {
-                Items = items,
+                Items      = items,
                 TotalCount = totalCount,
                 PageNumber = parameters.PageNumber,
-                PageSize = parameters.PageSize
+                PageSize   = parameters.PageSize
             };
         }
 
@@ -222,55 +181,57 @@ namespace PharmacyApi.Repositories
 
             return new SalesMasterDto
             {
-                SaleId = s.SaleId,
-                InvoiceCode = s.InvoiceCode,
-                PartyId = s.PartyId,
-                CustomerName = s.CustomerName,
-                CustomerPhone = s.CustomerPhone,
+                SaleId               = s.SaleId,
+                InvoiceCode          = s.InvoiceCode,
+                TenantId             = s.TenantId,
+                BranchId             = s.BranchId,
+                PartyId              = s.PartyId,
+                CustomerName         = s.CustomerName,
+                CustomerPhone        = s.CustomerPhone,
                 CustomerIsRegistered = s.Party != null,
-                SaleDate = s.SaleDate,
-                SaleTime = s.SaleTime,
-                SubTotal = s.SubTotal,
-                TotalDiscount = s.TotalDiscount,
-                TotalTax = s.TotalTax,
-                SpecialDiscount = s.SpecialDiscount,
-                GrandTotal = s.GrandTotal,
-                PaidAmount = s.PaidAmount,
-                ChangeAmount = s.ChangeAmount,
-                DueAmount = s.DueAmount,
-                PaymentMethod = s.PaymentMethod,
-                PaymentStatus = s.PaymentStatus,
-                SaleStatus = s.SaleStatus,
-                CreatedBy = _context.Users.Where(u => u.UserName == s.CreatedBy).Select(u => u.FullName).FirstOrDefault() ?? s.CreatedBy,
+                SaleDate             = s.SaleDate,
+                SaleTime             = s.SaleTime,
+                SubTotal             = s.SubTotal,
+                TotalDiscount        = s.TotalDiscount,
+                TotalTax             = s.TotalTax,
+                SpecialDiscount      = s.SpecialDiscount,
+                GrandTotal           = s.GrandTotal,
+                PaidAmount           = s.PaidAmount,
+                ChangeAmount         = s.ChangeAmount,
+                DueAmount            = s.DueAmount,
+                PaymentMethod        = s.PaymentMethod,
+                PaymentStatus        = s.PaymentStatus,
+                SaleStatus           = s.SaleStatus,
+                CreatedBy            = _context.Users.Where(u => u.UserName == s.CreatedBy).Select(u => u.FullName).FirstOrDefault() ?? s.CreatedBy,
                 SalesDetails = s.SalesDetails.Select(d => new SalesDetailDto
                 {
-                    SalesDetailId = d.SalesDetailId,
-                    MedicineId = d.MedicineId,
-                    MedicineName = d.Medicine?.Name,
-                    BatchNumber = d.BatchNumber,
-                    ExpiryDate = d.ExpiryDate,
-                    Quantity = d.Quantity,
-                    UomId = d.UomId,
-                    UomName = d.UomName,
-                    UnitPrice = d.UnitPrice,
+                    SalesDetailId   = d.SalesDetailId,
+                    MedicineId      = d.MedicineId,
+                    MedicineName    = d.Medicine?.Name,
+                    BatchNumber     = d.BatchNumber,
+                    ExpiryDate      = d.ExpiryDate,
+                    Quantity        = d.Quantity,
+                    UomId           = d.UomId,
+                    UomName         = d.UomName,
+                    UnitPrice       = d.UnitPrice,
                     DiscountPercent = d.DiscountPercent,
-                    DiscountAmount = d.DiscountAmount,
-                    TaxPercent = d.TaxPercent,
-                    TaxAmount = d.TaxAmount,
-                    LineTotal = d.LineTotal,
-                    Tax = d.Tax,
-                    Subtotal = d.Subtotal
+                    DiscountAmount  = d.DiscountAmount,
+                    TaxPercent      = d.TaxPercent,
+                    TaxAmount       = d.TaxAmount,
+                    LineTotal       = d.LineTotal,
+                    Tax             = d.Tax,
+                    Subtotal        = d.Subtotal
                 }).ToList(),
                 SalesPayments = s.SalesPayments.Select(p => new SalesPaymentDto
                 {
                     SalesPaymentId = p.SalesPaymentId,
-                    SaleId = p.SaleId,
-                    PaymentMethod = p.PaymentMethod,
-                    Amount = p.Amount,
-                    AccountNumber = p.AccountNumber,
-                    TransactionId = p.TransactionId,
-                    Remarks = p.Remarks,
-                    CreatedAt = p.CreatedAt
+                    SaleId         = p.SaleId,
+                    PaymentMethod  = p.PaymentMethod,
+                    Amount         = p.Amount,
+                    AccountNumber  = p.AccountNumber,
+                    TransactionId  = p.TransactionId,
+                    Remarks        = p.Remarks,
+                    CreatedAt      = p.CreatedAt
                 }).ToList()
             };
         }
@@ -300,66 +261,148 @@ namespace PharmacyApi.Repositories
 
                     // Due validation: only registered customers can have due
                     if (dto.DueAmount > 0 && !dto.CustomerIsRegistered)
-                        throw new InvalidOperationException("Walking Guest / Unregistered customers cannot have a due balance.");
+                        throw new InvalidOperationException("Walking Guest / অনিবন্ধিত গ্রাহকের ক্ষেত্রে বকেয়া গ্রহণযোগ্য নয়।");
+
+                    // Resolve TenantId & BranchId
+                    int tenantId = _ctx.TenantId ?? (dto.TenantId.HasValue && dto.TenantId.Value > 0 ? dto.TenantId.Value : 1);
+                    int branchId = dto.BranchId ?? _ctx.BranchId ?? 0;
+                    if (branchId == 0)
+                    {
+                        var ho = await _context.Branches.FirstOrDefaultAsync(b => b.TenantId == tenantId && b.IsHeadOffice);
+                        branchId = ho?.BranchId ?? (await _context.Branches.Where(b => b.TenantId == tenantId).Select(b => b.BranchId).FirstOrDefaultAsync());
+                        if (branchId == 0) branchId = 1;
+                    }
 
                     var sale = new SalesMaster
                     {
-                        InvoiceCode = invoiceCode,
-                        PartyId = dto.PartyId,
-                        CustomerName = dto.CustomerName,
-                        CustomerPhone = dto.CustomerPhone,
-                        SaleDate = dto.SaleDate.Date,
-                        SaleTime = now,
-                        SubTotal = dto.SubTotal,
-                        TotalDiscount = dto.TotalDiscount,
-                        TotalTax = dto.TotalTax,
+                        InvoiceCode     = invoiceCode,
+                        TenantId        = tenantId,
+                        BranchId        = branchId,
+                        PartyId         = dto.PartyId,
+                        CustomerName    = dto.CustomerName,
+                        CustomerPhone   = dto.CustomerPhone,
+                        SaleDate        = dto.SaleDate.Date,
+                        SaleTime        = now,
+                        SubTotal        = dto.SubTotal,
+                        TotalDiscount   = dto.TotalDiscount,
+                        TotalTax        = dto.TotalTax,
                         SpecialDiscount = dto.SpecialDiscount,
-                        GrandTotal = dto.GrandTotal,
-                        PaidAmount = dto.PaidAmount,
-                        ChangeAmount = dto.ChangeAmount,
-                        DueAmount = dto.DueAmount,
-                        PaymentMethod = dto.PaymentMethod,
-                        SaleStatus = status,
-                        CreatedBy = username,
-                        CreatedAt = now
+                        GrandTotal      = dto.GrandTotal,
+                        PaidAmount      = dto.PaidAmount,
+                        ChangeAmount    = dto.ChangeAmount,
+                        DueAmount       = dto.DueAmount,
+                        PaymentMethod   = dto.PaymentMethod,
+                        SaleStatus      = status,
+                        CreatedBy       = username,
+                        CreatedAt       = now
                     };
 
                     // Payment status
                     sale.PaymentStatus = sale.DueAmount <= 0 ? "Paid"
                         : sale.PaidAmount > 0 ? "Partial" : "Due";
 
-                    // Details + Stock deduction (only for Completed sales)
+                    // Details + Batch Stock Deduction (only for Completed sales)
                     foreach (var item in dto.SalesDetails)
                     {
-                        var detail = new SalesDetail
-                        {
-                            MedicineId = item.MedicineId,
-                            BatchNumber = item.BatchNumber,
-                            ExpiryDate = item.ExpiryDate,
-                            Quantity = item.Quantity,
-                            UomId = item.UomId,
-                            UomName = item.UomName,
-                            UnitPrice = item.UnitPrice,
-                            DiscountPercent = item.DiscountPercent,
-                            DiscountAmount = item.DiscountAmount,
-                            TaxPercent = item.TaxPercent,
-                            TaxAmount = item.TaxAmount,
-                            LineTotal = item.LineTotal,
-                            Tax = item.TaxAmount,
-                            Subtotal = item.LineTotal,
-                            CreatedAt = now
-                        };
-                        sale.SalesDetails.Add(detail);
+                        var med = await _context.Medicines.FindAsync(item.MedicineId);
+                        if (med == null)
+                            throw new InvalidOperationException($"ওষুধ আইডি {item.MedicineId} ডাটাবেসে পাওয়া যায়নি।");
 
                         if (status == "Completed")
                         {
-                            var med = await _context.Medicines.FindAsync(item.MedicineId);
-                            if (med == null || med.StockQuantity < item.Quantity)
-                                throw new InvalidOperationException(
-                                    $"Insufficient stock for '{med?.Name ?? "Medicine ID " + item.MedicineId}'. Available: {med?.StockQuantity ?? 0}.");
-                            med.StockQuantity -= item.Quantity;
+                            // ─── POS Expiry & Recall Guard + FIFO Batch Deduction ───
+                            if (!string.IsNullOrWhiteSpace(item.BatchNumber))
+                            {
+                                var cleanBatch = item.BatchNumber.Trim();
+                                var targetBatch = await _context.MedicineBatches
+                                    .FirstOrDefaultAsync(b => b.TenantId == tenantId &&
+                                                              b.BranchId == branchId &&
+                                                              b.MedicineId == item.MedicineId &&
+                                                              b.BatchNumber == cleanBatch);
+
+                                if (targetBatch != null)
+                                {
+                                    if (targetBatch.Status == "Recalled")
+                                        throw new InvalidOperationException($"ওষুধ '{med.Name}' (ব্যাচ: {targetBatch.BatchNumber}) রিকল করা হয়েছে। এটি বিক্রি সম্পূর্ণ নিষিদ্ধ।");
+                                    if (targetBatch.Status == "Quarantined")
+                                        throw new InvalidOperationException($"ওষুধ '{med.Name}' (ব্যাচ: {targetBatch.BatchNumber}) কোয়ারেন্টাইন করা হয়েছে। এটি বিক্রি করা যাবে না।");
+                                    if (targetBatch.ExpiryDate.Date < now.Date)
+                                        throw new InvalidOperationException($"ওষুধ '{med.Name}' (ব্যাচ: {targetBatch.BatchNumber}) এর মেয়াদ {targetBatch.ExpiryDate:dd/MM/yyyy} তারিখে শেষ হয়ে গেছে। মেয়াদোত্তীর্ণ ওষুধ বিক্রি সম্পূর্ণ নিষিদ্ধ।");
+                                    if (targetBatch.CurrentStock < item.Quantity)
+                                        throw new InvalidOperationException($"ব্যাচ '{targetBatch.BatchNumber}'-এ অপর্যাপ্ত স্টক। উপলব্ধ: {targetBatch.CurrentStock}, চাওয়া হয়েছে: {item.Quantity}।");
+
+                                    targetBatch.CurrentStock -= item.Quantity;
+                                    item.ExpiryDate = targetBatch.ExpiryDate;
+                                }
+                                else
+                                {
+                                    // If batch was manually entered but not yet in MedicineBatches, check Medicine catalog stock
+                                    if (med.StockQuantity < item.Quantity)
+                                        throw new InvalidOperationException($"'{med.Name}' এর অপর্যাপ্ত স্টক। উপলব্ধ: {med.StockQuantity}, চাওয়া হয়েছে: {item.Quantity}।");
+                                }
+                            }
+                            else
+                            {
+                                // Automatic FIFO deduction across active, non-expired batches
+                                var activeBatches = await _context.MedicineBatches
+                                    .Where(b => b.TenantId == tenantId &&
+                                                b.BranchId == branchId &&
+                                                b.MedicineId == item.MedicineId &&
+                                                b.CurrentStock > 0 &&
+                                                b.Status == "Active" &&
+                                                b.ExpiryDate >= now.Date)
+                                    .OrderBy(b => b.ExpiryDate)
+                                    .ThenBy(b => b.ReceivedAt)
+                                    .ToListAsync();
+
+                                int totalBatchStock = activeBatches.Sum(b => b.CurrentStock);
+                                if (totalBatchStock < item.Quantity && med.StockQuantity < item.Quantity)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"'{med.Name}' এর জন্য সক্রিয় ও মেয়াদযুক্ত স্টক আছে মাত্র {totalBatchStock} টি। চাওয়া হয়েছে: {item.Quantity} টি।");
+                                }
+
+                                int remaining = item.Quantity;
+                                foreach (var b in activeBatches)
+                                {
+                                    int take = Math.Min(b.CurrentStock, remaining);
+                                    b.CurrentStock -= take;
+                                    remaining -= take;
+
+                                    if (string.IsNullOrEmpty(item.BatchNumber))
+                                    {
+                                        item.BatchNumber = b.BatchNumber;
+                                        item.ExpiryDate  = b.ExpiryDate;
+                                    }
+
+                                    if (remaining <= 0) break;
+                                }
+                            }
+
+                            // Update tenant-wide medicine catalog stock
+                            med.StockQuantity = Math.Max(0, med.StockQuantity - item.Quantity);
                             _context.Entry(med).State = EntityState.Modified;
                         }
+
+                        var detail = new SalesDetail
+                        {
+                            MedicineId      = item.MedicineId,
+                            BatchNumber     = item.BatchNumber ?? string.Empty,
+                            ExpiryDate      = item.ExpiryDate,
+                            Quantity        = item.Quantity,
+                            UomId           = item.UomId,
+                            UomName         = item.UomName,
+                            UnitPrice       = item.UnitPrice,
+                            DiscountPercent = item.DiscountPercent,
+                            DiscountAmount  = item.DiscountAmount,
+                            TaxPercent      = item.TaxPercent,
+                            TaxAmount       = item.TaxAmount,
+                            LineTotal       = item.LineTotal,
+                            Tax             = item.TaxAmount,
+                            Subtotal        = item.LineTotal,
+                            CreatedAt       = now
+                        };
+                        sale.SalesDetails.Add(detail);
                     }
 
                     // Payments
@@ -368,10 +411,10 @@ namespace PharmacyApi.Repositories
                         sale.SalesPayments.Add(new SalesPayment
                         {
                             PaymentMethod = pm.PaymentMethod,
-                            Amount = pm.Amount,
+                            Amount        = pm.Amount,
                             AccountNumber = pm.AccountNumber,
                             TransactionId = pm.TransactionId,
-                            Remarks = pm.Remarks
+                            Remarks       = pm.Remarks
                         });
                     }
 
@@ -379,11 +422,13 @@ namespace PharmacyApi.Repositories
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
-                    dto.SaleId = sale.SaleId;
-                    dto.InvoiceCode = invoiceCode;
-                    dto.SaleTime = sale.SaleTime;
+                    dto.SaleId        = sale.SaleId;
+                    dto.InvoiceCode   = invoiceCode;
+                    dto.TenantId      = sale.TenantId;
+                    dto.BranchId      = sale.BranchId;
+                    dto.SaleTime      = sale.SaleTime;
                     dto.PaymentStatus = sale.PaymentStatus;
-                    dto.SaleStatus = sale.SaleStatus;
+                    dto.SaleStatus    = sale.SaleStatus;
                     return dto;
                 }
                 catch
@@ -394,7 +439,7 @@ namespace PharmacyApi.Repositories
             });
         }
 
-        // ─── Delete (with stock reversal for Completed only) ─────────────────
+        // ─── Delete (with stock & MedicineBatch reversal for Completed only) ──
         public async Task<bool> DeleteAsync(int id)
         {
             var sale = await _context.SalesMasters
@@ -410,21 +455,30 @@ namespace PharmacyApi.Repositories
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
-                    // Protection: Do not allow deleting a sale that has payments (except the initial one if it was part of creation,
-                    // but usually, any payment means transaction started). 
-                    // Best practice: If Due Collection has been used, the sale is "locked" from direct deletion.
+                    // Protection: Do not allow deleting a sale that has payments recorded in SalesPayments
                     if (sale.SalesPayments.Any())
                     {
-                        // Optional: You could allow it if PaidAmount is 0, but usually SalesPayments table being populated means money changed hands.
-                        // I will return false to signal "cannot delete due to existing payments".
                         return false; 
                     }
 
                     if (sale.SaleStatus == "Completed")
-
                     {
                         foreach (var item in sale.SalesDetails)
                         {
+                            if (!string.IsNullOrWhiteSpace(item.BatchNumber))
+                            {
+                                var cleanBatch = item.BatchNumber.Trim();
+                                var batch = await _context.MedicineBatches
+                                    .FirstOrDefaultAsync(b => b.TenantId == sale.TenantId &&
+                                                              b.BranchId == sale.BranchId &&
+                                                              b.MedicineId == item.MedicineId &&
+                                                              b.BatchNumber == cleanBatch);
+                                if (batch != null)
+                                {
+                                    batch.CurrentStock += item.Quantity;
+                                }
+                            }
+
                             var med = await _context.Medicines.FindAsync(item.MedicineId);
                             if (med != null)
                             {

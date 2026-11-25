@@ -543,11 +543,11 @@ interface PaymentRow {
 
     .btn-primary {
       display: flex; align-items: center; gap: 8px;
-      background: #0d9488; color: #fff; border: none; border-radius: 10px;
+      background: var(--brand); color: #fff; border: none; border-radius: 10px;
       padding: 9px 18px; font-size: .875rem; font-weight: 600;
       cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; transition: background .15s;
     }
-    .btn-primary:hover:not(:disabled) { background: #0f766e; }
+    .btn-primary:hover:not(:disabled) { background: var(--brand-hover); }
     .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
     .btn-secondary {
       display: flex; align-items: center; gap: 6px;
@@ -568,7 +568,7 @@ interface PaymentRow {
     .fv { font-size: .8rem; color: #0f172a; font-weight: 600; }
 
     .fi { flex: 1; height: 34px; padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .8rem; font-family: 'Inter', sans-serif; outline: none; transition: border-color .15s; background: #fff; }
-    .fi:focus { border-color: #0d9488; }
+    .fi:focus { border-color: var(--brand); }
     .readonly-fi { background: #f8fafc; color: #64748b; cursor: not-allowed; }
     ::ng-deep .fi-cal { flex: 1; }
     ::ng-deep .fi-cal .p-datepicker-input { height: 34px; padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .8rem; width: 100%; }
@@ -576,8 +576,8 @@ interface PaymentRow {
     ::ng-deep .fi-auto .p-autocomplete-input { height: 34px; padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .8rem; width: 100%; }
 
     .search-supplier-wrap { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-    .quick-link { font-size: .65rem; color: #0d9488; font-weight: 600; cursor: pointer; align-self: flex-start; transition: color .15s; }
-    .quick-link:hover { text-decoration: underline; color: #0f766e; }
+    .quick-link { font-size: .65rem; color: var(--brand); font-weight: 600; cursor: pointer; align-self: flex-start; transition: color .15s; }
+    .quick-link:hover { text-decoration: underline; color: var(--brand-hover); }
     .sup-item { display: flex; flex-direction: column; }
     .sup-name { font-weight: 600; font-size: .8rem; color: #0f172a; }
     .sup-phone { font-size: .7rem; color: #64748b; }
@@ -589,13 +589,13 @@ interface PaymentRow {
     /* ── Medicine Table ── */
     .med-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; }
     .med-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-    .med-table th { background: #f1f5f9; color: #0d9488; font-weight: 800; padding: 10px 10px; text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .7px; border-bottom: 2.5px solid #0d9488; white-space: nowrap; }
+    .med-table th { background: #f1f5f9; color: var(--brand); font-weight: 800; padding: 10px 10px; text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .7px; border-bottom: 2.5px solid var(--brand); white-space: nowrap; }
     .med-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     .med-table tr:last-child td { border-bottom: none; }
     .med-table tr:hover td { background: #f8fafc; }
 
     .cell-input { width: 100%; height: 30px; padding: 4px 8px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: .78rem; font-family: 'Inter', sans-serif; outline: none; }
-    .cell-input:focus { border-color: #0d9488; }
+    .cell-input:focus { border-color: var(--brand); }
     ::ng-deep .cell-num { width: 100%; }
     ::ng-deep .cell-input-n { height: 30px !important; padding: 4px 8px !important; border: 1.5px solid #e2e8f0 !important; border-radius: 6px !important; font-size: .78rem !important; width: 100% !important; }
 
@@ -623,21 +623,21 @@ interface PaymentRow {
         margin-right: 1rem; text-align: left;
       }
       .cell-input, ::ng-deep .cell-input-n, ::ng-deep .cell-select-wrap { max-width: 200px; }
-      .total-cell { font-weight: 800; color: #0d9488; }
+      .total-cell { font-weight: 800; color: var(--brand); }
     }
     ::ng-deep .cell-cal { width: 100%; }
     ::ng-deep .cell-cal .p-datepicker-input { height: 30px; padding: 4px 8px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: .78rem; width: 100%; }
     ::ng-deep .med-auto { width: 100%; }
     ::ng-deep .med-auto .p-autocomplete-input { height: 30px; padding: 4px 8px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: .78rem; width: 100%; }
     .med-search-cell { display: flex; flex-direction: column; gap: 2px; }
-    .quick-link-sm { font-size: .6rem; color: #0d9488; cursor: pointer; white-space: nowrap; }
+    .quick-link-sm { font-size: .6rem; color: var(--brand); cursor: pointer; white-space: nowrap; }
     .med-item { display: flex; flex-direction: column; }
     .med-n { font-weight: 600; font-size: .78rem; }
     .med-g { font-size: .68rem; color: #64748b; }
 
     .disc-cell { display: flex; align-items: center; gap: 4px; }
-    .disc-toggle { width: 28px; height: 28px; border: 1.5px solid #0d9488; border-radius: 6px; background: #fff; color: #0d9488; font-size: .7rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
-    .disc-toggle.active { background: #0d9488; color: #fff; }
+    .disc-toggle { width: 28px; height: 28px; border: 1.5px solid var(--brand); border-radius: 6px; background: #fff; color: var(--brand); font-size: .7rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
+    .disc-toggle.active { background: var(--brand); color: #fff; }
     ::ng-deep .cell-input-disc { height: 30px !important; padding: 4px 6px !important; border: 1.5px solid #e2e8f0 !important; border-radius: 6px !important; font-size: .78rem !important; width: 80px !important; }
 
     .uom-cell { display: flex; align-items: center; gap: 4px; }
@@ -648,7 +648,7 @@ interface PaymentRow {
       height: 30px; border: 1.5px solid #e2e8f0; border-radius: 6px; background: #fff;
       display: flex; align-items: center; transition: border-color .15s; width: 100%;
     }
-    ::ng-deep .cell-select-wrap .p-select:not(.p-disabled).p-focus { border-color: #0d9488; }
+    ::ng-deep .cell-select-wrap .p-select:not(.p-disabled).p-focus { border-color: var(--brand); }
     ::ng-deep .cell-select-wrap .p-select .p-select-label {
       padding: 0 8px; font-size: .78rem; font-family: 'Inter', sans-serif;
       height: 100%; display: flex; align-items: center; color: #0f172a; font-weight: 500;
@@ -664,8 +664,8 @@ interface PaymentRow {
     .add-row-btn { margin-top: 12px; display: flex; align-items: center; gap: 8px; background: #f0fdf4; color: #16a34a; border: 1.5px dashed #86efac; border-radius: 10px; padding: 9px 18px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .15s; width: 100%; justify-content: center; font-family: 'Inter', sans-serif; }
     .add-row-btn:hover { background: #dcfce7; border-color: #4ade80; }
 
-    .btn-save-print { display: flex; align-items: center; gap: 8px; background: #0d9488; color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: .88rem; font-weight: 700; cursor: pointer; transition: all .15s; font-family: 'Inter', sans-serif; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25); }
-    .btn-save-print:hover { background: #0f766e; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(13, 148, 136, 0.3); }
+    .btn-save-print { display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-hover)); color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: .88rem; font-weight: 700; cursor: pointer; transition: all .15s; font-family: 'Inter', sans-serif; box-shadow: 0 4px 12px var(--brand-glow); }
+    .btn-save-print:hover { transform: translateY(-1px); box-shadow: 0 6px 15px var(--brand-glow); opacity: 0.95; }
     .btn-save-print:active { transform: translateY(0); }
     .btn-save-print:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
@@ -678,7 +678,7 @@ interface PaymentRow {
     .summary-row-item { display: flex; justify-content: space-between; align-items: center; font-size: .82rem; padding: 4px 0; border-bottom: 1px solid #f8fafc; }
     .summary-divider { border-top: 2px solid #e2e8f0; margin: 4px 0; }
     .summary-row-item.grand { font-size: .95rem; font-weight: 700; color: #0f172a; border-bottom: none; }
-    .grand-value { font-size: 1.1rem; color: #0d9488; }
+    .grand-value { font-size: 1.1rem; color: var(--brand); }
     .text-orange { color: #ea580c; }
     .text-blue { color: #3b82f6; }
     .text-green { color: #16a34a; }
@@ -694,8 +694,8 @@ interface PaymentRow {
     .payment-row-wrap { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; background: #f8fafc; }
     .payment-method-btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
     .method-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; color: #64748b; font-size: .75rem; font-weight: 600; cursor: pointer; transition: all .15s; font-family: 'Inter', sans-serif; }
-    .method-btn.active { background: #0d9488; border-color: #0d9488; color: #fff; }
-    .method-btn:hover:not(.active) { border-color: #0d9488; color: #0d9488; }
+    .method-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .method-btn:hover:not(.active) { border-color: var(--brand); color: var(--brand); }
     .remove-pm-btn { margin-left: auto; width: 28px; height: 28px; background: #fff1f2; border: none; border-radius: 6px; color: #f43f5e; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .75rem; }
 
     .payment-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -703,12 +703,12 @@ interface PaymentRow {
     .pf.full { grid-column: 1 / -1; }
     .pf label { font-size: .68rem; color: #64748b; font-weight: 600; }
     .pf-text { height: 32px; padding: 5px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .78rem; font-family: 'Inter', sans-serif; outline: none; }
-    .pf-text:focus { border-color: #0d9488; }
+    .pf-text:focus { border-color: var(--brand); }
     ::ng-deep .pf-num { width: 100%; }
     ::ng-deep .pf-input { height: 32px !important; padding: 5px 10px !important; border: 1.5px solid #e2e8f0 !important; border-radius: 8px !important; font-size: .78rem !important; width: 100% !important; }
 
-    .add-pm-btn { display: flex; align-items: center; gap: 6px; background: #f8fafc; color: #0d9488; border: 1.5px dashed #94a3b8; border-radius: 10px; padding: 7px 14px; font-size: .78rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; align-self: flex-start; transition: all .15s; }
-    .add-pm-btn:hover { border-color: #0d9488; background: #ccfbf1; }
+    .add-pm-btn { display: flex; align-items: center; gap: 6px; background: #f8fafc; color: var(--brand); border: 1.5px dashed #94a3b8; border-radius: 10px; padding: 7px 14px; font-size: .78rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; align-self: flex-start; transition: all .15s; }
+    .add-pm-btn:hover { border-color: var(--brand); background: var(--brand-soft); }
     .py-divider { border-top: 2px solid #e2e8f0; }
     .py-calc { display: flex; flex-direction: column; gap: 6px; }
     .py-row { display: flex; justify-content: space-between; font-size: .82rem; font-weight: 600; color: #334155; }
@@ -723,7 +723,7 @@ interface PaymentRow {
     .qf { display: flex; flex-direction: column; gap: 4px; }
     .qf label { font-size: .72rem; font-weight: 600; color: #475569; }
     .btn-cancel { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 8px; font-weight: 600; font-size: .78rem; cursor: pointer; }
-    .btn-save { display: flex; align-items: center; gap: 6px; padding: 7px 16px; background: #0d9488; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: .78rem; cursor: pointer; }
+    .btn-save { display: flex; align-items: center; gap: 6px; padding: 7px 16px; background: var(--brand); color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: .78rem; cursor: pointer; }
     .btn-save:disabled { opacity: .6; cursor: not-allowed; }
     
     ::ng-deep .qf-select.p-select { 
@@ -745,7 +745,7 @@ interface PaymentRow {
     
     .expiry-cell { display: flex; align-items: center; gap: 4px; }
     .clone-btn { width: 24px; height: 30px; border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .7rem; transition: all .15s; }
-    .clone-btn:hover { background: #f1f5f9; color: #0d9488; border-color: #0d9488; }
+    .clone-btn:hover { background: #f1f5f9; color: var(--brand); border-color: var(--brand); }
   `]
 })
 export class PurchaseFormComponent implements OnInit {

@@ -25,6 +25,9 @@ namespace PharmacyApi.Models
 
         public bool IsActive { get; set; } = true;
 
+        // ─── SaaS: Tenant-level
+        public int TenantId { get; set; }
+
         // Audit Fields
         public DateTime CreatedAt { get; set; }
         public string? CreatedBy { get; set; }

@@ -99,7 +99,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
           <td>{{ s.customerName }}</td>
           <td>{{ s.customerPhone || '—' }}</td>
           <td style="text-align:right; font-weight:700">৳{{ s.grandTotal | number:'1.2-2' }}</td>
-          <td style="text-align:right; color:#0d9488; font-weight:600">৳{{ s.paidAmount | number:'1.2-2' }}</td>
+          <td style="text-align:right; color:var(--brand); font-weight:600">৳{{ s.paidAmount | number:'1.2-2' }}</td>
           <td style="text-align:right; color:#f59e0b; font-weight:600">৳{{ s.dueAmount | number:'1.2-2' }}</td>
           <td style="text-align:center">
             <p-tag [value]="s.paymentStatus"
@@ -222,7 +222,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
     <div *ngIf="selectedSale" class="pay-form">
       <div class="pay-summary">
         <div class="pay-sum-item"><span>Grand Total</span><strong>৳{{ selectedSale.grandTotal | number:'1.2-2' }}</strong></div>
-        <div class="pay-sum-item"><span>Paid</span><strong style="color:#0d9488">৳{{ selectedSale.paidAmount | number:'1.2-2' }}</strong></div>
+        <div class="pay-sum-item"><span>Paid</span><strong style="color:var(--brand)">৳{{ selectedSale.paidAmount | number:'1.2-2' }}</strong></div>
         <div class="pay-sum-item"><span>Balance Due</span><strong style="color:#dc2626">৳{{ selectedSale.dueAmount | number:'1.2-2' }}</strong></div>
       </div>
 
@@ -275,20 +275,20 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
   `,
   styles: [`
     :host { display:block; font-family:'Inter',sans-serif; }
-    .sl-page { padding:20px 24px; background:#f0f4f8; min-height:100vh; }
+    .sl-page { padding:20px 24px; background:var(--bg-canvas, #f0f4f8); min-height:100vh; }
     .sl-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
     .sl-header-left { display:flex; align-items:center; gap:14px; }
-    .sl-icon { width:46px;height:46px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem; }
-    .sl-title { font-size:1.4rem;font-weight:800;color:#0d9488;margin:0; }
-    .sl-sub { font-size:.8rem;color:#334155;font-weight:500;margin:0; }
-    .btn-new-sale { background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:.875rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:'Inter',sans-serif; }
+    .sl-icon { width:46px;height:46px;background:linear-gradient(135deg,var(--brand),var(--brand-hover));color:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem; }
+    .sl-title { font-size:1.4rem;font-weight:800;color:var(--text-heading, #0f172a);margin:0; }
+    .sl-sub { font-size:.8rem;color:var(--text-muted, #334155);font-weight:500;margin:0; }
+    .btn-new-sale { background:linear-gradient(135deg,var(--brand),var(--brand-hover));color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:.875rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:'Inter',sans-serif; }
     .sl-filters { display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap; }
-    .filter-input { padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:.875rem;font-family:'Inter',sans-serif;color:#0f172a;outline:none;&:focus{border-color:#0d9488} }
+    .filter-input { padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:.875rem;font-family:'Inter',sans-serif;color:#0f172a;outline:none;&:focus{border-color:var(--brand);} }
     .search-box { width:260px; }
     .filter-cal, .filter-select { width:140px !important; }
     .btn-reset { width:38px;height:38px;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;&:hover{background:#f1f5f9} }
-    .sl-table-card { background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04); }
-    .inv-code-cell { font-weight:700;color:#0d9488;font-size:.85rem; }
+    .sl-table-card { background:var(--bg-card, #fff);border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04); border: 1px solid var(--border-subtle, transparent); }
+    .inv-code-cell { font-weight:700;color:var(--brand);font-size:.85rem; }
     .action-btns { display:flex;gap:6px;justify-content:center; }
     .act-btn { width:30px;height:30px;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem; }
     .act-btn.view { background:#eff6ff;color:#3b82f6;&:hover{background:#dbeafe} }
@@ -300,7 +300,7 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
     .detail-table { width:100%;border-collapse:collapse;font-size:.8rem; th{background:#f8fafc;padding:8px;text-align:left;font-size:.65rem;font-weight:700;color:#64748b;} td{padding:8px;border-bottom:1px solid #f1f5f9;} }
     .detail-summary { display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:#0f172a;border-radius:10px;padding:12px 16px;color:#94a3b8;font-size:.8rem; strong{color:#4ade80;font-size:1rem;margin-left:auto;} }
     .btn-dialog-close { padding:8px 18px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff;color:#64748b;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif; }
-    .btn-dialog-print { padding:8px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:6px; }
+    .btn-dialog-print { padding:8px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand-hover));color:#fff;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:6px; }
 
     /* Payment Dialog Styles */
     .pay-dialog ::ng-deep .p-dialog-header { border-bottom: 1px solid #f1f5f9 !important; padding: 12px 20px !important; }
@@ -316,18 +316,18 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
     .pay-row-top { display: grid; grid-template-columns: 120px 1fr 34px; gap: 8px; }
     .pay-row-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
     .pay-sub-input { width: 100%; border: 1.5px solid #f1f5f9; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; color: #0f172a; outline: none; }
-    .pay-sub-input:focus { border-color: #0d9488; }
+    .pay-sub-input:focus { border-color: var(--brand); }
     .btn-row-del { width: 34px; height: 34px; background: #fff1f2; color: #f43f5e; border: none; border-radius: 6px; cursor: pointer; }
     .pay-footer-stats { margin-top: 10px; border-top: 2px dashed #f1f5f9; padding-top: 10px; }
     .pay-method-select { width: 100% !important; font-size: 0.8rem; border-radius: 6px; }
-    .pay-amount-input { width: 100%; font-weight: 700; font-size: 1rem; color: #0d9488; }
+    .pay-amount-input { width: 100%; font-weight: 700; font-size: 1rem; color: var(--brand); }
     .justify-between { justify-content: space-between; }
     .items-center { align-items: center; }
     .font-black { font-weight: 900; }
     .text-xl { font-size: 1.25rem; }
     .text-red-500 { color: #ef4444; }
     .text-slate-500 { color: #1e293b; font-weight: 500; } /* Darkened for better contrast */
-    .text-teal { color: #0d9488; }
+    .text-teal { color: var(--brand); }
     .text-right { text-align: right; }
 
     /* Dialog Mask/Overlay Fix (Matches Purchase) */
@@ -349,11 +349,11 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
     
     .btn-save {
       display: flex; align-items: center; gap: 8px; padding: 8px 20px;
-      background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;
+      background: linear-gradient(135deg, var(--brand), var(--brand-hover)); color: #fff;
       border: none; border-radius: 10px; font-weight: 700; font-size: .8rem;
-      cursor: pointer; transition: all .2s; box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+      cursor: pointer; transition: all .2s; box-shadow: 0 4px 10px var(--brand-glow);
     }
-    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(13, 148, 136, 0.25); opacity: 0.95; }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 14px var(--brand-glow); opacity: 0.95; }
     .btn-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
 
     /* History Table Styles */
