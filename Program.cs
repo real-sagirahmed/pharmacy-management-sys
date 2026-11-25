@@ -206,7 +206,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred during database migration or role seeding.");
+        logger.LogCritical(ex, "CRITICAL: An error occurred during database migration or startup role/user seeding.");
     }
 }
 

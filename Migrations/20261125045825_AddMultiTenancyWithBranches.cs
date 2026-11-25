@@ -458,8 +458,8 @@ namespace PharmacyApi.Migrations
                 SET IDENTITY_INSERT Tenants ON;
                 IF NOT EXISTS (SELECT 1 FROM Tenants WHERE TenantId = 1)
                 BEGIN
-                    INSERT INTO Tenants (TenantId, PharmacyName, Tagline, ContactPhone, ContactEmail, Address, DrugLicenseNo, SubscriptionPlan, IsActive, CreatedAt)
-                    VALUES (1, N'S7 Drug House', N'আপনার বিশ্বস্ত স্বাস্থ্য সঙ্গী', '01700000000', 'info@s7drughouse.com', N'ঢাকা, বাংলাদেশ', 'DL-DH-001', 'Pro', 1, GETUTCDATE());
+                    INSERT INTO Tenants (TenantId, PharmacyName, Slogan, HeadOfficeAddress, Phone, Email, DrugLicenseNo, PrimaryColor, SubscriptionPlan, IsActive, CreatedAt)
+                    VALUES (1, N'S7 Drug House', N'আপনার বিশ্বস্ত স্বাস্থ্য সঙ্গী', N'ঢাকা, বাংলাদেশ', '01700000000', 'info@s7drughouse.com', 'DL-DH-001', '#007070', 'Pro', 1, GETUTCDATE());
                 END
                 SET IDENTITY_INSERT Tenants OFF;
 
@@ -467,8 +467,8 @@ namespace PharmacyApi.Migrations
                 SET IDENTITY_INSERT Branches ON;
                 IF NOT EXISTS (SELECT 1 FROM Branches WHERE BranchId = 1)
                 BEGIN
-                    INSERT INTO Branches (BranchId, TenantId, BranchName, BranchCode, IsHeadOffice, IsActive, CreatedAt)
-                    VALUES (1, 1, N'মেইন আউটলেট (হেড অফিস)', 'BR-001', 1, 1, GETUTCDATE());
+                    INSERT INTO Branches (BranchId, TenantId, BranchName, Address, Phone, DrugLicenseNo, IsHeadOffice, IsActive, CreatedAt)
+                    VALUES (1, 1, N'মেইন আউটলেট (হেড অফিস)', N'ঢাকা, বাংলাদেশ', '01700000000', 'DL-DH-001', 1, 1, GETUTCDATE());
                 END
                 SET IDENTITY_INSERT Branches OFF;
 
@@ -490,15 +490,29 @@ namespace PharmacyApi.Migrations
                 UPDATE SalesMasters SET TenantId = 1, BranchId = 1 WHERE TenantId = 0 OR TenantId IS NULL OR BranchId = 0 OR BranchId IS NULL;
                 UPDATE PurchaseMasters SET TenantId = 1, BranchId = 1 WHERE TenantId = 0 OR TenantId IS NULL OR BranchId = 0 OR BranchId IS NULL;
 
-                -- 5. Backfill non-SystemAdmin users to Tenant 1 and Branch 1
+                -- 5a. Backfill TenantId = 1 on existing non-SystemAdmin users (SystemAdmin stays TenantId = NULL, BranchId = NULL)
                 UPDATE AspNetUsers
-                SET TenantId = 1, BranchId = 1
+                SET TenantId = 1
                 WHERE TenantId IS NULL
                   AND Id NOT IN (
                       SELECT ur.UserId
                       FROM AspNetUserRoles ur
                       JOIN AspNetRoles r ON ur.RoleId = r.Id
-                      WHERE r.Name = 'SystemAdmin'
+                      WHERE r.Name = 'SystemAdmin' OR r.NormalizedName = 'SYSTEMADMIN'
+                  );
+
+                -- 5b. Assign BranchId = 1 ONLY to non-Admin / non-SystemAdmin users (Manager, Cashier, etc.)
+                -- ARCHITECTURAL INTENT: Tenant Admin owners keep BranchId = NULL so they can view and switch all branches (GAP-15 backfill fix).
+                UPDATE AspNetUsers
+                SET BranchId = 1
+                WHERE BranchId IS NULL
+                  AND TenantId = 1
+                  AND Id NOT IN (
+                      SELECT ur.UserId
+                      FROM AspNetUserRoles ur
+                      JOIN AspNetRoles r ON ur.RoleId = r.Id
+                      WHERE r.Name IN ('SystemAdmin', 'Admin')
+                         OR r.NormalizedName IN ('SYSTEMADMIN', 'ADMIN')
                   );
 
                 -- 6. Populate MedicineBatches from existing Medicines having stock
