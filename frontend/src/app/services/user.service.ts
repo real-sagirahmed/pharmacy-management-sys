@@ -77,8 +77,9 @@ export class UserService {
   }
 
   // Role & Permission Management
-  getRoles(): Observable<RoleDto[]> {
-    return this.http.get<RoleDto[]>(`${this.apiUrl}/roles`);
+  getRoles(tenantId?: number): Observable<RoleDto[]> {
+    const query = tenantId ? `?tenantId=${tenantId}` : '';
+    return this.http.get<RoleDto[]>(`${this.apiUrl}/roles${query}`);
   }
 
   createRole(roleName: string): Observable<any> {

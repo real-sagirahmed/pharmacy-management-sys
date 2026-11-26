@@ -2,29 +2,49 @@ import { Injectable, inject } from '@angular/core';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DatePipe } from '@angular/common';
+import { TenantConfigService } from './tenant-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GrnPrintService {
   private datePipe = inject(DatePipe);
+  private tenantConfig = inject(TenantConfigService);
   constructor() {}
 
   generatePDF(data: any) {
+    const brand = this.tenantConfig.getPrintBranding();
+    const [pr, pg, pb] = brand.primaryRgb;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
 
     // --- Header ---
-    doc.setFontSize(18);
-    doc.setTextColor(13, 148, 136); // Teal color
-    doc.text('PHARMACY MANAGEMENT SYSTEM', pageWidth / 2, 15, { align: 'center' });
-    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(17);
+    doc.setTextColor(pr, pg, pb);
+    doc.text(brand.pharmacyName.toUpperCase(), pageWidth / 2, 14, { align: 'center' });
+
+    const metaParts: string[] = [];
+    if (brand.branchName) metaParts.push(`Branch: ${brand.branchName}`);
+    if (brand.address) metaParts.push(brand.address);
+    if (brand.phone) metaParts.push(`Tel: ${brand.phone}`);
+    if (brand.drugLicenseNo) metaParts.push(`DL: ${brand.drugLicenseNo}`);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(95);
+    if (metaParts.length > 0) {
+      doc.text(metaParts.join('  |  '), pageWidth / 2, 20, { align: 'center', maxWidth: pageWidth - 28 });
+    }
+
     doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text('Goods Received Note (GRN)', pageWidth / 2, 22, { align: 'center' });
+    doc.setTextColor(80);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Goods Received Note (GRN)', pageWidth / 2, 26, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
     
     doc.setDrawColor(200);
-    doc.line(14, 25, pageWidth - 14, 25);
+    doc.line(14, 29, pageWidth - 14, 29);
 
     // --- Supplier & GRN Info ---
     doc.setFontSize(10);
@@ -59,7 +79,7 @@ export class GrnPrintService {
       head: [['#', 'Medicine', 'Batch', 'Expiry', 'Qty', 'Unit', 'Price', 'Total']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [13, 148, 136], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [pr, pg, pb], textColor: 255, fontStyle: 'bold' },
       styles: { fontSize: 9, cellPadding: 3 },
       columnStyles: {
         0: { cellWidth: 10 },
@@ -112,7 +132,7 @@ export class GrnPrintService {
     let y = finalY;
     const drawSummaryRow = (label: string, value: string, isBold: boolean = false, isTeal: boolean = false) => {
         if (isBold) doc.setFont('helvetica', 'bold');
-        if (isTeal) doc.setTextColor(13, 148, 136);
+        if (isTeal) doc.setTextColor(pr, pg, pb);
         
         doc.text(label, summaryX, y);
         doc.text(value, pageWidth - 14, y, { align: 'right' });
@@ -159,7 +179,7 @@ export class GrnPrintService {
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(150);
     const printedOn = this.datePipe.transform(new Date(), 'dd-MMM-yyyy HH:mm:ss');
-    doc.text(`Printed on: ${printedOn}`, 14, footerY + 5);
+    doc.text(`Printed on: ${printedOn} — ${brand.pharmacyName}`, 14, footerY + 5);
     doc.text('Authorized Signature', pageWidth - 45, footerY + 15);
     doc.line(pageWidth - 55, footerY + 12, pageWidth - 14, footerY + 12);
 

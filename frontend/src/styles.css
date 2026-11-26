@@ -19,6 +19,8 @@
   --brand-hover:        #005858; /* Deep Teal Hover/Active */
   --brand-soft:         #E6F4F4; /* Soft Mint Accent */
   --brand-glow:         rgba(0, 112, 112, 0.20); /* S7 Accent Glow */
+  --brand-badge-bg:     rgba(0, 112, 112, 0.35);
+  --brand-badge-border: rgba(0, 112, 112, 0.50);
   --s7-focus-ring:      #007070;
 
   /* Aliases for Component Backward Compatibility */

@@ -53,6 +53,7 @@ export interface SaleMaster {
   paymentMethod: string;
   paymentStatus?: string;
   saleStatus?: string;
+  prescriptionImagePath?: string | null;
   createdBy?: string;
   salesDetails: SaleDetail[];
   salesPayments: SalePayment[];
@@ -64,6 +65,9 @@ export interface SaleBatchInfo {
   availableQty: number;
   salePrice: number;
   isNearExpiry: boolean;
+  status?: string;
+  isExpired?: boolean;
+  isSellable?: boolean;
 }
 
 export interface SaleSearchParameters {
@@ -111,6 +115,12 @@ export class SalesService {
 
   holdSale(sale: SaleMaster): Observable<SaleMaster> {
     return this.http.post<SaleMaster>(`${this.apiUrl}/hold`, sale);
+  }
+
+  uploadPrescription(saleId: number, file: File): Observable<{ prescriptionImagePath: string }> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<{ prescriptionImagePath: string }>(`${this.apiUrl}/${saleId}/prescription`, fd);
   }
 
   deleteSale(id: number): Observable<any> {

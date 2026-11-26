@@ -1,10 +1,12 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { SaleMaster } from './sales.service';
+import { TenantConfigService } from './tenant-config.service';
 
 @Injectable({ providedIn: 'root' })
 export class SalesInvoicePrintService {
+  private tenantConfig = inject(TenantConfigService);
   constructor() {}
 
   private formatDate(date: string | Date | undefined): string {
@@ -30,32 +32,50 @@ export class SalesInvoicePrintService {
   }
 
   generatePDF(sale: SaleMaster): void {
+    const brand = this.tenantConfig.getPrintBranding();
+    const [pr, pg, pb] = brand.primaryRgb;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     // Header
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(13, 148, 136);
-    doc.text('PHARMACY SYSTEM', 105, 18, { align: 'center' });
+    doc.setFontSize(17);
+    doc.setTextColor(pr, pg, pb);
+    doc.text(brand.pharmacyName.toUpperCase(), 105, 16, { align: 'center' });
+
+    const metaParts: string[] = [];
+    if (brand.branchName) metaParts.push(`Branch: ${brand.branchName}`);
+    if (brand.address) metaParts.push(brand.address);
+    if (brand.phone) metaParts.push(`Tel: ${brand.phone}`);
+    if (brand.drugLicenseNo) metaParts.push(`DL: ${brand.drugLicenseNo}`);
+
+    doc.setFontSize(8.5);
+    doc.setTextColor(95);
+    doc.setFont('helvetica', 'normal');
+    if (metaParts.length > 0) {
+      doc.text(metaParts.join('  |  '), 105, 22, { align: 'center', maxWidth: 180 });
+    } else {
+      doc.text(brand.tagline, 105, 22, { align: 'center' });
+    }
 
     doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Sales Invoice', 105, 24, { align: 'center' });
+    doc.setTextColor(60);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Sales Invoice', 105, 28, { align: 'center' });
 
     // Invoice Info Box
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(14, 28, 182, 30, 3, 3, 'F');
+    doc.roundedRect(14, 32, 182, 30, 3, 3, 'F');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(50);
-    doc.text(`Invoice No : ${sale.invoiceCode || '—'}`, 18, 35);
-    doc.text(`Date       : ${this.formatDate(sale.saleDate)}`, 18, 41);
-    doc.text(`Time       : ${this.formatTime(sale.saleTime)}`, 18, 47);
+    doc.text(`Invoice No : ${sale.invoiceCode || '—'}`, 18, 39);
+    doc.text(`Date       : ${this.formatDate(sale.saleDate)}`, 18, 45);
+    doc.text(`Time       : ${this.formatTime(sale.saleTime)}`, 18, 51);
 
-    doc.text(`Customer : ${sale.customerName}`, 110, 35);
-    doc.text(`Mobile   : ${sale.customerPhone || '—'}`, 110, 41);
-    doc.text(`Status   : ${sale.paymentStatus || 'Paid'}`, 110, 47);
-    doc.text(`Sales By : ${sale.createdBy || '—'}`, 110, 53);
+    doc.text(`Customer : ${sale.customerName}`, 110, 39);
+    doc.text(`Mobile   : ${sale.customerPhone || '—'}`, 110, 45);
+    doc.text(`Status   : ${sale.paymentStatus || 'Paid'}`, 110, 51);
+    doc.text(`Sales By : ${sale.createdBy || '—'}`, 110, 57);
 
     // Items Table
     const head = [['Product', 'Batch', 'Qty', 'Unit', 'Price', 'Disc', 'VAT', 'Total']];
@@ -73,9 +93,9 @@ export class SalesInvoicePrintService {
     autoTable(doc, {
       head,
       body,
-      startY: 62,
+      startY: 66,
       theme: 'striped',
-      headStyles: { fillColor: [13, 148, 136], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      headStyles: { fillColor: [pr, pg, pb], textColor: 255, fontStyle: 'bold', fontSize: 8 },
       bodyStyles: { fontSize: 8, textColor: 50 },
       columnStyles: {
         2: { halign: 'center' },
@@ -107,7 +127,7 @@ export class SalesInvoicePrintService {
     });
 
     const gtY = finalY + lines.length * 6 + 2;
-    doc.setFillColor(13, 148, 136);
+    doc.setFillColor(pr, pg, pb);
     doc.roundedRect(summaryX - 4, gtY - 4, 68, 10, 2, 2, 'F');
     doc.setTextColor(255);
     doc.setFont('helvetica', 'bold');
@@ -124,8 +144,8 @@ export class SalesInvoicePrintService {
 
     // Footer
     doc.setFontSize(8); doc.setTextColor(150);
-    doc.text('Thank you for your purchase!', 105, pmY + 10, { align: 'center' });
-    doc.text('Printed by Pharmacy Management System', 105, pmY + 15, { align: 'center' });
+    doc.text(brand.invoiceFooter, 105, pmY + 10, { align: 'center', maxWidth: 180 });
+    doc.text(`Printed by ${brand.pharmacyName}`, 105, pmY + 15, { align: 'center' });
 
     // Use bloburl for preview/new tab instead of immediate download
     const blob = doc.output('bloburl');

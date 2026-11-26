@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, signal, computed, effect, untracked, inject, HostListener
+  Component, OnInit, OnDestroy, signal, computed, effect, untracked, inject, HostListener
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -28,6 +28,8 @@ import { MedicineService, Medicine } from '../../services/medicine.service';
 import { TaxService } from '../../services/tax.service';
 import { UomService } from '../../services/uom.service';
 import { SalesInvoicePrintService } from '../../services/invoice-print.service';
+import { ThermalReceiptPrintService } from '../../services/thermal-receipt-print.service';
+import { environment } from '../../../environments/environment';
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -81,7 +83,7 @@ interface PayRow {
   templateUrl: './sales-form.component.html',
   styleUrls: ['./sales-form.component.scss']
 })
-export class SalesFormComponent implements OnInit {
+export class SalesFormComponent implements OnInit, OnDestroy {
 
   // ── Sales Header ──────────────────────────────────────────────────────────
   invoiceCode = '';
@@ -110,6 +112,14 @@ export class SalesFormComponent implements OnInit {
   // ── Summary ───────────────────────────────────────────────────────────────
   specialDiscount = signal(0);
   adjustment = signal(0);
+
+  // ── Prescription Attachment & Receipt Format (GAP-24) ─────────────────────
+  private thermalPrintService = inject(ThermalReceiptPrintService);
+  printFormat: 'a4' | 'thermal80' = 'thermal80';
+  pendingPrescriptionFile: File | null = null;
+  pendingPrescriptionName = '';
+  pendingPrescriptionPreview: string | null = null;
+  existingPrescriptionPath: string | null = null;
 
   subTotal       = computed(() => this.rows().reduce((s, r) => s + r.quantity * r.unitPrice, 0));
   totalDiscount  = computed(() => this.rows().reduce((s, r) => s + r.discountAmount, 0));
@@ -360,6 +370,7 @@ export class SalesFormComponent implements OnInit {
         this.invoiceCode = s.invoiceCode || '';
         this.saleDate = s.saleDate ? new Date(s.saleDate) : new Date();
         this.specialDiscount.set(s.specialDiscount || 0);
+        this.existingPrescriptionPath = s.prescriptionImagePath || null;
 
         // Set customer
         if (s.partyId) {
@@ -472,12 +483,22 @@ export class SalesFormComponent implements OnInit {
     row.discountPercent = 0;
     row.isNearExpiry = false;
 
-    // Load FEFO batches
+    // Load strictly Active & non-expired FEFO batches; never auto-select an unsellable batch
     this.salesService.getMedicineBatches(med.medicineId).subscribe(batches => {
-      row.batchOptions = batches;
-      if (batches.length > 0) {
-        // Auto-select the first FEFO batch (nearest expiry)
-        this.onBatchSelect(batches[0], row);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const sellableBatches = (batches || []).filter(b =>
+        b.isSellable !== false &&
+        (!b.status || b.status === 'Active') &&
+        !b.isExpired &&
+        b.availableQty > 0 &&
+        (!b.expiryDate || new Date(b.expiryDate) >= today)
+      );
+
+      row.batchOptions = sellableBatches;
+      if (sellableBatches.length > 0) {
+        // Auto-select the first valid FEFO batch (nearest valid expiry)
+        this.onBatchSelect(sellableBatches[0], row);
       } else {
         this.recalcRow(row);
       }
@@ -669,6 +690,43 @@ export class SalesFormComponent implements OnInit {
     return true;
   }
 
+  // ── Prescription Upload Helpers ───────────────────────────────────────────
+  onPrescriptionSelected(event: any) {
+    const file: File | undefined = event?.target?.files?.[0];
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type.toLowerCase())) {
+      this.messageService.add({ severity: 'warn', summary: 'Invalid File', detail: 'Only JPG, PNG, or WEBP images are allowed.' });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      this.messageService.add({ severity: 'warn', summary: 'Too Large', detail: 'Prescription image max size is 2MB.' });
+      return;
+    }
+    this.clearPendingPrescription();
+    this.pendingPrescriptionFile = file;
+    this.pendingPrescriptionName = file.name;
+    this.pendingPrescriptionPreview = URL.createObjectURL(file);
+  }
+
+  clearPendingPrescription() {
+    if (this.pendingPrescriptionPreview) {
+      URL.revokeObjectURL(this.pendingPrescriptionPreview);
+    }
+    this.pendingPrescriptionFile = null;
+    this.pendingPrescriptionName = '';
+    this.pendingPrescriptionPreview = null;
+  }
+
+  ngOnDestroy(): void {
+    this.clearPendingPrescription();
+  }
+
+  getExistingPrescriptionUrl(): string | null {
+    if (!this.existingPrescriptionPath) return null;
+    return `${environment.apiUrl.replace('/api', '')}${this.existingPrescriptionPath}`;
+  }
+
   // ── Actions ───────────────────────────────────────────────────────────────
   completeSale(shouldPrint = false) {
     if (!this.validate()) return;
@@ -676,28 +734,50 @@ export class SalesFormComponent implements OnInit {
     this.saving = true;
     this.salesService.createSale(this.buildPayload()).subscribe({
       next: (res) => {
-        this.saving = false;
-        this.messageService.add({ severity: 'success', summary: 'Sale Completed!', detail: `Invoice ${res.invoiceCode} saved.` });
-        
-        const payloadWithUser = { ...res, createdBy: this.salesBy };
+        const finalizeFlow = (savedSale: SaleMaster) => {
+          this.saving = false;
+          this.messageService.add({ severity: 'success', summary: 'Sale Completed!', detail: `Invoice ${savedSale.invoiceCode} saved.` });
+          const payloadWithUser = { ...savedSale, createdBy: this.salesBy };
 
-        if (shouldPrint) {
-          this.confirmationService.confirm({
-            message: 'Sale saved successfully! Would you like to view the Invoice Preview?',
-            header: 'Print Confirmation',
-            icon: 'pi pi-print',
-            acceptLabel: 'View & Print',
-            rejectLabel: 'Skip',
-            accept: () => {
-              this.printService.generatePDF(payloadWithUser);
-              setTimeout(() => this.router.navigate(['/dashboard/sales']), 1000);
+          if (shouldPrint) {
+            const label = this.printFormat === 'thermal80' ? '80mm Thermal Receipt' : 'A4 Invoice PDF';
+            this.confirmationService.confirm({
+              message: `Sale saved successfully! Open ${label}?`,
+              header: 'Print Confirmation',
+              icon: 'pi pi-print',
+              acceptLabel: `Print (${this.printFormat === 'thermal80' ? '80mm' : 'A4'})`,
+              rejectLabel: 'Skip',
+              accept: () => {
+                if (this.printFormat === 'thermal80') {
+                  this.thermalPrintService.print80mmReceipt(payloadWithUser);
+                } else {
+                  this.printService.generatePDF(payloadWithUser);
+                }
+                setTimeout(() => this.router.navigate(['/dashboard/sales']), 1000);
+              },
+              reject: () => {
+                this.router.navigate(['/dashboard/sales']);
+              }
+            });
+          } else {
+            setTimeout(() => this.router.navigate(['/dashboard/sales']), 1200);
+          }
+        };
+
+        if (this.pendingPrescriptionFile && res.saleId) {
+          this.salesService.uploadPrescription(res.saleId, this.pendingPrescriptionFile).subscribe({
+            next: (up) => {
+              this.clearPendingPrescription();
+              finalizeFlow({ ...res, prescriptionImagePath: up.prescriptionImagePath });
             },
-            reject: () => {
-              this.router.navigate(['/dashboard/sales']);
+            error: () => {
+              this.messageService.add({ severity: 'warn', summary: 'Prescription Upload', detail: 'Sale saved, but prescription photo upload failed. You can upload it from Sales List.' });
+              this.clearPendingPrescription();
+              finalizeFlow(res);
             }
           });
         } else {
-          setTimeout(() => this.router.navigate(['/dashboard/sales']), 1200);
+          finalizeFlow(res);
         }
       },
       error: (err) => {

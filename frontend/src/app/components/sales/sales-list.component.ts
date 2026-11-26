@@ -1,8 +1,9 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -18,6 +19,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 
 import { SalesService, SaleMaster, SaleSearchParameters } from '../../services/sales.service';
 import { SalesInvoicePrintService } from '../../services/invoice-print.service';
+import { ThermalReceiptPrintService } from '../../services/thermal-receipt-print.service';
 import { PaymentService } from '../../services/payment.service';
 import { MoneyReceiptService } from '../due-collection/money-receipt.service';
 
@@ -121,8 +123,11 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
               <button class="act-btn view" (click)="viewDetail(s)" title="View">
                 <i class="pi pi-eye"></i>
               </button>
-              <button class="act-btn print" (click)="printInvoice(s.saleId!)" title="Print Invoice">
+              <button class="act-btn print" (click)="printInvoice(s.saleId!)" title="Print A4 Invoice">
                 <i class="pi pi-print"></i>
+              </button>
+              <button class="act-btn print" (click)="printThermal(s.saleId!)" title="Print 80mm Thermal Receipt">
+                <i class="pi pi-receipt"></i>
               </button>
               <button class="act-btn del" (click)="deleteSale(s.saleId!)" title="Delete" *ngIf="isSystemAdmin() || hasPermission('Sales', 'delete')">
                 <i class="pi pi-trash"></i>
@@ -206,11 +211,35 @@ import { MoneyReceiptService } from '../due-collection/money-receipt.service';
               </tfoot>
           </table>
       </div>
+
+      <!-- Prescription Image Section -->
+      <div class="history-section">
+        <div class="history-title flex items-center justify-between">
+          <span><i class="pi pi-image"></i> Prescription Photo</span>
+          <label *ngIf="isSystemAdmin() || hasPermission('Sales', 'create')"
+            class="px-2.5 py-1 rounded bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold cursor-pointer">
+            <i class="pi pi-upload mr-1"></i> {{ detailSale.prescriptionImagePath ? 'Replace' : 'Upload' }}
+            <input type="file" style="display:none" accept="image/jpeg,image/png,image/webp" (change)="onDetailPrescriptionSelected($event)" />
+          </label>
+        </div>
+        <div *ngIf="detailSale.prescriptionImagePath; else noRx" class="mt-2">
+          <a [href]="getPrescriptionUrl(detailSale.prescriptionImagePath)" target="_blank" rel="noopener">
+            <img [src]="getPrescriptionUrl(detailSale.prescriptionImagePath)" alt="Prescription Image"
+              style="max-height: 180px; border-radius: 8px; border: 1px solid #e2e8f0;" />
+          </a>
+        </div>
+        <ng-template #noRx>
+          <p class="text-xs text-slate-400">No prescription image attached.</p>
+        </ng-template>
+      </div>
     </div>
     <ng-template pTemplate="footer">
       <button class="btn-dialog-close" (click)="showDetail = false">Close</button>
+      <button class="btn-dialog-print" (click)="printThermal(detailSale!.saleId!)">
+        <i class="pi pi-receipt"></i> 80mm Thermal
+      </button>
       <button class="btn-dialog-print" (click)="printInvoice(detailSale!.saleId!)">
-        <i class="pi pi-print"></i> Print Invoice
+        <i class="pi pi-print"></i> Print A4 Invoice
       </button>
     </ng-template>
   </p-dialog>
@@ -384,6 +413,7 @@ export class SalesListComponent implements OnInit {
 
   showDetail = false;
   detailSale: SaleMaster | null = null;
+  private thermalPrint = inject(ThermalReceiptPrintService);
 
   // Payment Dialog State
   showPayDialog = false;
@@ -496,6 +526,40 @@ export class SalesListComponent implements OnInit {
 
   printInvoice(saleId: number) {
     this.salesService.getSaleById(saleId).subscribe(s => this.printService.generatePDF(s));
+  }
+
+  printThermal(saleId: number) {
+    this.salesService.getSaleById(saleId).subscribe(s => {
+      const ok = this.thermalPrint.print80mmReceipt(s);
+      if (!ok) {
+        this.messageService.add({ severity: 'warn', summary: 'Popup Blocked', detail: 'Please allow popups to print the 80mm thermal receipt.' });
+      }
+    });
+  }
+
+  getPrescriptionUrl(path?: string | null): string {
+    if (!path) return '';
+    return `${environment.apiUrl.replace('/api', '')}${path}`;
+  }
+
+  onDetailPrescriptionSelected(event: any) {
+    const file: File | undefined = event?.target?.files?.[0];
+    if (!file || !this.detailSale?.saleId) return;
+    if (file.size > 2 * 1024 * 1024) {
+      this.messageService.add({ severity: 'warn', summary: 'Too Large', detail: 'Max prescription image size is 2MB.' });
+      return;
+    }
+    this.salesService.uploadPrescription(this.detailSale.saleId, file).subscribe({
+      next: (res) => {
+        if (this.detailSale) {
+          this.detailSale = { ...this.detailSale, prescriptionImagePath: res.prescriptionImagePath };
+        }
+        this.messageService.add({ severity: 'success', summary: 'Uploaded', detail: 'Prescription image attached.' });
+      },
+      error: (err) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error || 'Could not upload prescription image.' });
+      }
+    });
   }
 
   deleteSale(id: number) {

@@ -45,16 +45,16 @@ import { ReportService } from '../../services/report.service';
             <div class="kpi-icon-wrap kpi-indigo-icon"><i class="pi pi-tags"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">Total Cost</span>
-              <span class="kpi-value">৳ {{profitLossData?.totalCost || 0 | number:'1.2-2'}}</span>
-              <div class="kpi-trend trend-down"><i class="pi pi-arrow-down text-[10px]"></i> 3.2% vs last period</div>
+              <span class="kpi-value">৳ {{profitLossData?.totalCostOfGoodsSold || 0 | number:'1.2-2'}}</span>
+              <div class="kpi-trend trend-down"><i class="pi pi-arrow-down text-[10px]"></i> Cost of goods sold</div>
             </div>
           </div>
           <div class="kpi-card kpi-emerald">
             <div class="kpi-icon-wrap kpi-emerald-icon"><i class="pi pi-chart-line"></i></div>
             <div class="kpi-info">
               <span class="kpi-label">Gross Profit</span>
-              <span class="kpi-value">৳ {{profitLossData?.totalProfit || 0 | number:'1.2-2'}}</span>
-              <div class="kpi-trend trend-up"><i class="pi pi-arrow-up text-[10px]"></i> 8.1% vs last period</div>
+              <span class="kpi-value">৳ {{profitLossData?.grossProfit || 0 | number:'1.2-2'}}</span>
+              <div class="kpi-trend trend-up"><i class="pi pi-arrow-up text-[10px]"></i> Revenue minus COGS</div>
             </div>
           </div>
         </div>
@@ -224,61 +224,66 @@ export class VisualDashboardComponent implements OnInit {
       this.profitLossData = data;
     });
 
-    // Top Selling Medicines (Quantity)
-    this.reportService.getTopSellingMedicines(start, end, 10).subscribe(data => {
-      // Adding a gradient-like color using array based on value
-      const maxQty = Math.max(...data.map(d => d.totalQuantity), 1);
+    // Top Selling Medicines (Quantity + Revenue Doughnut)
+    this.reportService.getTopSellingMedicines(start, end, 10).subscribe({
+      next: (data) => {
+        const rows = data || [];
+        const maxQty = Math.max(...rows.map(d => d.totalQuantitySold || 0), 1);
 
-      this.topSellingData = {
-        labels: data.map(d => d.itemName),
-        datasets: [{
-          label: 'Quantity Sold',
-          data: data.map(d => d.totalQuantity),
-          backgroundColor: data.map(d => {
-             const opacity = Math.max(0.4, d.totalQuantity / maxQty);
-             return `rgba(0, 112, 112, ${opacity})`; // S7 Teal with varying opacity
-          }),
-          hoverBackgroundColor: '#005858',
-          borderRadius: 6,
-          barPercentage: 0.6
-        }]
-      };
+        this.topSellingData = {
+          labels: rows.map(d => d.medicineName),
+          datasets: [{
+            label: 'Quantity Sold',
+            data: rows.map(d => d.totalQuantitySold),
+            backgroundColor: rows.map(d => {
+              const opacity = Math.max(0.4, (d.totalQuantitySold || 0) / maxQty);
+              return `rgba(0, 112, 112, ${opacity})`;
+            }),
+            hoverBackgroundColor: '#005858',
+            borderRadius: 6,
+            barPercentage: 0.6
+          }]
+        };
+
+        const top5Revenue = [...rows]
+          .sort((a, b) => (b.totalRevenue || 0) - (a.totalRevenue || 0))
+          .slice(0, 5);
+        this.salesPieData = {
+          labels: top5Revenue.map(d => d.medicineName),
+          datasets: [{
+            data: top5Revenue.map(d => d.totalRevenue),
+            backgroundColor: ['#007070', '#b45309', '#047857', '#0369a1', '#8b5cf6']
+          }]
+        };
+      }
     });
 
-    // Sales Summary (Revenue breakdown pie chart)
-    this.reportService.getSalesSummary(start, end).subscribe(data => {
-      const top5 = data.slice(0, 5); // top 5 items
-      this.salesPieData = {
-        labels: top5.map(d => d.itemName),
-        datasets: [{
-          data: top5.map(d => d.totalRevenue),
-          backgroundColor: ['#007070', '#b45309', '#047857', '#0369a1', '#8b5cf6']
-        }]
-      };
-    });
-
-    // Expiry Report
-    this.reportService.getExpiryReport(6).subscribe(data => {
-        const top10 = data.slice(0, 10); // show top 10 soonest
-        
-        // Ensure gradient-like color representation
-        const isCritical = (d: any) => d.stockQuantity > 0; // Just example logic
+    // Expiry Report (Branch-scoped MedicineBatches)
+    this.reportService.getExpiryReport(6).subscribe({
+      next: (data) => {
+        const top10 = (data || []).slice(0, 10);
+        const isCritical = (d: any) => d.status === 'Expired' || (d.daysUntilExpiry ?? 999) <= 30;
 
         this.expiryData = {
-            labels: top10.map(d => d.itemName + ' (' + d.batchNumber + ')'),
-            datasets: [{
-              label: 'Stock Quantity',
-              data: top10.map(d => d.stockQuantity),
-              backgroundColor: top10.map(d => isCritical(d) ? '#ef4444' : '#f97316'),
-              hoverBackgroundColor: top10.map(d => isCritical(d) ? '#dc2626' : '#ea580c'),
-              borderRadius: 6
-            }]
+          labels: top10.map(d => `${d.medicineName} (${d.batchNumber})`),
+          datasets: [{
+            label: 'Remaining Stock',
+            data: top10.map(d => d.remainingStock),
+            backgroundColor: top10.map(d => isCritical(d) ? '#ef4444' : '#f97316'),
+            hoverBackgroundColor: top10.map(d => isCritical(d) ? '#dc2626' : '#ea580c'),
+            borderRadius: 6
+          }]
         };
         this.loading.set(false);
+      },
+      error: () => this.loading.set(false)
     });
   }
 
   formatDate(date: Date): string {
-    return date.toISOString().split('T')[0];
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 }

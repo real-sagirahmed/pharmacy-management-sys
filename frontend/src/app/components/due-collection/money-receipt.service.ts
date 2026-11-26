@@ -1,31 +1,46 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { TenantConfigService } from '../../services/tenant-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MoneyReceiptService {
+  private tenantConfig = inject(TenantConfigService);
 
   constructor() { }
 
   generateReceipt(record: any, payments: any[], type: 'Sales' | 'Purchase') {
+    const brand = this.tenantConfig.getPrintBranding();
+    const [pr, pg, pb] = brand.primaryRgb;
     const doc = new jsPDF();
     const isSales = type === 'Sales';
     const title = isSales ? 'MONEY RECEIPT' : 'PAYMENT VOUCHER';
     const partyLabel = isSales ? 'Customer' : 'Supplier';
     const partyName = isSales ? record.customerName : record.supplierName;
-    const refCode = isSales ? `Invoice: ${record.saleId}` : `GRN: ${record.grnCode || record.purchaseId}`;
+    const refCode = isSales
+      ? `Invoice: ${record.invoiceCode || record.saleId}`
+      : `GRN: ${record.grnCode || record.purchaseId}`;
 
     // ═══ Header Section ═══
-    doc.setFontSize(22);
-    doc.setTextColor(13, 148, 136); // Teal color
-    doc.text('s7 Drug House', 105, 20, { align: 'center' });
-    
-    doc.setFontSize(10);
+    doc.setFontSize(20);
+    doc.setTextColor(pr, pg, pb);
+    doc.text(brand.pharmacyName, 105, 19, { align: 'center' });
+
+    doc.setFontSize(9.5);
     doc.setTextColor(100);
-    doc.text('Your Trusted Pharmacy Partner', 105, 26, { align: 'center' });
-    doc.text('Address: Sector 7, Uttara, Dhaka | Phone: 01700-000000', 105, 32, { align: 'center' });
+    doc.text(brand.tagline, 105, 25, { align: 'center' });
+
+    const contactParts: string[] = [];
+    if (brand.branchName) contactParts.push(`Branch: ${brand.branchName}`);
+    if (brand.address) contactParts.push(brand.address);
+    if (brand.phone) contactParts.push(`Phone: ${brand.phone}`);
+    if (brand.drugLicenseNo) contactParts.push(`DL: ${brand.drugLicenseNo}`);
+    if (contactParts.length > 0) {
+      doc.setFontSize(8.5);
+      doc.text(contactParts.join(' | '), 105, 31, { align: 'center', maxWidth: 170 });
+    }
 
     doc.setDrawColor(200);
     doc.line(20, 38, 190, 38);
@@ -73,7 +88,7 @@ export class MoneyReceiptService {
         { content: (p.amount || 0).toFixed(2), styles: { halign: 'right' } }
       ]),
       theme: 'grid',
-      headStyles: { fillColor: [13, 148, 136], textColor: 255, fontSize: 10 },
+      headStyles: { fillColor: [pr, pg, pb], textColor: 255, fontSize: 10 },
       styles: { fontSize: 9 },
       columnStyles: {
         3: { cellWidth: 30 }
@@ -91,7 +106,12 @@ export class MoneyReceiptService {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
-    doc.text('Note: This is a computer generated receipt. No signature is required.', 105, 270, { align: 'center' });
+    doc.text(
+      `${brand.invoiceFooter} — Computer generated receipt, no signature required.`,
+      105,
+      270,
+      { align: 'center', maxWidth: 170 }
+    );
     
     doc.setDrawColor(200);
     doc.line(20, 260, 190, 260);

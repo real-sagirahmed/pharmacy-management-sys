@@ -56,8 +56,8 @@ import { TagModule } from 'primeng/tag';
                         [style]="{'min-width': '180px'}"></p-dropdown>
           </div>
 
-          <!-- Create Role Section (Merged) -->
-          <div class="flex items-center gap-2 max-w-xs" *ngIf="isSystemAdmin || hasPermission('Roles', 'create')">
+          <!-- Create Role Section (SystemAdmin only — AspNetRoles is global across tenants) -->
+          <div class="flex items-center gap-2 max-w-xs" *ngIf="isSystemAdmin">
             <input type="text" pInputText [(ngModel)]="newRoleName" 
                    placeholder="New role name..." class="p-inputtext-sm text-xs w-32"
                    (input)="blockReservedRoleName()">
@@ -114,17 +114,17 @@ import { TagModule } from 'primeng/tag';
                 </div>
               </div>
               <div class="role-actions">
-                <!-- Edit & Delete hidden for SystemAdmin role itself -->
-                <ng-container *ngIf="role.name !== 'SystemAdmin' && role.name !== 'Admin' && (isSystemAdmin || hasPermission('Roles', 'edit'))">
+                <!-- Edit & Delete restricted strictly to SystemAdmin -->
+                <ng-container *ngIf="role.name !== 'SystemAdmin' && role.name !== 'Admin' && isSystemAdmin">
                   <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-sm" 
                           (click)="editRole(role); $event.stopPropagation()"></button>
                 </ng-container>
-                <ng-container *ngIf="role.name !== 'SystemAdmin' && role.name !== 'Admin' && (isSystemAdmin || hasPermission('Roles', 'delete'))">
+                <ng-container *ngIf="role.name !== 'SystemAdmin' && role.name !== 'Admin' && isSystemAdmin">
                   <button pButton icon="pi pi-trash" class="p-button-rounded p-button-text p-button-sm p-button-danger" 
                           (click)="confirmDelete(role); $event.stopPropagation()"></button>
                 </ng-container>
-                <ng-container *ngIf="role.name === 'SystemAdmin' || role.name === 'Admin' || (!isSystemAdmin && !hasPermission('Roles', 'edit'))">
-                  <i class="pi pi-lock text-amber-500 text-sm" [title]="!isSystemAdmin ? 'Permission required to edit' : 'System role is protected'"></i>
+                <ng-container *ngIf="role.name === 'SystemAdmin' || role.name === 'Admin' || !isSystemAdmin">
+                  <i class="pi pi-lock text-amber-500 text-sm" [title]="!isSystemAdmin ? 'SystemAdmin only' : 'System role is protected'"></i>
                 </ng-container>
               </div>
             </div>
@@ -426,7 +426,11 @@ export class RoleManagementComponent implements OnInit {
     { name: 'Users', icon: 'pi-user-edit' },
     { name: 'Roles', icon: 'pi-shield' },
     { name: 'Settings', icon: 'pi-cog' },
-    { name: 'Master Data', icon: 'pi-list' }
+    { name: 'Master Data', icon: 'pi-list' },
+    { name: 'Tenants', icon: 'pi-building' },
+    { name: 'Branches', icon: 'pi-sitemap' },
+    { name: 'BranchTransfer', icon: 'pi-arrows-h' },
+    { name: 'Batches', icon: 'pi-tags' }
   ];
 
   constructor(
@@ -449,7 +453,8 @@ export class RoleManagementComponent implements OnInit {
   }
 
   loadRoles() {
-    this.userService.getRoles().subscribe(data => this.roles = data);
+    this.userService.getRoles(this.isSystemAdmin ? (this.selectedTenantId ?? undefined) : undefined)
+      .subscribe(data => this.roles = data);
   }
 
   loadTenants() {
@@ -459,6 +464,7 @@ export class RoleManagementComponent implements OnInit {
         if (!this.selectedTenantId && data.length > 0) {
           const preferred = data.find(t => t.isActive) || data[0];
           this.selectedTenantId = preferred.tenantId;
+          this.loadRoles();
           if (this.selectedRole) {
             this.loadPermissions(this.selectedRole.id);
           }
@@ -490,6 +496,7 @@ export class RoleManagementComponent implements OnInit {
     this.confirmDiscardIfDirty(
       () => {
         this.selectedTenantId = newTenantId;
+        this.loadRoles();
         if (this.selectedRole) {
           this.loadPermissions(this.selectedRole.id);
         }
@@ -521,8 +528,10 @@ export class RoleManagementComponent implements OnInit {
     this.userService.getPermissions(roleId, this.selectedTenantId ?? undefined).subscribe(data => {
       let finalPerms: PermissionDto[] = [];
       
-      // Map modules to current interface
-      finalPerms = this.modules.map(mod => {
+      // Map modules to current interface (Tenants permission row is visible only to SystemAdmin)
+      finalPerms = this.modules
+        .filter(mod => this.isSystemAdmin || mod.name !== 'Tenants')
+        .map(mod => {
         const existing = data.find(p => p.moduleName === mod.name);
         return existing || {
           roleId: roleId,

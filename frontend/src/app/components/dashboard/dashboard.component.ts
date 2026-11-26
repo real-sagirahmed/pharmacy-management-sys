@@ -207,7 +207,7 @@ import { TooltipModule } from 'primeng/tooltip';
             </a>
 
             <!-- ─── Inventory & Stock ─── -->
-            <div class="nav-group" [class.group-open]="inventoryOpen()" [class.group-active]="isGroupActive('inventory')" *ngIf="isSystemAdmin() || hasPermission('Medicines') || hasPermission('Purchases')">
+            <div class="nav-group" [class.group-open]="inventoryOpen()" [class.group-active]="isGroupActive('inventory')" *ngIf="isSystemAdmin() || hasPermission('Medicines') || hasPermission('Purchases') || hasPermission('Batches')">
               <div class="nav-item group-header" (click)="toggleGroup('inventory')"
                    appTooltip="Stock & Procurement" [tooltipEnabled]="!sidebarOpen()">
                 <i class="pi pi-box nav-icon"></i>
@@ -224,6 +224,11 @@ import { TooltipModule } from 'primeng/tooltip';
                    appTooltip="New Purchase & Orders" [tooltipEnabled]="!sidebarOpen()">
                   <i class="pi pi-truck nav-icon-dot"></i>
                   <span class="nav-label">Procurement</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Batches')" routerLink="/dashboard/batches" routerLinkActive="nav-active"
+                   appTooltip="FEFO Batches, Quarantine & Recalls" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-shield nav-icon-dot"></i>
+                  <span class="nav-label">Batches & Recalls</span>
                 </a>
               </div>
             </div>
@@ -315,7 +320,7 @@ import { TooltipModule } from 'primeng/tooltip';
             <app-global-search #globalSearch></app-global-search>
 
             <!-- ─── Administration ─── -->
-            <div class="nav-group" [class.group-open]="adminOpen()" [class.group-active]="isGroupActive('admin')" *ngIf="isSystemAdmin() || hasPermission('Users') || hasPermission('Roles')">
+            <div class="nav-group" [class.group-open]="adminOpen()" [class.group-active]="isGroupActive('admin')" *ngIf="isSystemAdmin() || hasPermission('Users') || hasPermission('Roles') || hasPermission('Branches') || hasPermission('BranchTransfer')">
               <div class="nav-item group-header" (click)="toggleGroup('admin')"
                    appTooltip="Users & Access Control" [tooltipEnabled]="!sidebarOpen()">
                 <i class="pi pi-shield nav-icon"></i>
@@ -323,6 +328,14 @@ import { TooltipModule } from 'primeng/tooltip';
                 <i class="pi pi-chevron-up group-arrow"></i>
               </div>
               <div class="sub-nav">
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin()" routerLink="/dashboard/tenants" routerLinkActive="nav-active" appTooltip="SaaS Pharmacies & Subscriptions" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-globe nav-icon-dot"></i>
+                  <span class="nav-label">Pharmacies (Tenants)</span>
+                </a>
+                <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Branches') || hasPermission('BranchTransfer')" routerLink="/dashboard/branches" routerLinkActive="nav-active" appTooltip="Outlets & Stock Transfers" [tooltipEnabled]="!sidebarOpen()">
+                  <i class="pi pi-building nav-icon-dot"></i>
+                  <span class="nav-label">Branches & Transfers</span>
+                </a>
                 <a class="nav-item sub-item" *ngIf="isSystemAdmin() || hasPermission('Users')" routerLink="/dashboard/users" routerLinkActive="nav-active" appTooltip="User Accounts & Access" [tooltipEnabled]="!sidebarOpen()">
                   <i class="pi pi-user-plus nav-icon-dot"></i>
                   <span class="nav-label">Manage Users</span>
@@ -1234,9 +1247,9 @@ export class DashboardComponent implements OnInit {
 
   autoOpenGroups() {
     const url = this.router.url;
-    if (url.includes('/medicines') || url.includes('/purchases')) this.inventoryOpen.set(true);
+    if (url.includes('/medicines') || url.includes('/purchases') || url.includes('/batches')) this.inventoryOpen.set(true);
     if (url.includes('/sales') || url.includes('/due-collection') || url.includes('/parties')) this.salesOpen.set(true);
-    if (url.includes('/users') || url.includes('/roles')) this.adminOpen.set(true);
+    if (url.includes('/users') || url.includes('/roles') || url.includes('/tenants') || url.includes('/branches')) this.adminOpen.set(true);
     if (url.includes('/reports')) this.reportsOpen.set(true);
     if (url.includes('/taxes') || url.includes('/uoms') || url.includes('/generics') || 
         url.includes('/categories') || url.includes('/manufacturers') || 
@@ -1276,9 +1289,9 @@ export class DashboardComponent implements OnInit {
     const sections = url.split('/');
     const mainSection = sections[2] || ''; // 'dashboard/{mainSection}/...'
 
-    if (group === 'inventory') return mainSection === 'medicines' || mainSection === 'purchases';
+    if (group === 'inventory') return mainSection === 'medicines' || mainSection === 'purchases' || mainSection === 'batches';
     if (group === 'sales') return mainSection === 'sales' || mainSection === 'due-collection' || mainSection === 'parties';
-    if (group === 'admin') return mainSection === 'users' || mainSection === 'roles';
+    if (group === 'admin') return mainSection === 'users' || mainSection === 'roles' || mainSection === 'tenants' || mainSection === 'branches';
     if (group === 'reports') return mainSection === 'reports' || mainSection === 'analytics';
     if (group === 'config') {
       const configSections = ['taxes', 'uoms', 'generics', 'categories', 'manufacturers', 'dosage-forms', 'strengths', 'indications'];

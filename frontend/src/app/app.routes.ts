@@ -11,6 +11,9 @@ import { SalesListComponent } from './components/sales/sales-list.component';
 import { DueCollectionComponent } from './components/due-collection/due-collection.component';
 import { UserManagementComponent } from './components/dashboard/user-management/user-management.component';
 import { RoleManagementComponent } from './components/dashboard/user-management/role-management.component';
+import { TenantManagementComponent } from './components/tenants/tenant-management.component';
+import { BranchManagementComponent } from './components/branches/branch-management.component';
+import { BatchListComponent } from './components/batches/batch-list.component';
 import { AuthGuard } from './guards/auth.guard';
 
 // ─── Master Data Components ───
@@ -59,6 +62,9 @@ export const routes: Routes = [
 
       { path: 'users',       component: UserManagementComponent },
       { path: 'roles',       component: RoleManagementComponent },
+      { path: 'tenants',     component: TenantManagementComponent },
+      { path: 'branches',    component: BranchManagementComponent },
+      { path: 'batches',     component: BatchListComponent },
       // ─── Master Data Routes ───
       { path: 'parties',    component: PartyListComponent },
       { path: 'taxes',      component: TaxListComponent },

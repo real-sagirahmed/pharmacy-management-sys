@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService } from '../../../services/user.service';
 import { AuthService } from '../../../services/auth.service';
+import { BranchService, BranchItem } from '../../../services/branch.service';
+import { TenantService, TenantListDto } from '../../../services/tenant.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -83,6 +85,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                 <tr>
                   <th style="min-width: 250px;" pSortableColumn="fullName">User Details <p-sortIcon field="fullName"></p-sortIcon></th>
                   <th style="min-width: 150px;">Roles</th>
+                  <th style="min-width: 140px;">Branch</th>
                   <th style="min-width: 140px;">Mobile</th>
                   <th style="min-width: 180px;">Address</th>
                   <th style="min-width: 120px;">Status</th>
@@ -113,6 +116,9 @@ import { ConfirmationService, MessageService } from 'primeng/api';
                         {{ role }}
                       </span>
                     </div>
+                  </td>
+                  <td>
+                    <span class="text-xs font-semibold text-slate-700">{{ getBranchLabel(u) }}</span>
                   </td>
                   <td>
                     <div class="user-phone" style="font-size: 0.8rem; font-weight: 600; color: #475569;">
@@ -181,7 +187,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
               </ng-template>
 
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="7"><div class="empty-state"><i class="pi pi-users empty-icon"></i><p class="empty-text">No users found</p></div></td></tr>
+                <tr><td colspan="8"><div class="empty-state"><i class="pi pi-users empty-icon"></i><p class="empty-text">No users found</p></div></td></tr>
               </ng-template>
             </p-table>
           </div>
@@ -232,6 +238,16 @@ import { ConfirmationService, MessageService } from 'primeng/api';
               <p-dropdown [options]="availableRoles" [(ngModel)]="newUser.role" 
                           placeholder="Select a Role" [style]="{width: '100%'}"></p-dropdown>
             </div>
+            <div class="field" *ngIf="isSystemAdmin()">
+              <label for="tenantId">Pharmacy Tenant *</label>
+              <p-dropdown [options]="tenants()" [(ngModel)]="newUser.tenantId" optionLabel="pharmacyName" optionValue="tenantId"
+                          placeholder="Select Tenant" (onChange)="newUser.branchId = null" [style]="{width: '100%'}"></p-dropdown>
+            </div>
+            <div class="field">
+              <label for="branchId">Assigned Branch</label>
+              <p-dropdown [options]="getBranchOptions(newUser.tenantId)" [(ngModel)]="newUser.branchId"
+                          optionLabel="label" optionValue="value" placeholder="All Branches (Admin/Owner)" [style]="{width: '100%'}"></p-dropdown>
+            </div>
           </div>
         </ng-template>
 
@@ -281,6 +297,11 @@ import { ConfirmationService, MessageService } from 'primeng/api';
             <div class="field">
               <label for="eaddress">Residential Address</label>
               <textarea pInputText id="eaddress" [(ngModel)]="editUser.address" placeholder="Enter full address" rows="2" style="width: 100%; border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 10px;"></textarea>
+            </div>
+            <div class="field" *ngIf="!editUserIsSysAdmin">
+              <label for="ebranchId">Assigned Branch</label>
+              <p-dropdown [options]="getBranchOptions(editUser.tenantId, true)" [(ngModel)]="editUser.branchId"
+                          optionLabel="label" optionValue="value" placeholder="All Branches (Admin/Owner)" [style]="{width: '100%'}"></p-dropdown>
             </div>
           </div>
         </ng-template>
@@ -434,17 +455,20 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 })
 export class UserManagementComponent implements OnInit {
   users = signal<any[]>([]);
+  branches = signal<BranchItem[]>([]);
+  tenants = signal<TenantListDto[]>([]);
   searchText = '';
   loading = signal(false);
   saving = false;
 
   // Add User Dialog
   displayAddDialog = false;
-  newUser = { fullName: '', userName: '', email: '', password: '', role: 'Cashier', phoneNumber: '', address: '' };
+  newUser: any = { fullName: '', userName: '', email: '', password: '', role: 'Cashier', phoneNumber: '', address: '', tenantId: null, branchId: null };
   
   // Edit User Dialog
   displayEditDialog = false;
-  editUser = { id: '', fullName: '', userName: '', email: '', phoneNumber: '', address: '', password: '' };
+  editUserIsSysAdmin = false;
+  editUser: any = { id: '', fullName: '', userName: '', email: '', phoneNumber: '', address: '', password: '', tenantId: null, branchId: 0 };
 
   availableRoles = ['Admin', 'Manager', 'Pharmacist', 'Cashier'];
 
@@ -463,12 +487,45 @@ export class UserManagementComponent implements OnInit {
   constructor(
     private userService: UserService, 
     private authService: AuthService,
+    private branchService: BranchService,
+    private tenantService: TenantService,
     private confirmationService: ConfirmationService,
     private messageService: MessageService,
     private router: Router
   ) {}
 
-  ngOnInit() { this.loadUsers(); }
+  ngOnInit() {
+    this.loadUsers();
+    this.branchService.getBranches().subscribe({
+      next: b => this.branches.set(b || []),
+      error: () => this.branches.set([])
+    });
+    if (this.isSystemAdmin()) {
+      this.tenantService.getAll().subscribe({
+        next: t => this.tenants.set(t || []),
+        error: () => this.tenants.set([])
+      });
+    }
+  }
+
+  getBranchLabel(u: any): string {
+    if (this.isUserSystemAdmin(u)) return 'Platform';
+    if (!u.branchId) return 'All Branches (Owner)';
+    const match = this.branches().find(b => b.branchId === u.branchId);
+    return match ? match.branchName : `Branch #${u.branchId}`;
+  }
+
+  getBranchOptions(tenantId?: number | null, zeroForAll = false): Array<{ label: string; value: number | null }> {
+    const allOptionValue: number | null = zeroForAll ? 0 : null;
+    const filtered = this.branches().filter(b => b.isActive && (!tenantId || b.tenantId === tenantId));
+    const options: Array<{ label: string; value: number | null }> = [
+      { label: 'All Branches (Admin/Owner)', value: allOptionValue }
+    ];
+    for (const b of filtered) {
+      options.push({ label: b.isHeadOffice ? `${b.branchName} ★` : b.branchName, value: b.branchId });
+    }
+    return options;
+  }
 
   loadUsers() {
     this.loading.set(true);
@@ -539,7 +596,11 @@ export class UserManagementComponent implements OnInit {
   }
 
   showAddDialog() {
-    this.newUser = { fullName: '', userName: '', email: '', password: '', role: 'Cashier', phoneNumber: '', address: '' };
+    this.newUser = {
+      fullName: '', userName: '', email: '', password: '', role: 'Cashier', phoneNumber: '', address: '',
+      tenantId: this.isSystemAdmin() ? (this.tenants()[0]?.tenantId ?? null) : null,
+      branchId: null
+    };
     this.displayAddDialog = true;
   }
 
@@ -571,6 +632,7 @@ export class UserManagementComponent implements OnInit {
   }
 
   showEditDialog(user: any) {
+    this.editUserIsSysAdmin = this.isUserSystemAdmin(user);
     this.editUser = {
       id: user.id,
       fullName: user.fullName,
@@ -578,7 +640,9 @@ export class UserManagementComponent implements OnInit {
       email: user.email,
       phoneNumber: user.phoneNumber || '',
       address: user.address || '',
-      password: ''
+      password: '',
+      tenantId: user.tenantId ?? null,
+      branchId: user.branchId ?? 0
     };
     this.displayEditDialog = true;
   }

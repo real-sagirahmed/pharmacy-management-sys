@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { TenantConfigService } from '../../services/tenant-config.service';
 
 @Component({
   selector: 'app-register',
@@ -15,11 +16,11 @@ import { AuthService } from '../../services/auth.service';
         <div class="visual-content">
           <div class="glass-brand">
             <div class="brand-icon">
-              <img src="/s7-logo-mark.svg" alt="s7 Logo" style="width: 38px; height: 38px;">
+              <img [src]="tenantConfig.logoUrl()" [alt]="tenantConfig.pharmacyName() + ' Logo'" style="width: 38px; height: 38px; object-fit: contain;">
             </div>
             <div>
-              <h1 class="brand-name">s7 Drug House</h1>
-              <p style="font-size: 0.95rem; color: #94a3b8; margin: 0;">Universal Pharmacy System</p>
+              <h1 class="brand-name">{{ tenantConfig.pharmacyName() }}</h1>
+              <p style="font-size: 0.95rem; color: #94a3b8; margin: 0;">{{ tenantConfig.tagline() }}</p>
             </div>
           </div>
           <div class="visual-text">
@@ -139,7 +140,7 @@ import { AuthService } from '../../services/auth.service';
             </div>
           </form>
 
-          <p class="copyright text-center py-4">© 2024 Pharmacy Management System</p>
+          <p class="copyright text-center py-4">© {{ currentYear }} {{ tenantConfig.pharmacyName() }}</p>
         </div>
       </div>
     </div>
@@ -156,7 +157,7 @@ import { AuthService } from '../../services/auth.service';
     }
     .visual-bg {
       position: absolute; top:0; left:0; width:100%; height:100%;
-      background: linear-gradient(135deg, #007070 0%, #050505 100%);
+      background: linear-gradient(135deg, var(--brand) 0%, #050505 100%);
       opacity: 0.95; z-index: 1;
     }
     .visual-bg::after {
@@ -182,8 +183,8 @@ import { AuthService } from '../../services/auth.service';
     .stats-float { display: flex; gap: 16px; }
     .stat-item {
       display: flex; align-items: center; gap: 8px; font-size: .875rem; font-weight: 700;
-      color: #fff; background: rgba(0, 112, 112, 0.35);
-      padding: 8px 18px; border-radius: 99px; border: 1px solid rgba(0, 112, 112, 0.5);
+      color: #fff; background: var(--brand-badge-bg, rgba(0, 112, 112, 0.35));
+      padding: 8px 18px; border-radius: 99px; border: 1px solid var(--brand-badge-border, rgba(0, 112, 112, 0.5));
       box-shadow: 0 4px 12px var(--brand-glow);
     }
 
@@ -249,11 +250,13 @@ export class RegisterComponent {
   loading = false;
   error = '';
   success = '';
+  currentYear = new Date().getFullYear();
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    public tenantConfig: TenantConfigService
   ) {
     this.registerForm = this.fb.group({
       fullName: ['', Validators.required],
