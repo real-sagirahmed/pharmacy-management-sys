@@ -47,6 +47,10 @@ namespace PharmacyApi.Models
         [StringLength(20)]
         public string SaleStatus { get; set; } = "Completed";
 
+        // Optional prescription attachment relative path (e.g. /uploads/prescriptions/tenant-1/rx-12.png)
+        [StringLength(260)]
+        public string? PrescriptionImagePath { get; set; }
+
         // ─── SaaS: Tenant + Branch (কোন ফার্মেসির কোন শাখায় বিক্রি হয়েছে)
         public int TenantId { get; set; }
         public int BranchId { get; set; }

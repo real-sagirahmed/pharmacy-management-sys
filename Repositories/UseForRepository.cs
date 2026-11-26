@@ -29,7 +29,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<UseForDto?> GetByIdAsync(int id)
         {
-            var u = await _context.UseFors.FindAsync(id);
+            var u = await _context.UseFors.AsNoTracking().FirstOrDefaultAsync(x => x.UseForId == id);
             if (u == null) return null;
             return new UseForDto
             {
@@ -77,7 +77,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, UseForDto dto)
         {
-            var entity = await _context.UseFors.FindAsync(id);
+            var entity = await _context.UseFors.FirstOrDefaultAsync(x => x.UseForId == id);
             if (entity == null) return false;
 
             if (await _context.UseFors.AnyAsync(u => u.Code == dto.Code && u.UseForId != id))
@@ -97,7 +97,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.UseFors.FindAsync(id);
+            var entity = await _context.UseFors.FirstOrDefaultAsync(x => x.UseForId == id);
             if (entity == null) return false;
             _context.UseFors.Remove(entity);
             await _context.SaveChangesAsync();

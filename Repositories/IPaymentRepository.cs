@@ -9,8 +9,8 @@ namespace PharmacyApi.Repositories
         Task<IEnumerable<object>> GetPurchaseDuesAsync();
 
         // ─── Payment History ─────────────────────────────────────────────────
-        Task<IEnumerable<SalesPaymentDto>> GetSalesPaymentHistoryAsync(int saleId);
-        Task<IEnumerable<PurchasePaymentDto>> GetPurchasePaymentHistoryAsync(int purchaseId);
+        Task<IEnumerable<SalesPaymentDto>?> GetSalesPaymentHistoryAsync(int saleId);
+        Task<IEnumerable<PurchasePaymentDto>?> GetPurchasePaymentHistoryAsync(int purchaseId);
 
         // ─── Single Collect / Pay ────────────────────────────────────────────
         Task<(bool Success, string Message, decimal NewDue)> CollectSalesDueAsync(SalesPaymentDto dto);

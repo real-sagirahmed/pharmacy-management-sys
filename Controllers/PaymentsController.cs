@@ -36,20 +36,25 @@ namespace PharmacyApi.Controllers
             return Ok(result);
         }
 
+        private IActionResult ToPaymentActionResult(bool success, string message, decimal newDue)
+        {
+            if (!success)
+            {
+                if (message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                    return NotFound(message);
+                return BadRequest(message);
+            }
+
+            return Ok(new { Message = message, NewDue = newDue });
+        }
+
         // POST: api/Payments/CollectSalesDue
         [HttpPost("CollectSalesDue")]
         [ModulePermission("Due Collection", "create")]
         public async Task<IActionResult> CollectSalesDue([FromBody] SalesPaymentDto paymentDto)
         {
             var (success, message, newDue) = await _paymentRepo.CollectSalesDueAsync(paymentDto);
-
-            if (!success)
-            {
-                if (message.Contains("not found")) return NotFound(message);
-                return BadRequest(message);
-            }
-
-            return Ok(new { Message = message, NewDue = newDue });
+            return ToPaymentActionResult(success, message, newDue);
         }
 
         // POST: api/Payments/PayPurchaseDue
@@ -58,14 +63,7 @@ namespace PharmacyApi.Controllers
         public async Task<IActionResult> PayPurchaseDue([FromBody] PurchasePaymentDto paymentDto)
         {
             var (success, message, newDue) = await _paymentRepo.PayPurchaseDueAsync(paymentDto);
-
-            if (!success)
-            {
-                if (message.Contains("not found")) return NotFound(message);
-                return BadRequest(message);
-            }
-
-            return Ok(new { Message = message, NewDue = newDue });
+            return ToPaymentActionResult(success, message, newDue);
         }
 
         // POST: api/Payments/BulkCollectSalesDue
@@ -74,8 +72,7 @@ namespace PharmacyApi.Controllers
         public async Task<IActionResult> BulkCollectSalesDue([FromBody] BulkSalesPaymentDto bulkDto)
         {
             var (success, message, newDue) = await _paymentRepo.BulkCollectSalesDueAsync(bulkDto);
-            if (!success) return BadRequest(message);
-            return Ok(new { Message = message, NewDue = newDue });
+            return ToPaymentActionResult(success, message, newDue);
         }
 
         // POST: api/Payments/BulkPayPurchaseDue
@@ -84,11 +81,8 @@ namespace PharmacyApi.Controllers
         public async Task<IActionResult> BulkPayPurchaseDue([FromBody] BulkPurchasePaymentDto bulkDto)
         {
             var (success, message, newDue) = await _paymentRepo.BulkPayPurchaseDueAsync(bulkDto);
-            if (!success) return BadRequest(message);
-            return Ok(new { Message = message, NewDue = newDue });
+            return ToPaymentActionResult(success, message, newDue);
         }
-
-        // GET: api/Payments/SalesHistory/{saleId}
 
         // GET: api/Payments/SalesHistory/{saleId}
         [HttpGet("SalesHistory/{saleId}")]
@@ -96,6 +90,7 @@ namespace PharmacyApi.Controllers
         public async Task<IActionResult> GetSalesHistory(int saleId)
         {
             var result = await _paymentRepo.GetSalesPaymentHistoryAsync(saleId);
+            if (result == null) return NotFound();
             return Ok(result);
         }
 
@@ -105,6 +100,7 @@ namespace PharmacyApi.Controllers
         public async Task<IActionResult> GetPurchaseHistory(int purchaseId)
         {
             var result = await _paymentRepo.GetPurchasePaymentHistoryAsync(purchaseId);
+            if (result == null) return NotFound();
             return Ok(result);
         }
     }

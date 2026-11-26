@@ -22,55 +22,90 @@ namespace PharmacyApi.Controllers
         [ModulePermission("Users", "view")]
         public async Task<IActionResult> GetUsers()
         {
-            var users = await _userService.GetAllUsersAsync();
-            return Ok(users);
+            try
+            {
+                var users = await _userService.GetAllUsersAsync();
+                return Ok(users);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         [HttpPost("create-by-admin")]
         [ModulePermission("Users", "create")]
         public async Task<IActionResult> CreateByAdmin([FromBody] CreateUserDto model)
         {
-            var result = await _userService.CreateUserAsync(model);
-            if (result.Succeeded) return Ok(new { Message = "User created successfully" });
+            try
+            {
+                var result = await _userService.CreateUserAsync(model);
+                if (result.Succeeded) return Ok(new { Message = "User created successfully" });
 
-            return BadRequest(result.Errors);
+                return BadRequest(result.Errors);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         [HttpPatch("{id}/toggle-status")]
         [ModulePermission("Users", "edit")]
         public async Task<IActionResult> ToggleStatus(string id)
         {
-            var success = await _userService.ToggleUserStatusAsync(id);
-            if (success) return Ok(new { Message = "User status toggled successfully" });
+            try
+            {
+                var success = await _userService.ToggleUserStatusAsync(id);
+                if (success) return Ok(new { Message = "User status toggled successfully" });
 
-            return NotFound("User not found, is SystemAdmin, or failed to update");
+                return NotFound("User not found, is SystemAdmin, or failed to update");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         [HttpPut("{id}")]
         [ModulePermission("Users", "edit")]
         public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserDto model)
         {
-            // Security Hardening: Only SystemAdmin can edit a SystemAdmin user
-            var isTargetSystemAdmin = await _userService.IsUserSystemAdminAsync(id);
-            if (isTargetSystemAdmin && !User.IsInRole("SystemAdmin"))
+            try
             {
-                return Forbid(); // Non-SystemAdmins cannot edit a SystemAdmin
+                // Security Hardening: Only SystemAdmin can edit a SystemAdmin user; cross-tenant/branch enforced in service
+                var isTargetSystemAdmin = await _userService.IsUserSystemAdminAsync(id);
+                if (isTargetSystemAdmin && !User.IsInRole("SystemAdmin"))
+                {
+                    return Forbid();
+                }
+
+                var result = await _userService.UpdateUserAsync(id, model);
+                if (result.Succeeded) return Ok(new { Message = "User updated successfully" });
+
+                return BadRequest(result.Errors);
             }
-
-            var result = await _userService.UpdateUserAsync(id, model);
-            if (result.Succeeded) return Ok(new { Message = "User updated successfully" });
-
-            return BadRequest(result.Errors);
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         [HttpDelete("{id}")]
         [ModulePermission("Users", "delete")]
         public async Task<IActionResult> DeleteUser(string id)
         {
-            var result = await _userService.DeleteUserAsync(id);
-            if (result.Succeeded) return Ok(new { Message = "User deleted successfully" });
+            try
+            {
+                var result = await _userService.DeleteUserAsync(id);
+                if (result.Succeeded) return Ok(new { Message = "User deleted successfully" });
 
-            return BadRequest(result.Errors);
+                return BadRequest(result.Errors);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         // ─── Role Assignment ───
@@ -86,10 +121,17 @@ namespace PharmacyApi.Controllers
                 return Forbid(); // 403
             }
 
-            var result = await _userService.AssignUserRoleAsync(model.UserId, model.NewRole);
-            if (result.Succeeded) return Ok(new { Message = "User role updated successfully" });
+            try
+            {
+                var result = await _userService.AssignUserRoleAsync(model.UserId, model.NewRole);
+                if (result.Succeeded) return Ok(new { Message = "User role updated successfully" });
 
-            return BadRequest(result.Errors);
+                return BadRequest(result.Errors);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         // Only SystemAdmin can grant the SystemAdmin role to another user
@@ -108,14 +150,24 @@ namespace PharmacyApi.Controllers
 
         [HttpGet("roles")]
         [ModulePermission("Roles", "view")]
-        public async Task<IActionResult> GetRoles()
+        public async Task<IActionResult> GetRoles([FromQuery] int? tenantId = null)
         {
-            var roles = await _userService.GetRolesAsync();
-            return Ok(roles);
+            try
+            {
+                int? scopedTenantId = User.IsInRole("SystemAdmin") ? tenantId : null;
+                var roles = await _userService.GetRolesAsync(scopedTenantId);
+                return Ok(roles);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
+        // ARCHITECTURAL INTENT: AspNetRoles is a shared global table across all tenants.
+        // Creating, renaming, or deleting global roles is strictly restricted to SystemAdmin.
         [HttpPost("roles")]
-        [ModulePermission("Roles", "create")]
+        [Authorize(Roles = "SystemAdmin")]
         public async Task<IActionResult> CreateRole([FromBody] string roleName)
         {
             var result = await _userService.CreateRoleAsync(roleName);
@@ -125,7 +177,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpPut("roles/{roleId}")]
-        [ModulePermission("Roles", "edit")]
+        [Authorize(Roles = "SystemAdmin")]
         public async Task<IActionResult> UpdateRoleName(string roleId, [FromBody] string newName)
         {
             var result = await _userService.UpdateRoleAsync(roleId, newName);
@@ -135,7 +187,7 @@ namespace PharmacyApi.Controllers
         }
 
         [HttpDelete("roles/{roleId}")]
-        [ModulePermission("Roles", "delete")]
+        [Authorize(Roles = "SystemAdmin")]
         public async Task<IActionResult> DeleteRole(string roleId)
         {
             var result = await _userService.DeleteRoleAsync(roleId);

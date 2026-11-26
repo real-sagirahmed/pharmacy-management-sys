@@ -29,7 +29,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<CommonStrengthDto?> GetByIdAsync(int id)
         {
-            var s = await _context.CommonStrengths.FindAsync(id);
+            var s = await _context.CommonStrengths.AsNoTracking().FirstOrDefaultAsync(x => x.CommonStrengthId == id);
             if (s == null) return null;
             return new CommonStrengthDto
             {
@@ -77,7 +77,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, CommonStrengthDto dto)
         {
-            var entity = await _context.CommonStrengths.FindAsync(id);
+            var entity = await _context.CommonStrengths.FirstOrDefaultAsync(x => x.CommonStrengthId == id);
             if (entity == null) return false;
 
             if (await _context.CommonStrengths.AnyAsync(s => s.Code == dto.Code && s.CommonStrengthId != id))
@@ -97,7 +97,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.CommonStrengths.FindAsync(id);
+            var entity = await _context.CommonStrengths.FirstOrDefaultAsync(x => x.CommonStrengthId == id);
             if (entity == null) return false;
             _context.CommonStrengths.Remove(entity);
             await _context.SaveChangesAsync();

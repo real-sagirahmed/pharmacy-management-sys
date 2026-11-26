@@ -29,7 +29,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<UomDto?> GetByIdAsync(int id)
         {
-            var u = await _context.Uoms.FindAsync(id);
+            var u = await _context.Uoms.AsNoTracking().FirstOrDefaultAsync(x => x.UomId == id);
             if (u == null) return null;
             return new UomDto
             {
@@ -77,7 +77,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, UomDto dto)
         {
-            var entity = await _context.Uoms.FindAsync(id);
+            var entity = await _context.Uoms.FirstOrDefaultAsync(x => x.UomId == id);
             if (entity == null) return false;
 
             if (await _context.Uoms.AnyAsync(u => u.Code == dto.Code && u.UomId != id))
@@ -98,7 +98,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.Uoms.FindAsync(id);
+            var entity = await _context.Uoms.FirstOrDefaultAsync(x => x.UomId == id);
             if (entity == null) return false;
             _context.Uoms.Remove(entity);
             await _context.SaveChangesAsync();

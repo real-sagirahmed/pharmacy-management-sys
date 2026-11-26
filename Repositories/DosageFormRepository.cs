@@ -29,7 +29,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<DosageFormDto?> GetByIdAsync(int id)
         {
-            var d = await _context.DosageForms.FindAsync(id);
+            var d = await _context.DosageForms.AsNoTracking().FirstOrDefaultAsync(x => x.DosageFormId == id);
             if (d == null) return null;
             return new DosageFormDto
             {
@@ -77,7 +77,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, DosageFormDto dto)
         {
-            var entity = await _context.DosageForms.FindAsync(id);
+            var entity = await _context.DosageForms.FirstOrDefaultAsync(x => x.DosageFormId == id);
             if (entity == null) return false;
 
             if (await _context.DosageForms.AnyAsync(d => d.Code == dto.Code && d.DosageFormId != id))
@@ -97,7 +97,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.DosageForms.FindAsync(id);
+            var entity = await _context.DosageForms.FirstOrDefaultAsync(x => x.DosageFormId == id);
             if (entity == null) return false;
             _context.DosageForms.Remove(entity);
             await _context.SaveChangesAsync();

@@ -31,36 +31,83 @@ namespace PharmacyApi.Controllers
         }
 
         // ── GET /api/tenants/config ─────────────────────────────────────────
-        // যেকোনো লগড-ইন ইউজার — নিজের Tenant-এর ব্র্যান্ডিং কনফিগ লোড করে
+        // যেকোনো লগড-ইন ইউজার — নিজের Tenant-এর ব্র্যান্ডিং কনফিগ ও শাখার তালিকা লোড করে
         [HttpGet("config")]
         [Authorize]
         public async Task<IActionResult> GetConfig()
         {
             if (_ctx.IsSystemAdmin)
-                return Ok(new { pharmacyName = "teamS7 Tech Solutions", subscriptionPlan = "Internal" });
+            {
+                return Ok(new
+                {
+                    tenantId             = 0,
+                    pharmacyName         = "teamS7 Tech Solutions",
+                    tagline              = "Platform Administration",
+                    subscriptionPlan     = "Internal",
+                    canAccessAllBranches = false,
+                    currentBranch        = (object?)null,
+                    branches             = Array.Empty<object>()
+                });
+            }
 
             if (_ctx.TenantId == null)
                 return Unauthorized();
 
+            int tenantId = _ctx.TenantId.Value;
             var tenant = await _db.Tenants
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.TenantId == _ctx.TenantId);
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId);
 
             if (tenant == null) return NotFound();
 
+            var branchQuery = _db.Branches
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(b => b.TenantId == tenantId && b.IsActive);
+
+            // Branch-locked staff only receive their assigned branch; Tenant Admins receive all active branches.
+            if (!_ctx.CanAccessAllBranches && _ctx.BranchId.HasValue)
+            {
+                int lockedBranchId = _ctx.BranchId.Value;
+                branchQuery = branchQuery.Where(b => b.BranchId == lockedBranchId);
+            }
+
+            var branches = await branchQuery
+                .OrderBy(b => b.IsHeadOffice ? 0 : 1)
+                .ThenBy(b => b.BranchName)
+                .Select(b => new
+                {
+                    branchId     = b.BranchId,
+                    branchName   = b.BranchName,
+                    isHeadOffice = b.IsHeadOffice,
+                    isActive     = b.IsActive,
+                    phone        = b.Phone,
+                    address      = b.Address
+                })
+                .ToListAsync();
+
+            var currentBranch = _ctx.BranchId.HasValue
+                ? branches.FirstOrDefault(b => b.branchId == _ctx.BranchId.Value)
+                : (!_ctx.CanAccessAllBranches ? branches.FirstOrDefault() : null);
+
             return Ok(new
             {
-                pharmacyName       = tenant.PharmacyName,
-                slogan             = tenant.Slogan,
-                headOfficeAddress  = tenant.HeadOfficeAddress,
-                phone              = tenant.Phone,
-                email              = tenant.Email,
-                drugLicenseNo      = tenant.DrugLicenseNo,
-                logoPath           = tenant.LogoPath,
-                invoiceFooter      = tenant.InvoiceFooter,
-                primaryColor       = tenant.PrimaryColor,
-                subscriptionPlan   = tenant.SubscriptionPlan,
-                subscriptionExpiry = tenant.SubscriptionExpiry
+                tenantId             = tenant.TenantId,
+                pharmacyName         = tenant.PharmacyName,
+                tagline              = tenant.Slogan,
+                slogan               = tenant.Slogan,
+                headOfficeAddress    = tenant.HeadOfficeAddress,
+                phone                = tenant.Phone,
+                email                = tenant.Email,
+                drugLicenseNo        = tenant.DrugLicenseNo,
+                logoPath             = tenant.LogoPath,
+                invoiceFooter        = tenant.InvoiceFooter,
+                primaryColor         = tenant.PrimaryColor,
+                subscriptionPlan     = tenant.SubscriptionPlan,
+                subscriptionExpiry   = tenant.SubscriptionExpiry,
+                canAccessAllBranches = _ctx.CanAccessAllBranches,
+                currentBranch,
+                branches
             });
         }
 
@@ -95,10 +142,45 @@ namespace PharmacyApi.Controllers
         [Authorize(Roles = "SystemAdmin")]
         public async Task<IActionResult> GetById(int id)
         {
+            // Explicit DTO projection avoids EF navigation fixup cycles (Tenant <-> Branch) during System.Text.Json serialization.
             var tenant = await _db.Tenants
                 .IgnoreQueryFilters()
-                .Include(t => t.Branches)
-                .FirstOrDefaultAsync(t => t.TenantId == id);
+                .AsNoTracking()
+                .Where(t => t.TenantId == id)
+                .Select(t => new
+                {
+                    t.TenantId,
+                    t.PharmacyName,
+                    t.Slogan,
+                    t.HeadOfficeAddress,
+                    t.Phone,
+                    t.Email,
+                    t.DrugLicenseNo,
+                    t.LogoPath,
+                    t.InvoiceFooter,
+                    t.PrimaryColor,
+                    t.SubscriptionPlan,
+                    t.SubscriptionExpiry,
+                    t.IsActive,
+                    t.CreatedAt,
+                    Branches = t.Branches
+                        .OrderBy(b => b.IsHeadOffice ? 0 : 1)
+                        .ThenBy(b => b.BranchName)
+                        .Select(b => new
+                        {
+                            b.BranchId,
+                            b.TenantId,
+                            b.BranchName,
+                            b.Address,
+                            b.Phone,
+                            b.DrugLicenseNo,
+                            b.IsHeadOffice,
+                            b.IsActive,
+                            b.CreatedAt
+                        })
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
 
             return tenant == null ? NotFound() : Ok(tenant);
         }
@@ -262,25 +344,17 @@ namespace PharmacyApi.Controllers
         // ── POST /api/tenants/{id}/logo ───────────────────────────────────────
         [HttpPost("{id:int}/logo")]
         [Authorize(Roles = "SystemAdmin")]
-        public async Task<IActionResult> UploadLogo(int id, IFormFile file, IWebHostEnvironment env)
+        public async Task<IActionResult> UploadLogo(int id, IFormFile file, IWebHostEnvironment env, CancellationToken cancellationToken = default)
         {
-            if (file == null || file.Length == 0) return BadRequest("কোনো ফাইল আপলোড হয়নি।");
+            var (isValid, errorMsg, ext) = await ImageUploadValidator.ValidateAsync(file, ImageUploadValidator.DefaultMaxImageBytes, cancellationToken);
+            if (!isValid) return BadRequest(errorMsg);
 
-            var tenant = await _db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.TenantId == id);
+            var tenant = await _db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(t => t.TenantId == id, cancellationToken);
             if (tenant == null) return NotFound();
 
-            var folder = Path.Combine(env.WebRootPath, "uploads", "logos", $"tenant-{id}");
-            Directory.CreateDirectory(folder);
-
-            var ext      = Path.GetExtension(file.FileName).ToLowerInvariant();
-            var fileName = $"logo{ext}";
-            var filePath = Path.Combine(folder, fileName);
-
-            await using var stream = new FileStream(filePath, FileMode.Create);
-            await file.CopyToAsync(stream);
-
-            tenant.LogoPath = $"/uploads/logos/tenant-{id}/{fileName}";
-            await _db.SaveChangesAsync();
+            tenant.LogoPath = await ImageUploadValidator.SaveToWebRootAsync(
+                file, env, $"logo{ext}", cancellationToken, "uploads", "logos", $"tenant-{id}");
+            await _db.SaveChangesAsync(cancellationToken);
 
             return Ok(new { logoPath = tenant.LogoPath });
         }

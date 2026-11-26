@@ -11,6 +11,7 @@ namespace PharmacyApi.Repositories
         Task<SalesMasterDto?> GetByIdAsync(int id);
         Task<SalesMasterDto> CreateAsync(SalesMasterDto dto, string username);
         Task<SalesMasterDto> HoldAsync(SalesMasterDto dto, string username);
+        Task<bool> SetPrescriptionImageAsync(int saleId, string relativePath, CancellationToken cancellationToken = default);
         Task<bool> DeleteAsync(int id);
     }
 }

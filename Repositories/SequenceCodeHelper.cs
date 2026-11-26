@@ -27,13 +27,23 @@ namespace PharmacyApi.Repositories
             int? requestedBranchId,
             CancellationToken cancellationToken = default)
         {
-            // Branch-locked users must never spoof another branch via request payload.
+            // Branch-locked users or header-selected multi-branch Admin MUST resolve to an active branch within tenantId.
             if (ctx.BranchId.HasValue && ctx.BranchId.Value > 0)
+            {
+                bool activeOwnedBranch = await db.Branches
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .AnyAsync(b => b.TenantId == tenantId && b.BranchId == ctx.BranchId.Value && b.IsActive, cancellationToken);
+                if (!activeOwnedBranch)
+                    throw new InvalidOperationException("নির্বাচিত শাখাটি বৈধ নয় বা এই ফার্মেসির সক্রিয় শাখা নয়।");
+
                 return ctx.BranchId.Value;
+            }
 
             if (requestedBranchId.HasValue && requestedBranchId.Value > 0)
             {
                 bool validBranch = await db.Branches
+                    .IgnoreQueryFilters()
                     .AsNoTracking()
                     .AnyAsync(b => b.TenantId == tenantId && b.BranchId == requestedBranchId.Value, cancellationToken);
                 if (validBranch)
@@ -41,6 +51,7 @@ namespace PharmacyApi.Repositories
             }
 
             var headOfficeId = await db.Branches
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Where(b => b.TenantId == tenantId && b.IsHeadOffice)
                 .Select(b => b.BranchId)
@@ -50,6 +61,7 @@ namespace PharmacyApi.Repositories
                 return headOfficeId;
 
             var anyBranchId = await db.Branches
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Where(b => b.TenantId == tenantId)
                 .Select(b => b.BranchId)

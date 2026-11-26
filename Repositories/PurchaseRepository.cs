@@ -261,8 +261,26 @@ namespace PharmacyApi.Repositories
                     else
                         purchase.PaymentStatus = "Due";
 
+                    // Pre-validate Recalled/Quarantined guards BEFORE persisting PurchaseMaster/PurchaseDetails
+                    var stagedItems = new List<(PurchaseDetail Detail, PurchaseDetailDto ItemDto, string BatchNumber, MedicineBatch? ExistingBatch)>();
                     foreach (var item in dto.PurchaseDetails)
                     {
+                        var batchNumber = string.IsNullOrWhiteSpace(item.BatchNumber) ? "DEFAULT" : item.BatchNumber.Trim();
+                        var existingBatch = await _context.MedicineBatches.FirstOrDefaultAsync(b =>
+                            b.TenantId == tenantId &&
+                            b.BranchId == branchId &&
+                            b.MedicineId == item.MedicineId &&
+                            b.BatchNumber == batchNumber, ct);
+
+                        if (existingBatch != null &&
+                            (string.Equals(existingBatch.Status, "Recalled", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(existingBatch.Status, "Quarantined", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            // ARCHITECTURAL INTENT: Never auto-reactivate a Recalled or Quarantined batch on restock.
+                            throw new InvalidOperationException(
+                                $"ব্যাচ '{existingBatch.BatchNumber}' বর্তমানে '{existingBatch.Status}' অবস্থায় আছে; নতুন পারচেজ দিয়ে এটি পুনরায় Active করা যাবে না।");
+                        }
+
                         var detail = new PurchaseDetail
                         {
                             MedicineId      = item.MedicineId,
@@ -281,57 +299,7 @@ namespace PharmacyApi.Repositories
                             CreatedAt       = now
                         };
                         purchase.PurchaseDetails.Add(detail);
-
-                        // ─── SaaS MedicineBatch Upsert (Branch-level batch stock) ───
-                        var batchNumber = string.IsNullOrWhiteSpace(item.BatchNumber) ? "DEFAULT" : item.BatchNumber.Trim();
-                        var batch = await _context.MedicineBatches
-                            .FirstOrDefaultAsync(b => b.TenantId == tenantId &&
-                                                      b.BranchId == branchId &&
-                                                      b.MedicineId == item.MedicineId &&
-                                                      b.BatchNumber == batchNumber);
-
-                        if (batch != null)
-                        {
-                            batch.CurrentStock += item.Quantity;
-                            if (item.ExpiryDate.HasValue) batch.ExpiryDate = item.ExpiryDate.Value;
-                            batch.PurchasePrice = item.UnitCost;
-                            if (item.SalePrice > 0) batch.SalePrice = item.SalePrice;
-                            batch.Status = "Active"; // Reactivate if was zero
-                        }
-                        else
-                        {
-                            batch = new MedicineBatch
-                            {
-                                TenantId      = tenantId,
-                                BranchId      = branchId,
-                                MedicineId    = item.MedicineId,
-                                BatchNumber   = batchNumber,
-                                ExpiryDate    = item.ExpiryDate ?? now.AddYears(1),
-                                CurrentStock  = item.Quantity,
-                                PurchasePrice = item.UnitCost,
-                                SalePrice     = item.SalePrice > 0 ? item.SalePrice : item.UnitCost,
-                                Status        = "Active",
-                                ReceivedAt    = now,
-                                CreatedAt     = now,
-                                CreatedBy     = username
-                            };
-                            _context.MedicineBatches.Add(batch);
-                        }
-
-                        // Update tenant-wide medicine catalog stock summary
-                        var medicine = await _context.Medicines.FindAsync(item.MedicineId);
-                        if (medicine != null)
-                        {
-                            medicine.StockQuantity += item.Quantity;
-                            medicine.Batch         = item.BatchNumber;
-                            medicine.ExpiryDate    = item.ExpiryDate;
-                            medicine.PurchasePrice = item.UnitCost;
-                            if (item.SalePrice > 0)
-                                medicine.SalePrice = item.SalePrice;
-                            medicine.UpdatedAt = now;
-                            medicine.UpdatedBy = username;
-                            _context.Entry(medicine).State = EntityState.Modified;
-                        }
+                        stagedItems.Add((detail, item, batchNumber, existingBatch));
                     }
 
                     foreach (var pm in dto.PurchasePayments)
@@ -347,6 +315,65 @@ namespace PharmacyApi.Repositories
                     }
 
                     _context.PurchaseMasters.Add(purchase);
+                    // Persist PurchaseMaster & PurchaseDetails after all batch-status guards pass
+                    // so every PurchaseDetail receives its database identity before linking MedicineBatch.PurchaseDetailId.
+                    await _context.SaveChangesAsync(ct);
+
+                    foreach (var (detail, item, batchNumber, preloadedBatch) in stagedItems)
+                    {
+                        // ─── SaaS MedicineBatch Upsert (Branch-level batch stock) ───
+                        var batch = preloadedBatch ?? _context.MedicineBatches.Local.FirstOrDefault(b =>
+                                        b.TenantId == tenantId &&
+                                        b.BranchId == branchId &&
+                                        b.MedicineId == item.MedicineId &&
+                                        b.BatchNumber == batchNumber);
+
+                        if (batch != null)
+                        {
+                            batch.CurrentStock += item.Quantity;
+                            if (item.ExpiryDate.HasValue) batch.ExpiryDate = item.ExpiryDate.Value;
+                            batch.PurchasePrice = item.UnitCost;
+                            if (item.SalePrice > 0) batch.SalePrice = item.SalePrice;
+                            if (!batch.PurchaseDetailId.HasValue) batch.PurchaseDetailId = detail.PurchaseDetailId;
+                            batch.Status = "Active";
+                        }
+                        else
+                        {
+                            batch = new MedicineBatch
+                            {
+                                TenantId         = tenantId,
+                                BranchId         = branchId,
+                                MedicineId       = item.MedicineId,
+                                BatchNumber      = batchNumber,
+                                ExpiryDate       = item.ExpiryDate ?? now.AddYears(1),
+                                CurrentStock     = item.Quantity,
+                                PurchasePrice    = item.UnitCost,
+                                SalePrice        = item.SalePrice > 0 ? item.SalePrice : item.UnitCost,
+                                Status           = "Active",
+                                ReceivedAt       = now,
+                                PurchaseDetailId = detail.PurchaseDetailId,
+                                CreatedAt        = now,
+                                CreatedBy        = username
+                            };
+                            _context.MedicineBatches.Add(batch);
+                        }
+
+                        // Update tenant-wide medicine catalog stock summary
+                        var medicine = await _context.Medicines.FirstOrDefaultAsync(m => m.MedicineId == item.MedicineId && m.TenantId == tenantId, ct);
+                        if (medicine != null)
+                        {
+                            medicine.StockQuantity += item.Quantity;
+                            medicine.Batch         = item.BatchNumber;
+                            medicine.ExpiryDate    = item.ExpiryDate;
+                            medicine.PurchasePrice = item.UnitCost;
+                            if (item.SalePrice > 0)
+                                medicine.SalePrice = item.SalePrice;
+                            medicine.UpdatedAt = now;
+                            medicine.UpdatedBy = username;
+                            _context.Entry(medicine).State = EntityState.Modified;
+                        }
+                    }
+
                     await _context.SaveChangesAsync(ct);
 
                     dto.PurchaseId    = purchase.PurchaseId;
@@ -362,56 +389,43 @@ namespace PharmacyApi.Repositories
         // ─── Delete (with stock & MedicineBatch reversal) ───────────────────
         public async Task<bool> DeleteAsync(int id)
         {
-            var p = await _context.PurchaseMasters
-                .Include(p => p.PurchaseDetails)
-                .Include(p => p.PurchasePayments)
-                .FirstOrDefaultAsync(p => p.PurchaseId == id);
-
-            if (p == null) return false;
-
-            var strategy = _context.Database.CreateExecutionStrategy();
-            return await strategy.ExecuteAsync(async () =>
+            return await _context.ExecuteInTransactionAsync(async ct =>
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                try
+                var p = await _context.PurchaseMasters
+                    .Include(pm => pm.PurchaseDetails)
+                    .Include(pm => pm.PurchasePayments)
+                    .FirstOrDefaultAsync(pm => pm.PurchaseId == id, ct);
+
+                if (p == null) return (false, false);
+
+                // Protection: Do not allow deleting a purchase that has payments recorded in PurchasePayments
+                if (p.PurchasePayments.Any())
+                    return (false, false);
+
+                foreach (var item in p.PurchaseDetails)
                 {
-                    // Protection: Do not allow deleting a purchase that has payments recorded in PurchasePayments
-                    if (p.PurchasePayments.Any())
+                    var batchNumber = string.IsNullOrWhiteSpace(item.BatchNumber) ? "DEFAULT" : item.BatchNumber.Trim();
+                    var batch = await _context.MedicineBatches
+                        .FirstOrDefaultAsync(b => b.TenantId == p.TenantId &&
+                                                  b.BranchId == p.BranchId &&
+                                                  b.MedicineId == item.MedicineId &&
+                                                  b.BatchNumber == batchNumber, ct);
+                    if (batch != null)
                     {
-                        return false;
+                        batch.CurrentStock = Math.Max(0, batch.CurrentStock - item.Quantity);
                     }
 
-                    foreach (var item in p.PurchaseDetails)
+                    var medicine = await _context.Medicines.FirstOrDefaultAsync(m => m.MedicineId == item.MedicineId && m.TenantId == p.TenantId, ct);
+                    if (medicine != null)
                     {
-                        var batchNumber = string.IsNullOrWhiteSpace(item.BatchNumber) ? "DEFAULT" : item.BatchNumber.Trim();
-                        var batch = await _context.MedicineBatches
-                            .FirstOrDefaultAsync(b => b.TenantId == p.TenantId &&
-                                                      b.BranchId == p.BranchId &&
-                                                      b.MedicineId == item.MedicineId &&
-                                                      b.BatchNumber == batchNumber);
-                        if (batch != null)
-                        {
-                            batch.CurrentStock = Math.Max(0, batch.CurrentStock - item.Quantity);
-                        }
-
-                        var medicine = await _context.Medicines.FindAsync(item.MedicineId);
-                        if (medicine != null)
-                        {
-                            medicine.StockQuantity = Math.Max(0, medicine.StockQuantity - item.Quantity);
-                            _context.Entry(medicine).State = EntityState.Modified;
-                        }
+                        medicine.StockQuantity = Math.Max(0, medicine.StockQuantity - item.Quantity);
+                        _context.Entry(medicine).State = EntityState.Modified;
                     }
+                }
 
-                    _context.PurchaseMasters.Remove(p);
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-                    return true;
-                }
-                catch
-                {
-                    await transaction.RollbackAsync();
-                    return false;
-                }
+                _context.PurchaseMasters.Remove(p);
+                await _context.SaveChangesAsync(ct);
+                return (true, true);
             });
         }
     }

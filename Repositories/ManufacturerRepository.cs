@@ -29,7 +29,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<ManufacturerDto?> GetByIdAsync(int id)
         {
-            var m = await _context.Manufacturers.FindAsync(id);
+            var m = await _context.Manufacturers.AsNoTracking().FirstOrDefaultAsync(x => x.ManufacturerId == id);
             if (m == null) return null;
             return new ManufacturerDto
             {
@@ -77,7 +77,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, ManufacturerDto dto)
         {
-            var entity = await _context.Manufacturers.FindAsync(id);
+            var entity = await _context.Manufacturers.FirstOrDefaultAsync(x => x.ManufacturerId == id);
             if (entity == null) return false;
 
             if (await _context.Manufacturers.AnyAsync(m => m.Code == dto.Code && m.ManufacturerId != id))
@@ -97,7 +97,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.Manufacturers.FindAsync(id);
+            var entity = await _context.Manufacturers.FirstOrDefaultAsync(x => x.ManufacturerId == id);
             if (entity == null) return false;
             _context.Manufacturers.Remove(entity);
             await _context.SaveChangesAsync();

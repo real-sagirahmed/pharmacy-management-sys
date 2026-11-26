@@ -1136,6 +1136,10 @@ namespace PharmacyApi.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("PrescriptionImagePath")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
                     b.Property<DateTime>("SaleDate")
                         .HasColumnType("datetime2");
 
@@ -1455,6 +1459,12 @@ namespace PharmacyApi.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("UseForId");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
 
                     b.ToTable("UseFors");
                 });

@@ -79,6 +79,12 @@ namespace PharmacyApi.Data
             builder.Entity<RolePermission>().HasQueryFilter(r =>
                 _ctx.IsSystemAdmin || r.TenantId == _ctx.TenantId);
 
+            // ARCHITECTURAL INTENT: Branches are strictly tenant-scoped. BranchesController and any
+            // other query against DbSet<Branch> rely on this Tier-1 filter; internal login/seeding
+            // lookups explicitly opt out via IgnoreQueryFilters() paired with explicit TenantId predicates.
+            builder.Entity<Branch>().HasQueryFilter(b =>
+                _ctx.IsSystemAdmin || (_ctx.TenantId != null && b.TenantId == _ctx.TenantId));
+
             // Master Data — Tenant-scoped
             builder.Entity<Category>().HasQueryFilter(c =>
                 _ctx.IsSystemAdmin || c.TenantId == _ctx.TenantId);
@@ -124,6 +130,39 @@ namespace PharmacyApi.Data
             builder.Entity<BranchTransfer>().HasQueryFilter(t =>
                 _ctx.IsSystemAdmin || t.TenantId == _ctx.TenantId);
 
+            // ── Tier 2 Children: Parent-Derived Tenant + Branch Isolation ────
+            // ARCHITECTURAL INTENT: SalesPayment, PurchasePayment, SalesDetail, এবং PurchaseDetail-এর
+            // নিজস্ব TenantId কলাম না থাকায় সরাসরি DbSet কুয়েরিতে যেন Cross-Tenant / Cross-Branch ডেটা
+            // লিক না হয় এবং required parent filter mismatch না ঘটে, সেজন্য প্যারেন্ট নেভিগেশন দিয়ে
+            // ম্যাচিং Tier-2 Global Query Filter লক রাখা হয়েছে। কখনো সরাবেন না।
+            builder.Entity<SalesPayment>().HasQueryFilter(p =>
+                _ctx.IsSystemAdmin ||
+                (_ctx.TenantId != null &&
+                 p.SalesMaster != null &&
+                 p.SalesMaster.TenantId == _ctx.TenantId &&
+                 (_ctx.BranchId == null || p.SalesMaster.BranchId == _ctx.BranchId)));
+
+            builder.Entity<PurchasePayment>().HasQueryFilter(p =>
+                _ctx.IsSystemAdmin ||
+                (_ctx.TenantId != null &&
+                 p.PurchaseMaster != null &&
+                 p.PurchaseMaster.TenantId == _ctx.TenantId &&
+                 (_ctx.BranchId == null || p.PurchaseMaster.BranchId == _ctx.BranchId)));
+
+            builder.Entity<SalesDetail>().HasQueryFilter(d =>
+                _ctx.IsSystemAdmin ||
+                (_ctx.TenantId != null &&
+                 d.SalesMaster != null &&
+                 d.SalesMaster.TenantId == _ctx.TenantId &&
+                 (_ctx.BranchId == null || d.SalesMaster.BranchId == _ctx.BranchId)));
+
+            builder.Entity<PurchaseDetail>().HasQueryFilter(d =>
+                _ctx.IsSystemAdmin ||
+                (_ctx.TenantId != null &&
+                 d.PurchaseMaster != null &&
+                 d.PurchaseMaster.TenantId == _ctx.TenantId &&
+                 (_ctx.BranchId == null || d.PurchaseMaster.BranchId == _ctx.BranchId)));
+
             // ── Unique Indexes (Tenant-scoped — আগের global unique সরিয়ে composite) ──
             // ARCHITECTURAL INTENT: Code uniqueness is now per-Tenant, not globally.
             // Two different Tenants can have Medicine code "MED-001" — that is correct.
@@ -154,6 +193,8 @@ namespace PharmacyApi.Data
             builder.Entity<DosageForm>().HasIndex(d => new { d.TenantId, d.Name }).IsUnique();
             builder.Entity<CommonStrength>().HasIndex(c => new { c.TenantId, c.Code }).IsUnique();
             builder.Entity<CommonStrength>().HasIndex(c => new { c.TenantId, c.Name }).IsUnique();
+            builder.Entity<UseFor>().HasIndex(u => new { u.TenantId, u.Code }).IsUnique();
+            builder.Entity<UseFor>().HasIndex(u => new { u.TenantId, u.Name }).IsUnique();
 
             // ── Decimal Precision (অপরিবর্তিত) ──────────────────────────────
             builder.Entity<Medicine>().Property(m => m.SalePrice).HasPrecision(18, 2);

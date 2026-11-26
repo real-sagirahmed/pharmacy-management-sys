@@ -2782,3 +2782,118 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126073131_AddUniqueUseForTenantIndexes'
+)
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM [UseFors]
+        GROUP BY [TenantId], [Code]
+        HAVING COUNT(*) > 1
+    )
+    BEGIN
+        ;WITH DupCodes AS (
+            SELECT [UseForId],
+                   [Code],
+                   ROW_NUMBER() OVER (PARTITION BY [TenantId], [Code] ORDER BY [UseForId]) AS [RowNum]
+            FROM [UseFors]
+        )
+        UPDATE u
+        SET u.[Code] = LEFT(
+                            d.[Code],
+                            CASE WHEN 19 - LEN(CAST(d.[UseForId] AS nvarchar(10))) > 0
+                                 THEN 19 - LEN(CAST(d.[UseForId] AS nvarchar(10)))
+                                 ELSE 0
+                            END) + '-' + CAST(d.[UseForId] AS nvarchar(10))
+        FROM [UseFors] u
+        INNER JOIN DupCodes d ON u.[UseForId] = d.[UseForId]
+        WHERE d.[RowNum] > 1;
+    END
+    IF EXISTS (
+        SELECT 1
+        FROM [UseFors]
+        GROUP BY [TenantId], [Name]
+        HAVING COUNT(*) > 1
+    )
+    BEGIN
+        ;WITH DupNames AS (
+            SELECT [UseForId],
+                   [Name],
+                   ROW_NUMBER() OVER (PARTITION BY [TenantId], [Name] ORDER BY [UseForId]) AS [RowNum]
+            FROM [UseFors]
+        )
+        UPDATE u
+        SET u.[Name] = LEFT(
+                            d.[Name],
+                            CASE WHEN 99 - LEN(CAST(d.[UseForId] AS nvarchar(10))) > 0
+                                 THEN 99 - LEN(CAST(d.[UseForId] AS nvarchar(10)))
+                                 ELSE 0
+                            END) + '-' + CAST(d.[UseForId] AS nvarchar(10))
+        FROM [UseFors] u
+        INNER JOIN DupNames d ON u.[UseForId] = d.[UseForId]
+        WHERE d.[RowNum] > 1;
+    END
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126073131_AddUniqueUseForTenantIndexes'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_UseFors_TenantId_Code] ON [UseFors] ([TenantId], [Code]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126073131_AddUniqueUseForTenantIndexes'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_UseFors_TenantId_Name] ON [UseFors] ([TenantId], [Name]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126073131_AddUniqueUseForTenantIndexes'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261126073131_AddUniqueUseForTenantIndexes', N'8.0.0');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126082949_AddSalePrescriptionImagePath'
+)
+BEGIN
+    ALTER TABLE [SalesMasters] ADD [PrescriptionImagePath] nvarchar(260) NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126082949_AddSalePrescriptionImagePath'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261126082949_AddSalePrescriptionImagePath', N'8.0.0');
+END;
+GO
+
+COMMIT;
+GO
+

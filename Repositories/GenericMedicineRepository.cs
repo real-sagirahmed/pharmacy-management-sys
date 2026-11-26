@@ -30,7 +30,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<GenericDto?> GetByIdAsync(int id)
         {
-            var g = await _context.Generics.FindAsync(id);
+            var g = await _context.Generics.AsNoTracking().FirstOrDefaultAsync(x => x.GenericId == id);
             if (g == null) return null;
             return new GenericDto
             {
@@ -78,7 +78,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, GenericDto dto)
         {
-            var entity = await _context.Generics.FindAsync(id);
+            var entity = await _context.Generics.FirstOrDefaultAsync(x => x.GenericId == id);
             if (entity == null) return false;
 
             if (await _context.Generics.AnyAsync(g => g.Code == dto.Code && g.GenericId != id))
@@ -99,7 +99,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.Generics.FindAsync(id);
+            var entity = await _context.Generics.FirstOrDefaultAsync(x => x.GenericId == id);
             if (entity == null) return false;
             _context.Generics.Remove(entity);
             await _context.SaveChangesAsync();

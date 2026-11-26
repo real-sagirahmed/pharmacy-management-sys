@@ -52,30 +52,35 @@ namespace PharmacyApi.Repositories
             return $"{prefix}{next}";
         }
 
-        // ─── FEFO Batch List for a Medicine (Branch-aware via MedicineBatches) ───
+        // ─── FEFO Batch List for a Medicine (Branch-aware, Active & Unexpired Only) ───
         public async Task<IEnumerable<SaleBatchInfoDto>> GetBatchesForMedicineAsync(int medicineId)
         {
             var today = BdNow().Date;
             var nearExpiryThreshold = today.AddDays(90);
 
-            // Directly query branch-isolated MedicineBatches
+            // ARCHITECTURAL INTENT: POS batch lookup MUST return ONLY Active, non-expired, positive-stock
+            // rows from Tier-2 filtered MedicineBatches in strict FEFO (ExpiryDate, ReceivedAt) order.
+            // Never leak Recalled/Quarantined/Expired batches or fall back to catalog StockQuantity.
             var batches = await _context.MedicineBatches
                 .AsNoTracking()
-                .Where(b => b.MedicineId == medicineId && b.CurrentStock > 0)
+                .Where(b => b.MedicineId == medicineId &&
+                            b.CurrentStock > 0 &&
+                            b.Status == "Active" &&
+                            b.ExpiryDate >= today)
                 .OrderBy(b => b.ExpiryDate)
+                .ThenBy(b => b.ReceivedAt)
                 .Select(b => new SaleBatchInfoDto
                 {
                     BatchNumber  = b.BatchNumber,
                     ExpiryDate   = b.ExpiryDate,
                     AvailableQty = b.CurrentStock,
                     SalePrice    = b.SalePrice,
-                    IsNearExpiry = b.ExpiryDate <= nearExpiryThreshold
+                    IsNearExpiry = b.ExpiryDate <= nearExpiryThreshold,
+                    Status       = b.Status,
+                    IsExpired    = false
                 })
                 .ToListAsync();
 
-            // ARCHITECTURAL INTENT: Never fall back to tenant-wide Medicine.StockQuantity when a branch
-            // has no MedicineBatches rows. Pre-SaaS opening stock was backfilled into Branch 1 during migration;
-            // falling back here would leak another branch's stock into zero-stock branches as a phantom batch.
             return batches;
         }
 
@@ -147,9 +152,10 @@ namespace PharmacyApi.Repositories
                     ChangeAmount         = x.ChangeAmount,
                     DueAmount            = x.DueAmount,
                     PaymentMethod        = x.PaymentMethod,
-                    PaymentStatus        = x.PaymentStatus,
-                    SaleStatus           = x.SaleStatus,
-                    CreatedBy            = _context.Users.Where(u => u.UserName == x.CreatedBy).Select(u => u.FullName).FirstOrDefault() ?? x.CreatedBy
+                    PaymentStatus         = x.PaymentStatus,
+                    SaleStatus            = x.SaleStatus,
+                    PrescriptionImagePath = x.PrescriptionImagePath,
+                    CreatedBy             = _context.Users.Where(u => u.UserName == x.CreatedBy).Select(u => u.FullName).FirstOrDefault() ?? x.CreatedBy
                 }).ToListAsync();
 
             return new PagedResult<SalesMasterDto>
@@ -194,9 +200,10 @@ namespace PharmacyApi.Repositories
                 ChangeAmount         = s.ChangeAmount,
                 DueAmount            = s.DueAmount,
                 PaymentMethod        = s.PaymentMethod,
-                PaymentStatus        = s.PaymentStatus,
-                SaleStatus           = s.SaleStatus,
-                CreatedBy            = _context.Users.Where(u => u.UserName == s.CreatedBy).Select(u => u.FullName).FirstOrDefault() ?? s.CreatedBy,
+                PaymentStatus         = s.PaymentStatus,
+                SaleStatus            = s.SaleStatus,
+                PrescriptionImagePath = s.PrescriptionImagePath,
+                CreatedBy             = _context.Users.Where(u => u.UserName == s.CreatedBy).Select(u => u.FullName).FirstOrDefault() ?? s.CreatedBy,
                 SalesDetails = s.SalesDetails.Select(d => new SalesDetailDto
                 {
                     SalesDetailId   = d.SalesDetailId,
@@ -418,8 +425,21 @@ namespace PharmacyApi.Repositories
                     dto.SaleTime      = sale.SaleTime;
                     dto.PaymentStatus = sale.PaymentStatus;
                     dto.SaleStatus    = sale.SaleStatus;
+                    dto.PrescriptionImagePath = sale.PrescriptionImagePath;
                     return (true, dto);
             });
+        }
+
+        // ─── Attach Prescription Image Path (tenant & branch scoped) ────────
+        public async Task<bool> SetPrescriptionImageAsync(int saleId, string relativePath, CancellationToken cancellationToken = default)
+        {
+            var sale = await _context.SalesMasters.FirstOrDefaultAsync(s => s.SaleId == saleId, cancellationToken);
+            if (sale == null) return false;
+
+            sale.PrescriptionImagePath = relativePath;
+            sale.UpdatedAt = BdNow();
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
         }
 
         // ─── Delete (with stock & MedicineBatch reversal for Completed only) ──

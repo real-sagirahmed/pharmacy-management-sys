@@ -30,7 +30,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<TaxDto?> GetByIdAsync(int id)
         {
-            var t = await _context.Taxes.FindAsync(id);
+            var t = await _context.Taxes.AsNoTracking().FirstOrDefaultAsync(x => x.TaxId == id);
             if (t == null) return null;
             return new TaxDto
             {
@@ -80,7 +80,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, TaxDto dto)
         {
-            var entity = await _context.Taxes.FindAsync(id);
+            var entity = await _context.Taxes.FirstOrDefaultAsync(x => x.TaxId == id);
             if (entity == null) return false;
 
             if (await _context.Taxes.AnyAsync(t => t.Code == dto.Code && t.TaxId != id))
@@ -102,7 +102,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.Taxes.FindAsync(id);
+            var entity = await _context.Taxes.FirstOrDefaultAsync(x => x.TaxId == id);
             if (entity == null) return false;
             _context.Taxes.Remove(entity);
             await _context.SaveChangesAsync();

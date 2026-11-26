@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PharmacyApi.DTOs;
 using PharmacyApi.Repositories;
 using PharmacyApi.Filters;
+using PharmacyApi.Services;
 
 namespace PharmacyApi.Controllers
 {
@@ -88,6 +89,32 @@ namespace PharmacyApi.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        // POST: api/Sales/{id}/prescription — Attach verified prescription image
+        [HttpPost("{id:int}/prescription")]
+        [ModulePermission("Sales", "create")]
+        public async Task<IActionResult> UploadPrescription(
+            int id,
+            IFormFile file,
+            [FromServices] IWebHostEnvironment env,
+            CancellationToken cancellationToken = default)
+        {
+            var (isValid, errorMsg, ext) = await ImageUploadValidator.ValidateAsync(file, ImageUploadValidator.DefaultMaxImageBytes, cancellationToken);
+            if (!isValid) return BadRequest(errorMsg);
+
+            var sale = await _repo.GetByIdAsync(id);
+            if (sale == null) return NotFound();
+
+            int tenantScope = sale.TenantId ?? 0;
+            var fileName = $"rx-{id}-{Guid.NewGuid():N}{ext}";
+            var relativePath = await ImageUploadValidator.SaveToWebRootAsync(
+                file, env, fileName, cancellationToken, "uploads", "prescriptions", $"tenant-{tenantScope}");
+
+            var updated = await _repo.SetPrescriptionImageAsync(id, relativePath, cancellationToken);
+            if (!updated) return NotFound();
+
+            return Ok(new { prescriptionImagePath = relativePath });
         }
 
         // DELETE: api/Sales/{id}

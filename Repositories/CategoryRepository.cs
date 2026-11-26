@@ -29,7 +29,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<CategoryDto?> GetByIdAsync(int id)
         {
-            var c = await _context.Categories.FindAsync(id);
+            var c = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(x => x.CategoryId == id);
             if (c == null) return null;
             return new CategoryDto
             {
@@ -77,7 +77,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, CategoryDto dto)
         {
-            var entity = await _context.Categories.FindAsync(id);
+            var entity = await _context.Categories.FirstOrDefaultAsync(x => x.CategoryId == id);
             if (entity == null) return false;
 
             if (await _context.Categories.AnyAsync(c => c.Code == dto.Code && c.CategoryId != id))
@@ -98,7 +98,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.Categories.FindAsync(id);
+            var entity = await _context.Categories.FirstOrDefaultAsync(x => x.CategoryId == id);
             if (entity == null) return false;
             _context.Categories.Remove(entity);
             await _context.SaveChangesAsync();

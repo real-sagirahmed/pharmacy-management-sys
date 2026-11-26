@@ -103,7 +103,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<MedicineDto?> GetByIdAsync(int id)
         {
-            var m = await _context.Medicines.FindAsync(id);
+            var m = await _context.Medicines.AsNoTracking().FirstOrDefaultAsync(x => x.MedicineId == id);
             if (m == null) return null;
 
             var dto = new MedicineDto
@@ -130,70 +130,36 @@ namespace PharmacyApi.Repositories
                 UpdatedBy = m.UpdatedBy
             };
 
-            // 1. Collect all "Inputs" (Opening Stock + Purchases)
-            var allBatches = new List<MedicineBatchDto>();
-
-            // Add Opening Stock (initial balance from Medicine table)
-            if (m.StockQuantity > 0 || !string.IsNullOrEmpty(m.Batch))
-            {
-                allBatches.Add(new MedicineBatchDto
+            // Branch-aware stock batches sourced directly from Tier-2 filtered MedicineBatches
+            var branchBatches = await _context.MedicineBatches
+                .AsNoTracking()
+                .Where(b => b.MedicineId == id && (b.CurrentStock > 0 || b.Status != "Active"))
+                .OrderBy(b => b.ExpiryDate)
+                .ThenBy(b => b.ReceivedAt)
+                .Select(b => new
                 {
-                    BatchNumber = string.IsNullOrEmpty(m.Batch) ? "OPENING" : m.Batch,
-                    ExpiryDate = m.ExpiryDate,
-                    RemainingQuantity = m.StockQuantity,
-                    PurchasePrice = m.PurchasePrice
-                });
-            }
-
-            // Add Purchases (from PurchaseDetails table)
-            var purchases = await _context.PurchaseDetails
-                .Where(pd => pd.MedicineId == id)
-                .Select(pd => new MedicineBatchDto { 
-                    BatchNumber = pd.BatchNumber, 
-                    ExpiryDate = pd.ExpiryDate, 
-                    RemainingQuantity = pd.Quantity, 
-                    PurchasePrice = pd.UnitCost 
+                    b.BatchNumber,
+                    ExpiryDate = b.ExpiryDate.Date,
+                    b.CurrentStock,
+                    b.PurchasePrice
                 })
                 .ToListAsync();
-            
-            allBatches.AddRange(purchases);
 
-            // 2. Group by Batch + Expiry to get total infusion per batch
-            var groupedBatches = allBatches
-                .GroupBy(b => new { 
-                    Batch = (b.BatchNumber ?? "N/A").Trim().ToUpper(), 
-                    Expiry = b.ExpiryDate?.Date 
+            dto.Batches = branchBatches
+                .GroupBy(b => new
+                {
+                    Batch = (string.IsNullOrWhiteSpace(b.BatchNumber) ? "N/A" : b.BatchNumber.Trim().ToUpper()),
+                    b.ExpiryDate
                 })
                 .Select(g => new MedicineBatchDto
                 {
                     BatchNumber = g.Key.Batch,
-                    ExpiryDate = g.Key.Expiry,
-                    RemainingQuantity = g.Sum(x => x.RemainingQuantity),
+                    ExpiryDate = g.Key.ExpiryDate,
+                    RemainingQuantity = g.Sum(x => x.CurrentStock),
                     PurchasePrice = g.Max(x => x.PurchasePrice)
                 })
                 .OrderBy(b => b.ExpiryDate ?? DateTime.MaxValue)
                 .ToList();
-
-            // 3. Subtract ALL Sales (FEFO) to find current remaining stock per batch
-            var totalSales = await _context.SalesDetails
-                .Where(sd => sd.MedicineId == id && sd.SalesMaster!.SaleStatus == "Completed")
-                .SumAsync(sd => sd.Quantity);
-
-            int remainingToSubtract = totalSales;
-            foreach (var b in groupedBatches)
-            {
-                int subtractFromThisBatch = Math.Min(b.RemainingQuantity, remainingToSubtract);
-                b.RemainingQuantity -= subtractFromThisBatch;
-                remainingToSubtract -= subtractFromThisBatch;
-
-                if (b.RemainingQuantity > 0 || totalSales == 0) // Keep batches with stock or all if no sales
-                {
-                    dto.Batches.Add(b);
-                }
-            }
-
-            // If we have remainingToSubtract > 0, it means over-sold (inventory mismatch)
-            // But we'll just show what's left.
 
             return dto;
         }
@@ -238,7 +204,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, MedicineDto dto, string username)
         {
-            var entity = await _context.Medicines.FindAsync(id);
+            var entity = await _context.Medicines.FirstOrDefaultAsync(x => x.MedicineId == id);
             if (entity == null) return false;
 
             if (await ExistsByNameAsync(dto.Name, id))
@@ -268,7 +234,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.Medicines.FindAsync(id);
+            var entity = await _context.Medicines.FirstOrDefaultAsync(x => x.MedicineId == id);
             if (entity == null) return false;
 
             _context.Medicines.Remove(entity);
@@ -299,16 +265,11 @@ namespace PharmacyApi.Repositories
         public async Task<bool> BatchExistsAsync(int medicineId, string batchNumber)
         {
             if (string.IsNullOrWhiteSpace(batchNumber)) return false;
-            
+
             var b = batchNumber.Trim().ToLower();
-            
-            // Check in Medicine table (Opening Stock)
-            var existsInMedicine = await _context.Medicines.AnyAsync(m => m.MedicineId == medicineId && m.Batch != null && m.Batch.ToLower() == b);
-            if (existsInMedicine) return true;
-            
-            // Check in PurchaseDetails table
-            var existsInPurchases = await _context.PurchaseDetails.AnyAsync(pd => pd.MedicineId == medicineId && pd.BatchNumber != null && pd.BatchNumber.ToLower() == b);
-            return existsInPurchases;
+            return await _context.MedicineBatches
+                .AsNoTracking()
+                .AnyAsync(mb => mb.MedicineId == medicineId && mb.BatchNumber.ToLower() == b);
         }
 
         public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)

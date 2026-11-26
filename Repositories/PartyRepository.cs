@@ -77,7 +77,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<PartyDto?> GetByIdAsync(int id)
         {
-            var p = await _context.Parties.FindAsync(id);
+            var p = await _context.Parties.AsNoTracking().FirstOrDefaultAsync(x => x.PartyId == id);
             if (p == null) return null;
             return new PartyDto
             {
@@ -141,7 +141,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> UpdateAsync(int id, PartyDto dto)
         {
-            var entity = await _context.Parties.FindAsync(id);
+            var entity = await _context.Parties.FirstOrDefaultAsync(x => x.PartyId == id);
             if (entity == null) return false;
 
             // Duplicate Code check (exclude self)
@@ -163,7 +163,7 @@ namespace PharmacyApi.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _context.Parties.FindAsync(id);
+            var entity = await _context.Parties.FirstOrDefaultAsync(x => x.PartyId == id);
             if (entity == null) return false;
             _context.Parties.Remove(entity);
             await _context.SaveChangesAsync();

@@ -250,6 +250,7 @@ namespace PharmacyApi.DTOs
         public string PaymentMethod { get; set; } = "Cash";
         public string PaymentStatus { get; set; } = "Paid";
         public string SaleStatus { get; set; } = "Completed";
+        public string? PrescriptionImagePath { get; set; }
         public string? CreatedBy { get; set; }
 
         public List<SalesDetailDto> SalesDetails { get; set; } = new();
@@ -318,6 +319,9 @@ namespace PharmacyApi.DTOs
         public int AvailableQty { get; set; }
         public decimal SalePrice { get; set; }
         public bool IsNearExpiry { get; set; } // within 90 days
+        public string Status { get; set; } = "Active";
+        public bool IsExpired { get; set; }
+        public bool IsSellable => string.Equals(Status, "Active", StringComparison.OrdinalIgnoreCase) && !IsExpired && AvailableQty > 0;
     }
 
     public class SaleSearchParameters
