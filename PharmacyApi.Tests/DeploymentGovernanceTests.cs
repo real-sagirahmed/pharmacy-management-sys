@@ -210,4 +210,25 @@ public class DeploymentGovernanceTests
         Assert.Contains("Response.Cookies.Delete(\"auth_token\", BuildAuthCookieOptions())", authSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Response.Cookies.Delete(\"auth_token\")", authSource, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void DeployWorkflow_ManagesAppOfflineOutsidePublish_WithSecureFtpsCleanup()
+    {
+        var root = FindRepositoryRoot();
+        var deployPath = Path.Combine(root, ".github", "workflows", "deploy.yml");
+        var deployLines = File.ReadAllLines(deployPath)
+            .Where(line => !line.TrimStart().StartsWith('#'));
+        var deployCode = string.Join('\n', deployLines);
+
+        // Must not bundle app_offline.htm into ./publish/ for FTP-Deploy-Action to manage
+        Assert.DoesNotContain("> ./publish/app_offline.htm", deployCode, StringComparison.Ordinal);
+        Assert.Contains("**/app_offline.htm", deployCode, StringComparison.Ordinal);
+
+        // Must enforce FTPS control + data protection and avoid invalid lftp `|| true` / plain-FTP fallback
+        Assert.DoesNotContain("set ftp:ssl-allow no", deployCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("|| true", deployCode, StringComparison.Ordinal);
+        Assert.Contains("set ftp:ssl-force true;", deployCode, StringComparison.Ordinal);
+        Assert.Contains("set ftp:ssl-protect-data true;", deployCode, StringComparison.Ordinal);
+        Assert.Contains("open --env-password", deployCode, StringComparison.Ordinal);
+    }
 }
